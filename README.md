@@ -1,4 +1,6 @@
-# Said Who?
+<h1 align="center">
+  <img src="docs/banner.png" alt="Said Who? — a viral quote traced back through a phone post, a newspaper and a book to its earliest source, a 1981 book. Nebius x NVIDIA Global AI Hackathon." width="100%">
+</h1>
 
 Paste a viral quote and watch a team of agents trace it back to the earliest source they can verify.
 
