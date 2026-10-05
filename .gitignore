@@ -1,0 +1,19 @@
+# Private planning notes (not part of the public repo)
+IDEAS.md
+IDEAS.tr.md
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+dist/
+coverage/
+
+# OS / editor
+.DS_Store
+*.log
