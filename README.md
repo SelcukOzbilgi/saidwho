@@ -57,7 +57,7 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 
 - [x] Project setup, with key handling and automatic checks on every change
 - [x] Tried out all four Nemotron models, and checked that Tavily can read old sources like archive.org and Wikisource
-- [ ] A test set of quotes whose real origins are already known
+- [x] A [test set](eval/) of 15 quotes whose real origins are already known
 - [ ] First full investigation, start to finish
 - [ ] The live timeline and verdict page
 - [ ] A public demo with finished example cases
