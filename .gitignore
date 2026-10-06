@@ -17,3 +17,15 @@ coverage/
 # OS / editor
 .DS_Store
 *.log
+
+# Next.js / Vercel / misc
+/build
+.vercel
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+.pnpm-debug.log*
+
+# Local tool notes (next dev regenerates these)
+AGENTS.md
+CLAUDE.md
