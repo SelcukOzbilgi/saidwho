@@ -10,7 +10,7 @@ Quotes travel. Every time one gets shared it can lose a word, pick up a new one,
 
 Take *"Insanity is doing the same thing over and over again and expecting different results."* It's usually credited to Albert Einstein, but there's no evidence he ever said it. The earliest match [Quote Investigator](https://quoteinvestigator.com/2017/03/23/same/) found is a 1981 newspaper report on an Al-Anon meeting in Knoxville, Tennessee.
 
-Ask a chatbot where a quote comes from and you'll get a confident answer, and sometimes a source that doesn't exist. Said Who? is meant to work differently. Instead of guessing, it reads the actual pages, checks that the quote is really there, and only then tells you what it found.
+Ask a chatbot where a quote comes from and you'll get a confident answer, and sometimes a source that doesn't exist. Said Who? is meant to work differently. Instead of guessing, it will read the actual pages, check that the quote is really there, and only then tell you what it found.
 
 ## What you'll see
 
@@ -23,9 +23,9 @@ This is what I'm building toward. The Status section below shows how far along i
 
 Sometimes the honest answer is "people disagree" or "I couldn't find it". Said Who? will say that rather than make something up.
 
-## How it works
+## How it will work
 
-Each quote gets a small team of AI agents, and each one has a single job:
+Each quote will get a small team of AI agents, and each one has a single job:
 
 - **Planner** thinks of other ways the quote has been worded or translated, and who might have said it.
 - **Searchers** look across the web, including old books and archives.
@@ -34,7 +34,7 @@ Each quote gets a small team of AI agents, and each one has a single job:
 - **Genealogist** follows citations backwards ("this 1995 book quotes a 1981 one") until nothing older turns up.
 - **Judge** writes the verdict, and every sentence of it has to point to a source the Checker confirmed.
 
-Small, fast models do most of the reading. The largest model only steps in for the final verdict or when sources disagree, which should keep each investigation cheap.
+Small, fast models will do most of the reading. The largest model will only step in for the final verdict or when sources disagree, which should keep each investigation cheap.
 
 <details>
 <summary>Models and services</summary>
