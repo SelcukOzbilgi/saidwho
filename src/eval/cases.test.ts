@@ -9,8 +9,8 @@ const file = fileURLToPath(new URL("../../eval/quotes.jsonl", import.meta.url));
 const cases = parseEvalCases(readFileSync(file, "utf8"));
 
 describe("eval/quotes.jsonl", () => {
-  it("has 15 cases with unique ids", () => {
-    expect(cases).toHaveLength(15);
+  it("has 20 cases with unique ids", () => {
+    expect(cases).toHaveLength(20);
     expect(new Set(cases.map((c) => c.id)).size).toBe(cases.length);
   });
 
@@ -18,6 +18,11 @@ describe("eval/quotes.jsonl", () => {
     const verdicts = cases.map((c) => c.verdict);
     expect(verdicts.filter((v) => v === "contested" || v === "no_known_source").length).toBeGreaterThanOrEqual(3);
     expect(verdicts).toContain("correct");
+  });
+
+  it("can't be passed by always answering misattributed", () => {
+    const misattributed = cases.filter((c) => c.verdict === "misattributed").length;
+    expect(misattributed / cases.length).toBeLessThan(0.5);
   });
 
   it("includes at least one quote outside English", () => {
