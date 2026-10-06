@@ -1,29 +1,90 @@
 <h1 align="center">
-  <img src="docs/banner.png" alt="Said Who? — a viral quote traced back through a phone post, a newspaper and a book to its earliest source, a 1981 book. Nebius x NVIDIA Global AI Hackathon." width="100%">
+  <img src="docs/banner.png" alt="Said Who? A quote traced back from a 2024 social media post, through a 2018 newspaper and a 2001 book, to a book from 1981." width="100%">
 </h1>
 
-Paste a viral quote and watch a team of agents trace it back to the earliest source they can verify.
+<p align="center"><b>Who really said it?</b><br>Paste a quote you saw online. Said Who? looks for the place it first appeared and shows you the trail, with a link for every step.</p>
 
-Chatbots *guess* where a quote comes from. Said Who? *finds* the source: it searches the web, reads every candidate page, checks that each snippet really appears on that page, follows citations backwards, and then writes a verdict that cites its evidence. "Contested" and "inconclusive" are valid answers.
+## Why I'm building this
 
-> 🚧 Work in progress for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/).
+Quotes travel. Every time one gets shared it can lose a word, pick up a new one, or end up with a more famous name attached. A few years later everyone "knows" who said it, and nobody can point to where.
+
+Take *"Insanity is doing the same thing over and over again and expecting different results."* It's usually credited to Albert Einstein, but there's no evidence he ever said it. The earliest match [Quote Investigator](https://quoteinvestigator.com/2017/03/23/same/) found is a 1981 newspaper report on an Al-Anon meeting in Knoxville, Tennessee.
+
+Ask a chatbot where a quote comes from and you'll get a confident answer, and sometimes a source that doesn't exist. Said Who? is meant to work differently. Instead of guessing, it reads the actual pages, checks that the quote is really there, and only then tells you what it found.
+
+## What you'll see
+
+This is what I'm building toward. The Status section below shows how far along it is.
+
+1. You paste a quote.
+2. A timeline fills in as sources turn up, oldest on the left.
+3. Each source shows the exact sentence from its page. If the page doesn't really contain the quote, that source gets crossed out.
+4. At the end you get a short verdict: the earliest source found, when the wrong name got attached, and how sure it is.
+
+Sometimes the honest answer is "people disagree" or "I couldn't find it". Said Who? will say that rather than make something up.
 
 ## How it works
 
-| Step | Agent | Model |
-|------|-------|-------|
-| 1 | Planner: quote variants, translations, candidate authors | Nemotron 3 Super |
-| 2 | Scouts: parallel web search | Tavily |
-| 3 | Readers: extract snippet, attribution, date and citations from each page | Nemotron 3.5 Lightning |
-| 4 | Verifier: checks every snippet against the raw page text | Plain code, no model |
-| 5 | Genealogist: follows citations backwards and builds the tree | Nemotron 3 Super |
-| 6 | Judge: writes a verdict where every sentence cites verified evidence | Nemotron 3 Ultra |
+Each quote gets a small team of AI agents, and each one has a single job:
 
-All models run on [Nebius Token Factory](https://nebius.com/services/token-factory).
+- **Planner** thinks of other ways the quote has been worded or translated, and who might have said it.
+- **Searchers** look across the web, including old books and archives.
+- **Readers** open each page and note the quote, who it's credited to, the date, and what the page cites.
+- **Checker** confirms the quote really appears on the page. This step is plain code, not AI, so it can't be talked into a made-up source.
+- **Genealogist** follows citations backwards ("this 1995 book quotes a 1981 one") until nothing older turns up.
+- **Judge** writes the verdict, and every sentence of it has to point to a source the Checker confirmed.
+
+Small, fast models do most of the reading. The largest model only steps in for the final verdict or when sources disagree, which should keep each investigation cheap.
+
+<details>
+<summary>Models and services</summary>
+
+| Job | Planned model or service |
+|-----|---------|
+| Planner, Genealogist | NVIDIA Nemotron 3 Super |
+| Readers | NVIDIA Nemotron 3.5 Lightning |
+| Judge | NVIDIA Nemotron 3 Ultra |
+| Search and page reading | Tavily |
+| Checker | Plain TypeScript |
+
+The Nemotron models are served by [Nebius Token Factory](https://nebius.com/services/token-factory). The app is built with Next.js.
+
+</details>
 
 ## Status
 
-Early setup. See the commit history for progress.
+I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/). Submissions close on October 30, 2026.
+
+- [x] Project setup, with key handling and automatic checks on every change
+- [x] Tried out all four Nemotron models, and checked that Tavily can read old sources like archive.org and Wikisource
+- [ ] A test set of quotes whose real origins are already known
+- [ ] First full investigation, start to finish
+- [ ] The live timeline and verdict page
+- [ ] A public demo with finished example cases
+
+Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
+
+## Trying it
+
+Once the demo is live, anyone will be able to browse finished investigations for free. To run a new one, you'll paste in your own Nebius and Tavily keys. Your keys are used for that one run and passed only to those two services. They're never saved or written to logs.
+
+## Running it locally
+
+You'll need Node.js 24 and pnpm.
+
+```bash
+git clone https://github.com/SelcukOzbilgi/saidwho.git
+cd saidwho
+pnpm install
+cp .env.example .env.local   # then add your Nebius and Tavily keys
+pnpm dev
+```
+
+`pnpm test` runs the tests. `pnpm smoke:nebius` and `pnpm smoke:tavily` make a few small real calls to check that your keys work.
+
+## Security
+
+If you find a security problem, please report it privately. See [SECURITY.md](SECURITY.md).
 
 ## License
 
