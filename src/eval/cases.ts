@@ -5,6 +5,10 @@ import { z } from "zod";
 
 const partialDate = z.string().regex(/^\d{4}(-\d{2}(-\d{2})?)?$/, "use YYYY, YYYY-MM or YYYY-MM-DD");
 
+// misattributed: the source names an earlier or real origin.
+// no_known_source: the credit is unsupported and no origin is known. If the earliest
+// appearance already credits the famous name, leave earliest.author null and give
+// misattribution_first_seen the same date as earliest.date.
 export const verdictSchema = z.enum(["misattributed", "correct", "contested", "no_known_source"]);
 
 export const evalCaseSchema = z.strictObject({
