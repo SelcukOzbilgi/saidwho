@@ -1,0 +1,15 @@
+# gitleaks config: default rules plus provider keys used in this project.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "tavily-api-key"
+description = "Tavily API key"
+regex = '''tvly-(?:dev-|prod-)?[A-Za-z0-9_-]{20,}'''
+keywords = ["tvly-"]
+
+[[rules]]
+id = "langsmith-api-key"
+description = "LangSmith API key"
+regex = '''lsv2_(?:pt|sk)_[A-Za-z0-9_]{20,}'''
+keywords = ["lsv2_"]
