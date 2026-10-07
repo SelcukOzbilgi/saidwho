@@ -74,10 +74,12 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
 
   let stopReported = false;
   // True once the run must not start another paid call; reports why, once.
-  const mustStop = (): boolean => {
+  // Readers check silently and the stop is reported after the last one returns,
+  // so no evidence event ever follows the stop marker.
+  const mustStop = (report = true): boolean => {
     const aborted = signal?.aborted ?? false;
     const overBudget = maxUsd !== undefined && nebiusUsd >= maxUsd;
-    if ((aborted || overBudget) && !stopReported) {
+    if ((aborted || overBudget) && report && !stopReported) {
       stopReported = true;
       onEvent(aborted ? { type: "aborted" } : { type: "budget_exceeded", spentUsd: nebiusUsd, maxUsd: maxUsd ?? 0 });
     }
@@ -176,7 +178,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   const nodes: EvidenceNode[] = [];
   const entries = [...pages.entries()].slice(0, MAX_PAGES).map(([url, page], i) => ({ url, page, id: `n${i + 1}` }));
   await mapLimit(entries, READER_CONCURRENCY, async ({ url, page, id }) => {
-    if (mustStop()) return;
+    if (mustStop(false)) return;
     const passage = selectPassages(page.text, phrases, READER_CHARS);
     const read = await callStructured(nebius, {
       model: MODELS.lightning,

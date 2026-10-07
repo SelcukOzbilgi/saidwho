@@ -154,6 +154,24 @@ describe("investigate", () => {
     expect(types(events).slice(-3)).toEqual(["page_read", "aborted", "done"]);
   });
 
+  it("reports a stop only after the readers still running have finished", async () => {
+    const controller = new AbortController();
+    const nebius = fakeNebius({
+      readDelay: (user) => (user.includes("/p1") ? 0 : 20),
+      read: (user) => {
+        if (user.includes("/p1")) controller.abort();
+        return READ;
+      },
+    });
+    const urls = [1, 2, 3, 4, 5, 6].map((i) => `https://site${i}.example.org/p${i}`);
+    const events = await run({ nebius, tavily: fakeTavily(urls), signal: controller.signal });
+    const kinds = types(events);
+    // Five readers start at once; the sixth page is never read.
+    expect(kinds.filter((k) => k === "page_read")).toHaveLength(5);
+    expect(kinds.indexOf("aborted")).toBeGreaterThan(kinds.lastIndexOf("node_added"));
+    expect(kinds.slice(-2)).toEqual(["aborted", "done"]);
+  });
+
   it("stops before the judge once the readers use up the budget", async () => {
     const nebius = fakeNebius();
     const events = await run({ nebius, maxUsd: 0.0004 });
