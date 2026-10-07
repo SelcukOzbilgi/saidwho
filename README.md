@@ -82,7 +82,7 @@ pnpm dev
 
 `pnpm test` runs the tests. `pnpm smoke:nebius` and `pnpm smoke:tavily` make a few small real calls to check that your keys work.
 
-`pnpm investigate insanity-same-thing` runs one quote from the [test set](eval/) and prints each step, the verdict and what it cost. Any `id` from `eval/quotes.jsonl` works. One run costs under half a cent of Nebius usage and 5 Tavily credits, and it stops on its own if it ever reaches $0.50.
+`pnpm investigate insanity-same-thing` runs one quote from the [test set](eval/) and prints each step, the verdict and what it cost. Any `id` from `eval/quotes.jsonl` works. In the runs so far, one investigation cost under half a cent of Nebius usage and about 5 Tavily credits; other quotes can cost more. As a safety net, the script starts no new model call once its estimated Nebius spend reaches $0.50, though calls already running still finish.
 
 ## Security
 
