@@ -4,30 +4,64 @@
 
 export type SnippetCheck = {
   status: "exact" | "near" | "not_found";
-  // Share of the snippet's three-word sequences that appear in the page, 0..1.
+  // 1 minus the word edits needed per snippet word, 0..1.
   score: number;
 };
 
-// Near matches tolerate OCR noise and small edits, not a different sentence.
-const NEAR_MATCH_THRESHOLD = 0.8;
 const SHINGLE_SIZE = 3;
+// A near match may differ by one whole word in ten (OCR noise, a dropped
+// "again"). Letter-level slips inside a word ("result"/"results") are free.
+const WORDS_PER_EDIT = 10;
+// Alignments tried per snippet, picked by how many three-word sequences agree.
+const CANDIDATE_ALIGNMENTS = 3;
+const ALIGNMENT_SLACK = 2;
 
 // Lowercase, drop accents and punctuation, unify quotes, collapse whitespace.
-// Both sides go through the same steps, so dotless ı or ß stay comparable.
+// Dotless ı is folded into i, so AKIL and akıl compare equal like any other case pair.
 export function normalizeText(text: string): string {
   return text
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
+    .replace(/ı/g, "i")
     .replace(/['‘’ʼ`´]/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }
 
-function shingles(words: readonly string[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i + SHINGLE_SIZE <= words.length; i++) out.push(words.slice(i, i + SHINGLE_SIZE).join(" "));
-  return out;
+function levenshtein(a: string, b: string): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function sameWord(a: string, b: string): boolean {
+  return a === b || (Math.min(a.length, b.length) >= 4 && levenshtein(a, b) <= 1);
+}
+
+// Fewest whole-word insertions, deletions or swaps to turn the snippet into some
+// contiguous run of the page window (page words before and after are free).
+// The snippet's first and last words must match the page: an extra word at the
+// edge is how an invented attribution ("Einstein: ...") would slip in.
+function wordEdits(snippet: readonly string[], window: readonly string[]): number {
+  let prev = new Array<number>(window.length + 1).fill(0);
+  for (let i = 1; i <= snippet.length; i++) {
+    const edge = i === 1 || i === snippet.length;
+    const cur = [edge ? Infinity : i];
+    for (let j = 1; j <= window.length; j++) {
+      const match = sameWord(snippet[i - 1], window[j - 1]);
+      const swap = prev[j - 1] + (match ? 0 : edge ? Infinity : 1);
+      cur[j] = Math.min(edge ? Infinity : prev[j] + 1, cur[j - 1] + 1, swap);
+    }
+    prev = cur;
+  }
+  return Math.min(...prev);
 }
 
 export function checkSnippet(snippet: string, pageText: string): SnippetCheck {
@@ -37,11 +71,39 @@ export function checkSnippet(snippet: string, pageText: string): SnippetCheck {
   if (` ${haystack} `.includes(` ${needle} `)) return { status: "exact", score: 1 };
 
   // Too short to judge by overlap; only an exact match counts.
-  const needleShingles = shingles(needle.split(" "));
-  if (needleShingles.length < 2) return { status: "not_found", score: 0 };
+  const words = needle.split(" ");
+  if (words.length < SHINGLE_SIZE + 1) return { status: "not_found", score: 0 };
 
-  const pageShingles = new Set(shingles(haystack.split(" ")));
-  const found = needleShingles.filter((s) => pageShingles.has(s)).length;
-  const score = found / needleShingles.length;
-  return { status: score >= NEAR_MATCH_THRESHOLD ? "near" : "not_found", score };
+  // Each three-word sequence the snippet shares with the page votes for an
+  // offset (page position minus snippet position). Only the best-supported
+  // offsets are aligned word by word, so matches scattered across the page don't add up.
+  const pageWords = haystack.split(" ");
+  const positions = new Map<string, number[]>();
+  for (let p = 0; p + SHINGLE_SIZE <= pageWords.length; p++) {
+    const key = pageWords.slice(p, p + SHINGLE_SIZE).join(" ");
+    const list = positions.get(key);
+    if (list) list.push(p);
+    else positions.set(key, [p]);
+  }
+  const votes = new Map<number, number>();
+  for (let i = 0; i + SHINGLE_SIZE <= words.length; i++) {
+    for (const p of positions.get(words.slice(i, i + SHINGLE_SIZE).join(" ")) ?? []) {
+      votes.set(p - i, (votes.get(p - i) ?? 0) + 1);
+    }
+  }
+  const offsets = [...votes.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, CANDIDATE_ALIGNMENTS)
+    .map(([offset]) => offset);
+
+  let fewest = Infinity;
+  for (const offset of offsets) {
+    const start = Math.max(0, offset - ALIGNMENT_SLACK);
+    const window = pageWords.slice(start, offset + words.length + ALIGNMENT_SLACK);
+    fewest = Math.min(fewest, wordEdits(words, window));
+  }
+  if (fewest === Infinity) return { status: "not_found", score: 0 };
+  const score = Math.max(0, 1 - fewest / words.length);
+  const allowed = Math.floor(words.length / WORDS_PER_EDIT);
+  return { status: fewest <= allowed ? "near" : "not_found", score };
 }

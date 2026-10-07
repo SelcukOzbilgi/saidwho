@@ -31,6 +31,25 @@ describe("checkSnippet", () => {
     expect(checkSnippet("the same idea", PAGE).status).toBe("not_found");
   });
 
+  it("rejects a real passage with an invented attribution in front", () => {
+    const snippet = "Einstein said insanity is doing the same thing over and over again but expecting different results";
+    expect(checkSnippet(snippet, PAGE).status).toBe("not_found");
+  });
+
+  it("allows one missing word in the middle of a long snippet", () => {
+    const snippet = "Insanity is doing the same thing over and over but expecting different results";
+    expect(checkSnippet(snippet, PAGE).status).toBe("near");
+  });
+
+  it("rejects a snippet stitched together from scattered parts of the page", () => {
+    const page = "insanity is doing filler words here. the same thing more filler. over and over again end.";
+    expect(checkSnippet("insanity is doing the same thing over and over again", page).status).toBe("not_found");
+  });
+
+  it("matches Turkish I and ı regardless of case", () => {
+    expect(checkSnippet("akıl", "AKIL").status).toBe("exact");
+  });
+
   it("treats Turkish letters the same way on both sides", () => {
     expect(normalizeText("Gel, gel, ne olursan ol YİNE gel")).toBe("gel gel ne olursan ol yine gel");
     expect(checkSnippet("ne olursan ol yine gel", "“Gel, gel, ne olursan ol yine gel”").status).toBe("exact");
@@ -51,6 +70,17 @@ describe("selectPassages", () => {
     expect(checkSnippet("doing the same thing over and over again", page).status).toBe("exact");
   });
 
+  it("keeps offsets right when lowercasing changes the text length", () => {
+    const page = `${"İ ".repeat(2_000)}${"x ".repeat(1_000)}uniquequotation ${"x ".repeat(3_000)}`;
+    expect(selectPassages(page, ["uniquequotation"], 1_500)).toContain("uniquequotation");
+  });
+
+  it("returns a smaller window when the budget is below one window", () => {
+    const out = selectPassages(`insanity ${"x ".repeat(2_000)}`, ["insanity"], 1_000);
+    expect(out).toContain("insanity");
+    expect(out.length).toBeLessThanOrEqual(1_000);
+  });
+
   it("falls back to the start of the page when no keyword appears", () => {
     const page = "x ".repeat(10_000);
     expect(selectPassages(page, ["insanity"], 100)).toBe(page.slice(0, 100));
@@ -61,6 +91,8 @@ describe("cleanDate", () => {
   it("keeps partial ISO dates and pulls the year out of prose", () => {
     expect(cleanDate("1981-10")).toBe("1981-10");
     expect(cleanDate("October 11, 1981")).toBe("1981");
+    expect(cleanDate("1981-02-30")).toBe("1981");
+    expect(cleanDate("1981-99-99")).toBe("1981");
     expect(cleanDate("unknown")).toBeNull();
     expect(cleanDate(null)).toBeNull();
   });
