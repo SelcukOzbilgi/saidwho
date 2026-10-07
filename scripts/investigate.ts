@@ -147,8 +147,10 @@ async function main(): Promise<void> {
   });
   saveLog(caseId, events);
   const last = events.at(-1);
-  // Exit 0 only when the run reached the judge's verdict or found nothing to judge.
-  const finished = events.some((e) => e.type === "verdict" || e.type === "judge_skipped");
+  // Exit 0 only when the run reached a verdict, or searched and found nothing to judge.
+  // A run whose every search failed found nothing because it looked nowhere.
+  const searched = events.some((e) => e.type === "searched");
+  const finished = events.some((e) => e.type === "verdict" || (e.type === "judge_skipped" && searched));
   if (!finished || last?.type !== "done") process.exitCode = 1;
 }
 
