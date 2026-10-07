@@ -47,6 +47,14 @@ describe("parseEvalCases", () => {
     expect(() => parseEvalCases('\n{"id":"x"}\n')).toThrow(/line 2/);
   });
 
+  it("rejects dates that don't exist", () => {
+    const valid = cases[0];
+    const withDate = (date: string) => JSON.stringify({ ...valid, earliest: { ...valid.earliest, date } });
+    expect(() => parseEvalCases(withDate("2025-99-99"))).toThrow(/not a real calendar date/);
+    expect(() => parseEvalCases(withDate("1981-02-29"))).toThrow(/not a real calendar date/);
+    expect(parseEvalCases(withDate("1980-02-29"))).toHaveLength(1);
+  });
+
   it("names the line of malformed JSON", () => {
     expect(() => parseEvalCases('\n{"id":\n')).toThrow(/line 2 is not valid JSON/);
   });
