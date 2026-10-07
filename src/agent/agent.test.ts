@@ -41,6 +41,14 @@ describe("checkSnippet", () => {
     expect(checkSnippet(snippet, PAGE).status).toBe("near");
   });
 
+  it("never lets a negation change or disappear", () => {
+    const page = "He said: I would never do the same thing over and over again and hope for change.";
+    expect(checkSnippet("I would ever do the same thing over and over again and hope for change", page).status).toBe("not_found");
+    const withNot = "We do not know who said it first, and the book from the archive says so plainly.";
+    expect(checkSnippet("We do know who said it first, and the book from the archive says so plainly", withNot).status).toBe("not_found");
+    expect(checkSnippet("We do not know who said it first, and the book from the archive says so plainly", withNot).status).toBe("exact");
+  });
+
   it("rejects a snippet stitched together from scattered parts of the page", () => {
     const page = "insanity is doing filler words here. the same thing more filler. over and over again end.";
     expect(checkSnippet("insanity is doing the same thing over and over again", page).status).toBe("not_found");
@@ -86,6 +94,11 @@ describe("selectPassages", () => {
     const out = selectPassages(page, ["insanity is doing the same thing"], 3_000);
     expect(out).toContain("Published 11 October 1981");
     expect(out).toContain("Al-Anon meeting");
+  });
+
+  it("covers text just past the page top", () => {
+    const page = `${"y".repeat(600)} uniquequotation ${"x ".repeat(5_000)}`;
+    expect(selectPassages(page, ["uniquequotation"], 3_000)).toContain("uniquequotation");
   });
 
   it("falls back to the start of the page when no keyword appears", () => {

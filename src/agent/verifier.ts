@@ -15,6 +15,14 @@ const WORDS_PER_EDIT = 10;
 // Alignments tried per snippet, picked by how many three-word sequences agree.
 const CANDIDATE_ALIGNMENTS = 3;
 const ALIGNMENT_SLACK = 2;
+// Words that flip a sentence's meaning. They must match exactly and can never be
+// added, dropped or swapped, so "never" doesn't pass as "ever". Turkish negation
+// is mostly a suffix, which the letter-level rule below doesn't loosen for short words.
+const NEGATIONS = new Set([
+  "not", "no", "nor", "never", "ever", "none", "nothing", "nobody", "nowhere", "neither",
+  "cannot", "cant", "dont", "doesnt", "didnt", "isnt", "arent", "wasnt", "werent", "wont", "wouldnt",
+  "shouldnt", "couldnt", "without", "degil", "yok", "hic", "asla", "ne",
+]);
 
 // Lowercase, drop accents and punctuation, unify quotes, collapse whitespace.
 // Dotless ı is folded into i, so AKIL and akıl compare equal like any other case pair.
@@ -42,8 +50,13 @@ function levenshtein(a: string, b: string): number {
 }
 
 function sameWord(a: string, b: string): boolean {
-  return a === b || (Math.min(a.length, b.length) >= 4 && levenshtein(a, b) <= 1);
+  if (a === b) return true;
+  if (NEGATIONS.has(a) || NEGATIONS.has(b)) return false;
+  return Math.min(a.length, b.length) >= 4 && levenshtein(a, b) <= 1;
 }
+
+// Cost of skipping one word; a negation can't be skipped.
+const skipCost = (word: string): number => (NEGATIONS.has(word) ? Infinity : 1);
 
 // Fewest whole-word insertions, deletions or swaps to turn the snippet into some
 // contiguous run of the page window (page words before and after are free).
@@ -53,11 +66,13 @@ function wordEdits(snippet: readonly string[], window: readonly string[]): numbe
   let prev = new Array<number>(window.length + 1).fill(0);
   for (let i = 1; i <= snippet.length; i++) {
     const edge = i === 1 || i === snippet.length;
-    const cur = [edge ? Infinity : i];
+    const cur = [edge ? Infinity : prev[0] + skipCost(snippet[i - 1])];
     for (let j = 1; j <= window.length; j++) {
-      const match = sameWord(snippet[i - 1], window[j - 1]);
-      const swap = prev[j - 1] + (match ? 0 : edge ? Infinity : 1);
-      cur[j] = Math.min(edge ? Infinity : prev[j] + 1, cur[j - 1] + 1, swap);
+      const [a, b] = [snippet[i - 1], window[j - 1]];
+      const swapCost = sameWord(a, b) ? 0 : edge || NEGATIONS.has(a) || NEGATIONS.has(b) ? Infinity : 1;
+      const dropSnippetWord = edge ? Infinity : prev[j] + skipCost(a);
+      const skipPageWord = cur[j - 1] + skipCost(b);
+      cur[j] = Math.min(dropSnippetWord, skipPageWord, prev[j - 1] + swapCost);
     }
     prev = cur;
   }

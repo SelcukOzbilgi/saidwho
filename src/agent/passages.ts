@@ -39,9 +39,12 @@ export function selectPassages(pageText: string, phrases: readonly string[], max
   const head = Math.min(HEAD, Math.max(0, maxChars - size));
   const picked: number[] = [];
   let used = head;
-  for (const { start } of windows.sort((a, b) => b.score - a.score || a.start - b.start)) {
+  for (const window of windows.sort((a, b) => b.score - a.score || a.start - b.start)) {
     if (used + size > maxChars) break;
-    if (start < head || picked.some((p) => Math.abs(p - start) < size)) continue;
+    // A window that starts inside the head is moved to start right after it, so
+    // text just past the head is still covered.
+    const start = Math.max(window.start, head);
+    if (picked.some((p) => Math.abs(p - start) < size)) continue;
     picked.push(start);
     used += size;
   }
