@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { verdictSchema } from "../eval/cases";
+import { isRealDate, verdictSchema } from "../eval/cases";
 
 // Structured outputs for each agent. Every object is strict and every field is
 // required (nullable where a value can be missing), which is what
@@ -41,11 +41,12 @@ export type ReaderOutput = z.infer<typeof readerOutputSchema>;
 export type JudgeOutput = z.infer<typeof judgeOutputSchema>;
 
 // Models write dates loosely ("circa 1981", "October 11, 1981"). Keep a clean
-// YYYY, YYYY-MM or YYYY-MM-DD when given one, otherwise fall back to the year.
+// YYYY, YYYY-MM or YYYY-MM-DD when given a real one, otherwise fall back to the
+// year ("1981-02-30" becomes "1981").
 export function cleanDate(raw: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
-  if (/^\d{4}(-\d{2}(-\d{2})?)?$/.test(trimmed)) return trimmed;
+  if (/^\d{4}(-\d{2}(-\d{2})?)?$/.test(trimmed) && isRealDate(trimmed)) return trimmed;
   const year = /\b(1[0-9]{3}|20[0-9]{2})\b/.exec(trimmed);
   return year ? year[1] : null;
 }

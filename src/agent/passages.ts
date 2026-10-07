@@ -4,7 +4,6 @@ import { normalizeText } from "./verifier";
 // reader only sees the parts of a page that mention the quote's words.
 
 const WINDOW = 1_500;
-const STRIDE = 750;
 const MIN_KEYWORD_LENGTH = 4;
 const STOPWORDS = new Set(["that", "this", "with", "from", "have", "what", "your", "they", "them", "there", "their", "were", "will", "would", "only", "over", "into", "than", "then", "when"]);
 
@@ -19,11 +18,15 @@ export function keywordsOf(phrases: readonly string[]): string[] {
 export function selectPassages(pageText: string, phrases: readonly string[], maxChars: number): string {
   if (pageText.length <= maxChars) return pageText;
   const keywords = keywordsOf(phrases);
-  const lower = pageText.toLowerCase();
+  // A budget smaller than one window still gets one (smaller) window.
+  const size = Math.min(WINDOW, maxChars);
+  const stride = Math.max(1, Math.floor(size / 2));
 
   const windows: { start: number; score: number }[] = [];
-  for (let start = 0; start < pageText.length; start += STRIDE) {
-    const slice = normalizeText(lower.slice(start, start + WINDOW));
+  for (let start = 0; start < pageText.length; start += stride) {
+    // Normalize each slice of the original text, not a lowercased copy: lowercasing
+    // can change the length (İ becomes two code units) and shift every offset.
+    const slice = normalizeText(pageText.slice(start, start + size));
     const score = keywords.filter((k) => ` ${slice} `.includes(` ${k} `)).length;
     if (score > 0) windows.push({ start, score });
   }
@@ -32,13 +35,13 @@ export function selectPassages(pageText: string, phrases: readonly string[], max
   const picked: number[] = [];
   let used = 0;
   for (const { start } of windows.sort((a, b) => b.score - a.score || a.start - b.start)) {
-    if (used + WINDOW > maxChars) break;
-    if (picked.some((p) => Math.abs(p - start) < WINDOW)) continue;
+    if (used + size > maxChars) break;
+    if (picked.some((p) => Math.abs(p - start) < size)) continue;
     picked.push(start);
-    used += WINDOW;
+    used += size;
   }
   return picked
     .sort((a, b) => a - b)
-    .map((start) => pageText.slice(start, start + WINDOW))
+    .map((start) => pageText.slice(start, start + size))
     .join("\n[…]\n");
 }
