@@ -4,6 +4,8 @@ import { normalizeText } from "./verifier";
 // reader only sees the parts of a page that mention the quote's words.
 
 const WINDOW = 1_500;
+// The top of a page is always included: dates and bylines usually sit there.
+const HEAD = 500;
 const MIN_KEYWORD_LENGTH = 4;
 const STOPWORDS = new Set(["that", "this", "with", "from", "have", "what", "your", "they", "them", "there", "their", "were", "will", "would", "only", "over", "into", "than", "then", "when"]);
 
@@ -12,9 +14,10 @@ export function keywordsOf(phrases: readonly string[]): string[] {
   return [...new Set(words.filter((w) => w.length >= MIN_KEYWORD_LENGTH && !STOPWORDS.has(w)))];
 }
 
-// Returns the page itself if it fits; otherwise the windows that contain the most
-// distinct keywords, in page order, joined with a marker. Each window is an exact
-// slice of the page, so a snippet copied from it can still be found in the page.
+// Returns the page itself if it fits; otherwise the top of the page plus the
+// windows that contain the most distinct keywords, in page order, joined with a
+// marker. Each part is an exact slice of the page, so a snippet copied from it can
+// still be found in the page.
 export function selectPassages(pageText: string, phrases: readonly string[], maxChars: number): string {
   if (pageText.length <= maxChars) return pageText;
   const keywords = keywordsOf(phrases);
@@ -32,16 +35,16 @@ export function selectPassages(pageText: string, phrases: readonly string[], max
   }
   if (windows.length === 0) return pageText.slice(0, maxChars);
 
+  // The head only takes room the windows leave over, so a tight budget still gets a window.
+  const head = Math.min(HEAD, Math.max(0, maxChars - size));
   const picked: number[] = [];
-  let used = 0;
+  let used = head;
   for (const { start } of windows.sort((a, b) => b.score - a.score || a.start - b.start)) {
     if (used + size > maxChars) break;
-    if (picked.some((p) => Math.abs(p - start) < size)) continue;
+    if (start < head || picked.some((p) => Math.abs(p - start) < size)) continue;
     picked.push(start);
     used += size;
   }
-  return picked
-    .sort((a, b) => a - b)
-    .map((start) => pageText.slice(start, start + size))
-    .join("\n[…]\n");
+  const parts = picked.sort((a, b) => a - b).map((start) => pageText.slice(start, start + size));
+  return (head > 0 ? [pageText.slice(0, head), ...parts] : parts).join("\n[…]\n");
 }

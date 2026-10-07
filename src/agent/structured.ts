@@ -14,9 +14,11 @@ export type StructuredRequest<S extends z.ZodType> = {
   maxTokens: number;
 };
 
+// usageKnown is false when the provider reported no token usage, or the call
+// failed in a way that may still be billed (a timeout). costUsd then undercounts.
 export type StructuredResult<T> =
-  | { ok: true; data: T; costUsd: number; latencyMs: number }
-  | { ok: false; reason: string; costUsd: number; latencyMs: number };
+  | { ok: true; data: T; costUsd: number; usageKnown: boolean; latencyMs: number }
+  | { ok: false; reason: string; costUsd: number; usageKnown: boolean; latencyMs: number };
 
 export function toStrictJsonSchema(schema: z.ZodType): Record<string, unknown> {
   const jsonSchema = z.toJSONSchema(schema, { target: "draft-7" }) as Record<string, unknown>;
@@ -46,7 +48,8 @@ export async function callStructured<S extends z.ZodType>(
     ],
   });
   if (!result.ok) {
-    return { ok: false, reason: `${result.error.kind}: ${result.error.message}`, costUsd: 0, latencyMs: result.latencyMs };
+    const reason = `${result.error.kind}: ${result.error.message}`;
+    return { ok: false, reason, costUsd: 0, usageKnown: false, latencyMs: result.latencyMs };
   }
 
   const usage = result.completion.usage;
@@ -54,7 +57,8 @@ export async function callStructured<S extends z.ZodType>(
     ? estimateCostUsd(model, { promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens })
     : 0;
   const choice = result.completion.choices[0];
-  const fail = (reason: string) => ({ ok: false as const, reason, costUsd, latencyMs: result.latencyMs });
+  const usageKnown = Boolean(usage);
+  const fail = (reason: string) => ({ ok: false as const, reason, costUsd, usageKnown, latencyMs: result.latencyMs });
   if (choice?.finish_reason === "length") return fail("ran out of tokens");
 
   let json: unknown;
@@ -65,5 +69,5 @@ export async function callStructured<S extends z.ZodType>(
   }
   const parsed = schema.safeParse(json);
   if (!parsed.success) return fail(`output does not match schema: ${z.prettifyError(parsed.error)}`);
-  return { ok: true, data: parsed.data, costUsd, latencyMs: result.latencyMs };
+  return { ok: true, data: parsed.data, costUsd, usageKnown, latencyMs: result.latencyMs };
 }

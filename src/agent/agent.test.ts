@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { selectPassages } from "./passages";
 import { cleanDate, judgeOutputSchema } from "./schemas";
 import { toStrictJsonSchema } from "./structured";
-import { checkSnippet, normalizeText } from "./verifier";
+import { checkSnippet, mentionsName, mentionsYear, normalizeText } from "./verifier";
 
 const PAGE = `Knoxville News-Sentinel, October 11, 1981. At the Al-Anon meeting a speaker said:
 “Insanity is doing the same thing over and over again, but expecting different results.”`;
@@ -81,6 +81,13 @@ describe("selectPassages", () => {
     expect(out.length).toBeLessThanOrEqual(1_000);
   });
 
+  it("keeps the top of a long page, where dates and bylines usually are", () => {
+    const page = `Published 11 October 1981 by the Knoxville News-Sentinel. ${"x ".repeat(5_000)}${PAGE}${"x ".repeat(5_000)}`;
+    const out = selectPassages(page, ["insanity is doing the same thing"], 3_000);
+    expect(out).toContain("Published 11 October 1981");
+    expect(out).toContain("Al-Anon meeting");
+  });
+
   it("falls back to the start of the page when no keyword appears", () => {
     const page = "x ".repeat(10_000);
     expect(selectPassages(page, ["insanity"], 100)).toBe(page.slice(0, 100));
@@ -104,5 +111,20 @@ describe("toStrictJsonSchema", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required.sort()).toEqual(Object.keys(judgeOutputSchema.shape).sort());
     expect(schema).not.toHaveProperty("$schema");
+  });
+});
+
+describe("mentionsName and mentionsYear", () => {
+  it("keeps a credit only when the page names that person", () => {
+    expect(mentionsName("Rita Mae Brown", "a line from Rita Mae Brown's novel")).toBe(true);
+    expect(mentionsName("Albert Einstein", "often credited to Einstein")).toBe(true);
+    expect(mentionsName("Albert Einstein", PAGE)).toBe(false);
+    expect(mentionsName("Rita Mae Brown (via a character)", "by Brown, 1983")).toBe(true);
+  });
+
+  it("keeps a date only when its year appears on the page", () => {
+    expect(mentionsYear("1981-10-11", PAGE)).toBe(true);
+    expect(mentionsYear("1905", PAGE)).toBe(false);
+    expect(mentionsYear("1981", "item 119812 in the archive")).toBe(false);
   });
 });

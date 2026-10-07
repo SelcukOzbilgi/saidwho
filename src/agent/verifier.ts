@@ -107,3 +107,22 @@ export function checkSnippet(snippet: string, pageText: string): SnippetCheck {
   const allowed = Math.floor(words.length / WORDS_PER_EDIT);
   return { status: fewest <= allowed ? "near" : "not_found", score };
 }
+
+// The reader also reports who a page credits and when. Those claims are kept only
+// if the page itself mentions them: the full name or at least the surname, and
+// the year of a date. Anything else may be the model's own guess.
+export function mentionsName(name: string, pageText: string): boolean {
+  // Possessives would otherwise turn "Brown's" into "browns".
+  const withoutPossessive = (text: string) => text.replace(/['’]s\b/g, "");
+  const full = normalizeText(withoutPossessive(name.replace(/\([^)]*\)/g, " ")));
+  if (!full) return false;
+  const page = ` ${normalizeText(withoutPossessive(pageText))} `;
+  if (page.includes(` ${full} `)) return true;
+  const surname = full.split(" ").at(-1) ?? "";
+  return surname.length >= 3 && page.includes(` ${surname} `);
+}
+
+export function mentionsYear(date: string, pageText: string): boolean {
+  const year = /^\d{4}/.exec(date)?.[0];
+  return Boolean(year) && new RegExp(`(^|\\D)${year}(\\D|$)`).test(pageText);
+}
