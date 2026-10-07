@@ -33,14 +33,18 @@ export type EvalCase = z.infer<typeof evalCaseSchema>;
 export type Verdict = z.infer<typeof verdictSchema>;
 
 export function parseEvalCases(jsonl: string): EvalCase[] {
-  return jsonl
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line, index) => {
-      const result = evalCaseSchema.safeParse(JSON.parse(line));
-      if (!result.success) {
-        throw new Error(`eval case on line ${index + 1} is invalid: ${z.prettifyError(result.error)}`);
-      }
-      return result.data;
-    });
+  return jsonl.split("\n").flatMap((line, index) => {
+    if (line.trim() === "") return [];
+    let json: unknown;
+    try {
+      json = JSON.parse(line);
+    } catch (error) {
+      throw new Error(`eval case on line ${index + 1} is not valid JSON: ${(error as Error).message}`);
+    }
+    const result = evalCaseSchema.safeParse(json);
+    if (!result.success) {
+      throw new Error(`eval case on line ${index + 1} is invalid: ${z.prettifyError(result.error)}`);
+    }
+    return [result.data];
+  });
 }

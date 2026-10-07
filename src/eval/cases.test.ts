@@ -42,4 +42,12 @@ describe("parseEvalCases", () => {
   it("names the line of a broken entry", () => {
     expect(() => parseEvalCases('{"id":"x"}\n')).toThrow(/line 1/);
   });
+
+  it("counts blank lines when naming the line", () => {
+    expect(() => parseEvalCases('\n{"id":"x"}\n')).toThrow(/line 2/);
+  });
+
+  it("names the line of malformed JSON", () => {
+    expect(() => parseEvalCases('\n{"id":\n')).toThrow(/line 2 is not valid JSON/);
+  });
 });
