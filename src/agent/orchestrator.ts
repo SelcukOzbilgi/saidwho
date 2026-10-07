@@ -147,6 +147,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       exactMatch: /"[^"]+"/.test(query),
     });
     if (!res.ok) {
+      // A failed search may still be billed (a timeout, say), so its cost is unknown.
+      unknownCostCalls++;
       onEvent({ type: "search_failed", query, reason: res.error.kind });
       continue;
     }

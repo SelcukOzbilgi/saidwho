@@ -211,6 +211,16 @@ describe("investigate", () => {
     expect(verdict?.type === "verdict" && verdict.unknownIds).toEqual(["n9"]);
   });
 
+  it("counts a failed search as a call with unknown cost", async () => {
+    const tavily: TavilyClient = {
+      ...fakeTavily(),
+      search: async () => ({ ok: false, latencyMs: 5, error: { provider: "tavily", kind: "timeout", message: "slow" } }) as never,
+    };
+    const events = await run({ tavily });
+    expect(events.filter((e) => e.type === "search_failed")).toHaveLength(2);
+    expect(events.at(-1)).toMatchObject({ type: "done", unknownCostCalls: 2 });
+  });
+
   it("drops pages on an excluded site even if the search returns them", async () => {
     const tavily = fakeTavily(["https://www.quoteinvestigator.com/2017/03/23/same/", "https://news.example.org/1981"]);
     const events = await run({ tavily });
