@@ -169,10 +169,13 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   }
   onEvent({ type: "pages_ready", pages: pages.size, droppedExcluded });
 
-  // 3) Readers + 4) Verifier, each node reported as soon as its page is read
+  // 3) Readers + 4) Verifier, each node reported as soon as its page is read. Node
+  // ids follow search order (n3 is the third page), not which reader finished first,
+  // so the same search results always give the judge the same evidence in the same order.
   const phrases = [quote, ...plan.data.variants];
   const nodes: EvidenceNode[] = [];
-  await mapLimit([...pages.entries()].slice(0, MAX_PAGES), READER_CONCURRENCY, async ([url, page]) => {
+  const entries = [...pages.entries()].slice(0, MAX_PAGES).map(([url, page], i) => ({ url, page, id: `n${i + 1}` }));
+  await mapLimit(entries, READER_CONCURRENCY, async ({ url, page, id }) => {
     if (mustStop()) return;
     const passage = selectPassages(page.text, phrases, READER_CHARS);
     const read = await callStructured(nebius, {
@@ -198,8 +201,10 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
 
     if (!read.ok) return report("failed", read.reason);
     if (!read.data.contains_quote || !read.data.exact_snippet) return report("no_quote");
-    const { exact_snippet: snippet, attributed_to: credit, cited_source: source } = read.data;
-    if ([snippet, credit, source].some((field) => (field?.length ?? 0) > MAX_FIELD_CHARS)) return report("too_long");
+    const { exact_snippet: snippet, attributed_to: credit } = read.data;
+    // Every text field is stored as returned, so every one is capped, dates included.
+    const fields = Object.values(read.data).filter((value) => typeof value === "string");
+    if (fields.some((field) => field.length > MAX_FIELD_CHARS)) return report("too_long");
 
     const pageText = `${page.title}\n${page.text}`;
     const keepDate = (raw: string | null) => {
@@ -209,7 +214,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     const pageDate = keepDate(read.data.page_date);
     const citedSourceDate = keepDate(read.data.cited_source_date);
     const node: EvidenceNode = {
-      id: `n${nodes.length + 1}`,
+      id,
       url,
       host,
       // Titles come from the page too, so they get the same cap.
@@ -227,12 +232,14 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   });
 
   // 5) Judge, on verified evidence only. With none there is nothing to judge.
-  const verified = nodes.filter((n) => n.check.status !== "not_found");
+  // A run stopped during the last readers reports why before anything else.
+  if (mustStop()) return finish();
+  const pageOrder = (n: EvidenceNode) => Number(n.id.slice(1));
+  const verified = nodes.filter((n) => n.check.status !== "not_found").sort((a, b) => pageOrder(a) - pageOrder(b));
   if (verified.length === 0) {
     onEvent({ type: "judge_skipped", reason: "no verified evidence" });
     return finish();
   }
-  if (mustStop()) return finish();
   const evidence = verified.map((n) => ({
     id: n.id,
     site: n.host,

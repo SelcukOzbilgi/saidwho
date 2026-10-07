@@ -15,6 +15,8 @@ type Replies = {
   plan?: PlannerOutput | null;
   read?: (user: string) => ReaderOutput | null;
   verdict?: JudgeOutput | null;
+  // Milliseconds a reader call takes, by its prompt.
+  readDelay?: (user: string) => number;
 };
 
 const PLAN: PlannerOutput = { variants: [], candidate_authors: ["Albert Einstein"], queries: ["origin of the insanity quote"] };
@@ -37,16 +39,20 @@ const VERDICT: JudgeOutput = {
 };
 
 // A null reply is a failed call (an API error).
-function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[] } {
+function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[]; prompts: Map<string, string> } {
   const calls: string[] = [];
+  const prompts = new Map<string, string>();
   return {
     calls,
+    prompts,
     listModels: async () => ({ ok: true, ids: [] }),
     chat: async (params: ChatParams) => {
       const format = params.response_format as { json_schema: { name: string } };
       const name = format.json_schema.name;
       calls.push(name);
       const user = String(params.messages.at(-1)?.content ?? "");
+      prompts.set(name, user);
+      if (name === "read_page") await new Promise((resolve) => setTimeout(resolve, replies.readDelay?.(user) ?? 0));
       const data =
         name === "plan"
           ? replies.plan === undefined ? PLAN : replies.plan
@@ -118,6 +124,41 @@ describe("investigate", () => {
   it("never puts page text in an event", async () => {
     const events = await run();
     expect(JSON.stringify(events)).not.toContain(SECRET);
+  });
+
+  it("drops a reading whose date field is long enough to be page text", async () => {
+    const events = await run({ nebius: fakeNebius({ read: () => ({ ...READ, page_date: PAGE_TEXT.repeat(5) }) }) });
+    expect(events.find((e) => e.type === "page_read")).toMatchObject({ outcome: "too_long" });
+    expect(JSON.stringify(events)).not.toContain(SECRET);
+  });
+
+  it("numbers nodes by search order, not by which reader finishes first", async () => {
+    const nebius = fakeNebius({ readDelay: (user) => (user.includes("/first") ? 30 : 0) });
+    const events = await run({ nebius, tavily: fakeTavily(["https://a.example.org/first", "https://b.example.org/second"]) });
+    const added = events.flatMap((e) => (e.type === "node_added" ? [`${e.node.id} ${e.node.host}`] : []));
+    expect(added).toEqual(["n2 b.example.org", "n1 a.example.org"]);
+    const prompt = nebius.prompts.get("verdict") ?? "";
+    expect(prompt.indexOf('"n1"')).toBeGreaterThan(-1);
+    expect(prompt.indexOf('"n1"')).toBeLessThan(prompt.indexOf('"n2"'));
+  });
+
+  it("says why it stopped when cancelled during the last reader", async () => {
+    const controller = new AbortController();
+    const nebius = fakeNebius({
+      read: () => {
+        controller.abort();
+        return { ...READ, contains_quote: false, exact_snippet: null };
+      },
+    });
+    const events = await run({ nebius, signal: controller.signal });
+    expect(types(events).slice(-3)).toEqual(["page_read", "aborted", "done"]);
+  });
+
+  it("stops before the judge once the readers use up the budget", async () => {
+    const nebius = fakeNebius();
+    const events = await run({ nebius, maxUsd: 0.0004 });
+    expect(nebius.calls).toEqual(["plan", "read_page"]);
+    expect(types(events).slice(-2)).toEqual(["budget_exceeded", "done"]);
   });
 
   it("cuts an over-long page title", async () => {
