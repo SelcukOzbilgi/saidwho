@@ -94,9 +94,11 @@ async function main(): Promise<void> {
         }
         break;
       case "budget_exceeded":
+        if (reads.total > 0) printNodes();
         console.log(`\nStopped: estimated spend $${event.spentUsd.toFixed(4)} reached the $${event.maxUsd} cap`);
         break;
       case "aborted":
+        if (reads.total > 0) printNodes();
         console.log("\nStopped: aborted");
         break;
       case "done":
@@ -145,7 +147,9 @@ async function main(): Promise<void> {
   });
   saveLog(caseId, events);
   const last = events.at(-1);
-  if (events.some((e) => e.type === "plan_failed") || last?.type !== "done") process.exitCode = 1;
+  // Exit 0 only when the run reached the judge's verdict or found nothing to judge.
+  const finished = events.some((e) => e.type === "verdict" || e.type === "judge_skipped");
+  if (!finished || last?.type !== "done") process.exitCode = 1;
 }
 
 main().catch((err: unknown) => {
