@@ -8,7 +8,7 @@ const partialDate = z
   .regex(/^\d{4}(-\d{2}(-\d{2})?)?$/, "use YYYY, YYYY-MM or YYYY-MM-DD")
   .refine(isRealDate, "not a real calendar date");
 
-function isRealDate(value: string): boolean {
+export function isRealDate(value: string): boolean {
   const [year, month = 1, day = 1] = value.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCFullYear(year);
