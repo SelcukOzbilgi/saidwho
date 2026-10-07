@@ -8,7 +8,7 @@ Each line records:
 - a verdict: `misattributed`, `correct`, `contested` or `no_known_source`
 - links to the pages the answer comes from
 
-Most answers come from [Quote Investigator](https://quoteinvestigator.com/). The rest come from original records, like the British parliamentary record for a Churchill speech, or from encyclopedias and academic papers. I checked each date and wording against the page itself. During test runs, Said Who? won't be allowed to search sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia. It has to find the trail on its own.
+Most answers come from [Quote Investigator](https://quoteinvestigator.com/). The rest come from original records, like the British parliamentary record for a Churchill speech, or from encyclopedias and academic papers. I checked each date and wording against the page itself. During test runs, Said Who? isn't allowed to search sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia, or the pages each answer comes from. It has to find the trail on its own.
 
 Not every quote is misattributed. Six of them really were said by the person they're credited to. A tool that calls every famous quote fake would fail those.
 

@@ -58,7 +58,7 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] Project setup, with key handling and automatic checks on every change
 - [x] Tried out all four Nemotron models, and checked that Tavily can read old sources like archive.org and Wikisource
 - [x] A [test set](eval/) of 20 quotes whose real origins are already known
-- [ ] First full investigation, start to finish
+- [x] [First full investigation](https://github.com/SelcukOzbilgi/saidwho/releases/tag/v0.1.0), start to finish, from the command line
 - [ ] The live timeline and verdict page
 - [ ] A public demo with finished example cases
 
@@ -81,6 +81,8 @@ pnpm dev
 ```
 
 `pnpm test` runs the tests. `pnpm smoke:nebius` and `pnpm smoke:tavily` make a few small real calls to check that your keys work.
+
+`pnpm investigate insanity-same-thing` runs one quote from the [test set](eval/) and prints each step, the verdict and what it cost. Any `id` from `eval/quotes.jsonl` works. One run costs under half a cent of Nebius usage and 5 Tavily credits, and it stops on its own if it ever reaches $0.50.
 
 ## Security
 
