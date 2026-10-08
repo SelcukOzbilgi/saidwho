@@ -23,9 +23,12 @@ export const BYOK_MAX_USD = 0.5;
 export const TRIAL_MAX_USD = 0.1;
 // What a trial run reserves from the daily budget before it starts: its Nebius
 // limit, five searches at one credit each ($0.04), and the most one call can add
-// after starting just under the limit. The largest is an Ultra second judge: up
-// to 8,000 output tokens ($0.024) on a prompt of a few thousand tokens.
-export const TRIAL_RESERVE_USD = 0.18;
+// after starting just under the limit. Only one can: the next check stops the run.
+// The largest is an Ultra second judge: up to 8,000 output tokens ($0.024) on a
+// prompt of at most about 30,000 characters (20 nodes with four fields of up to
+// 300 characters each, plus the quote), which is under 15,000 tokens ($0.015)
+// even at two characters a token. That comes to $0.18; the rest is margin.
+export const TRIAL_RESERVE_USD = 0.2;
 const HEARTBEAT_MS = 15_000;
 // The route may run for 300 s (maxDuration). A run starts no new paid call after
 // RUN_DEADLINE_MS, and a call already running gives up after NEBIUS_TIMEOUT_MS,
