@@ -8,7 +8,7 @@ import type { EvidenceNode, RunEvent } from "./events";
 import { MODELS, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { cleanDate, judgeOutputSchema, plannerOutputSchema, readerOutputSchema } from "./schemas";
-import { callStructured, type StructuredResult } from "./structured";
+import { callStructured, type FailureCause, type StructuredResult } from "./structured";
 import { checkSnippet, mentionsName, mentionsYear, normalizeText } from "./verifier";
 
 // Sites that already wrote up where famous quotes come from. The eval excludes
@@ -41,6 +41,11 @@ export type InvestigationOptions = {
   // Estimated Nebius spend after which no new model call starts.
   maxUsd?: number;
 };
+
+// Failures a second attempt can fix. A rejected key, an empty account, a rate
+// limit or a request the provider refuses would fail the same way again.
+const worthRetrying = (cause: FailureCause): boolean =>
+  !["auth", "quota", "rate_limit", "bad_request", "not_found"].includes(cause);
 
 export const hostOf = (url: string): string => {
   try {
@@ -102,12 +107,13 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   onEvent({ type: "started", quote, popularAttribution, language, excludeDomains: excluded });
   if (mustStop()) return finish();
 
-  // 1) Planner
-  const plan = await callStructured(nebius, {
+  // 1) Planner. Thinking can use up the whole token budget before any answer, so
+  // a failed plan is tried once more with thinking off. If that fails too, the
+  // run still searches for the exact quote rather than ending with nothing.
+  const planRequest = {
     model: MODELS.super,
     schema: plannerOutputSchema,
     name: "plan",
-    thinking: true,
     maxTokens: 8_000,
     system:
       "You plan a search for the earliest verifiable appearance of a saying. " +
@@ -117,23 +123,30 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "Start with the saying in double quotes, then queries about its origin and first appearance " +
       "(for example: earliest newspaper, book or speech where it appeared), and one per candidate author.",
     user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution}\nLanguage: ${language}`,
-  });
-  const planSpend = spend(MODELS.super, plan);
+  };
+  let plan = await callStructured(nebius, { ...planRequest, thinking: true });
   if (!plan.ok) {
-    onEvent({ type: "plan_failed", ...planSpend, reason: plan.reason });
-    return finish();
+    onEvent({ type: "plan_failed", ...spend(MODELS.super, plan), reason: plan.reason });
+    if (!worthRetrying(plan.cause)) return finish();
+    if (mustStop()) return finish();
+    onEvent({ type: "escalated", step: "plan", from: "super", to: "super", thinking: false, reason: plan.reason, url: null });
+    plan = await callStructured(nebius, { ...planRequest, thinking: false });
+    if (!plan.ok) onEvent({ type: "plan_failed", ...spend(MODELS.super, plan), reason: plan.reason });
   }
+  const variants = plan.ok ? plan.data.variants : [];
   // The exact phrase always goes first, even if the planner leaves it out (or returns nothing).
-  const queries = [`"${quote}"`, ...plan.data.queries]
+  const queries = [`"${quote}"`, ...(plan.ok ? plan.data.queries : [])]
     .filter((q, i, all) => all.findIndex((other) => normalizeText(other) === normalizeText(q)) === i)
     .slice(0, MAX_QUERIES);
-  onEvent({
-    type: "planned",
-    ...planSpend,
-    variants: plan.data.variants,
-    candidateAuthors: plan.data.candidate_authors,
-    queries,
-  });
+  if (plan.ok) {
+    onEvent({
+      type: "planned",
+      ...spend(MODELS.super, plan),
+      variants,
+      candidateAuthors: plan.data.candidate_authors,
+      queries,
+    });
+  }
 
   // 2) Search, with page text included so no separate extract call is needed
   const pages = new Map<string, { title: string; text: string }>();
@@ -176,7 +189,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // 3) Readers + 4) Verifier, each node reported as soon as its page is read. Node
   // ids follow search order (n3 is the third page), not which reader finished first,
   // so the same search results always give the judge the same evidence in the same order.
-  const phrases = [quote, ...plan.data.variants];
+  const phrases = [quote, ...variants];
   const nodes: EvidenceNode[] = [];
   const entries = [...pages.entries()].slice(0, MAX_PAGES).map(([url, page], i) => ({ url, page, id: `n${i + 1}` }));
   await mapLimit(entries, READER_CONCURRENCY, async ({ url, page, id }) => {
@@ -196,7 +209,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         "attributed_to: who the page credits, or null. page_date: when this page was published. " +
         "cited_source: an earlier work the page names as where the saying appeared, with cited_source_date. " +
         "Dates as YYYY, YYYY-MM or YYYY-MM-DD; null when the page does not say. Never guess.",
-      user: `Saying: "${quote}"\nVariants: ${plan.data.variants.join(" | ")}\n\nPage: ${page.title}\nURL: ${url}\n\n${passage}`,
+      user: `Saying: "${quote}"\nVariants: ${variants.join(" | ")}\n\nPage: ${page.title}\nURL: ${url}\n\n${passage}`,
     });
     const readSpend = spend(MODELS.lightning, read);
     const host = hostOf(url);

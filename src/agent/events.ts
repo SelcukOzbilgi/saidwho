@@ -48,7 +48,21 @@ export const runEventSchema = z.discriminatedUnion("type", [
     candidateAuthors: z.array(z.string()),
     queries: z.array(z.string()),
   }),
+  // A failed plan is tried once more. When no planned event follows, the run
+  // searches for the exact quote alone, with no variants.
   z.strictObject({ type: z.literal("plan_failed"), ...spendSchema, reason: z.string() }),
+  // A step is about to be tried again because a check failed: on a bigger model,
+  // or on the same one with thinking off when thinking used up the token budget.
+  // url names the page for a re-read and is null otherwise.
+  z.strictObject({
+    type: z.literal("escalated"),
+    step: z.enum(["plan", "read", "judge"]),
+    from: tierSchema,
+    to: tierSchema,
+    thinking: z.boolean(),
+    reason: z.string(),
+    url: z.string().nullable(),
+  }),
   z.strictObject({
     type: z.literal("searched"),
     query: z.string(),

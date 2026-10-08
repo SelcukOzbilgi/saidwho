@@ -11,10 +11,16 @@ const QUOTE = "Insanity is doing the same thing over and over again and expectin
 const SECRET = "SENTINEL-PAGE-BODY-7f3a";
 const PAGE_TEXT = `Knoxville News-Sentinel, 1981. ${SECRET} At the meeting a speaker said: "${QUOTE}." ${SECRET}`;
 
+// One model call as the fake sees it, so a reply can depend on the model and thinking setting.
+type Call = { name: string; model: string; thinking: boolean; user: string };
+// null is a failed call (a provider error), "auth" a rejected key and "length" a
+// call that ran out of tokens.
+type Reply<T> = T | null | "auth" | "length";
+
 type Replies = {
-  plan?: PlannerOutput | null;
-  read?: (user: string) => ReaderOutput | null;
-  verdict?: JudgeOutput | null;
+  plan?: (call: Call) => Reply<PlannerOutput>;
+  read?: (call: Call) => Reply<ReaderOutput>;
+  verdict?: (call: Call) => Reply<JudgeOutput>;
   // Milliseconds a reader call takes, by its prompt.
   readDelay?: (user: string) => number;
 };
@@ -38,32 +44,37 @@ const VERDICT: JudgeOutput = {
   rationale: "The 1981 newspaper [n1] has it with no credit to Einstein.",
 };
 
-// A null reply is a failed call (an API error).
-function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[]; prompts: Map<string, string> } {
+function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[]; log: Call[]; prompts: Map<string, string> } {
   const calls: string[] = [];
+  const log: Call[] = [];
   const prompts = new Map<string, string>();
   return {
     calls,
+    log,
     prompts,
     listModels: async () => ({ ok: true, ids: [] }),
     chat: async (params: ChatParams) => {
       const format = params.response_format as { json_schema: { name: string } };
       const name = format.json_schema.name;
-      calls.push(name);
       const user = String(params.messages.at(-1)?.content ?? "");
+      const kwargs = params.chat_template_kwargs as { enable_thinking: boolean };
+      const call = { name, model: params.model, thinking: kwargs.enable_thinking, user };
+      calls.push(name);
+      log.push(call);
       prompts.set(name, user);
       if (name === "read_page") await new Promise((resolve) => setTimeout(resolve, replies.readDelay?.(user) ?? 0));
-      const data =
+      const reply =
         name === "plan"
-          ? replies.plan === undefined ? PLAN : replies.plan
+          ? (replies.plan ?? (() => PLAN))(call)
           : name === "read_page"
-            ? (replies.read ?? (() => READ))(user)
-            : replies.verdict === undefined ? VERDICT : replies.verdict;
-      if (data === null) {
-        return { ok: false, error: { provider: "nebius", kind: "server", message: "boom" }, latencyMs: 5 } as never;
+            ? (replies.read ?? (() => READ))(call)
+            : (replies.verdict ?? (() => VERDICT))(call);
+      if (reply === null || reply === "auth") {
+        const kind = reply === "auth" ? "auth" : "upstream";
+        return { ok: false, error: { provider: "nebius", kind, message: "boom" }, latencyMs: 5 } as never;
       }
       const completion = {
-        choices: [{ finish_reason: "stop", message: { content: JSON.stringify(data) } }],
+        choices: [{ finish_reason: reply === "length" ? "length" : "stop", message: { content: reply === "length" ? "" : JSON.stringify(reply) } }],
         usage: { prompt_tokens: 1_000, completion_tokens: 100 },
       };
       return { ok: true, completion, latencyMs: 5 } as never;
@@ -158,7 +169,7 @@ describe("investigate", () => {
     const controller = new AbortController();
     const nebius = fakeNebius({
       readDelay: (user) => (user.includes("/p1") ? 0 : 20),
-      read: (user) => {
+      read: ({ user }) => {
         if (user.includes("/p1")) controller.abort();
         return READ;
       },
@@ -193,9 +204,40 @@ describe("investigate", () => {
     expect(node?.type === "node_added" && node.node.title.length).toBe(300);
   });
 
-  it("stops after a failed plan without searching", async () => {
-    const events = await run({ nebius: fakeNebius({ plan: null }) });
+  it("plans again with thinking off when thinking uses up the tokens", async () => {
+    const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? "length" : PLAN) });
+    const events = await run({ nebius });
+    expect(types(events).slice(0, 5)).toEqual(["started", "plan_failed", "escalated", "planned", "searched"]);
+    expect(events[2]).toMatchObject({ step: "plan", from: "super", to: "super", thinking: false, reason: "ran out of tokens" });
+    expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
+    expect(events.at(-2)?.type).toBe("verdict");
+  });
+
+  it("searches for the exact quote alone when both plans fail", async () => {
+    const tavily = fakeTavily();
+    const searched: string[] = [];
+    const events = await run({
+      nebius: fakeNebius({ plan: () => null }),
+      tavily: { ...tavily, search: async (query, options) => (searched.push(query), tavily.search(query, options)) },
+    });
+    expect(types(events).slice(0, 5)).toEqual(["started", "plan_failed", "escalated", "plan_failed", "searched"]);
+    expect(types(events)).not.toContain("planned");
+    expect(searched).toEqual([`"${QUOTE}"`]);
+    expect(events.at(-2)?.type).toBe("verdict");
+  });
+
+  it("does not plan again when the key is rejected", async () => {
+    const nebius = fakeNebius({ plan: () => "auth" });
+    const events = await run({ nebius });
     expect(types(events)).toEqual(["started", "plan_failed", "done"]);
+    expect(nebius.calls).toEqual(["plan"]);
+  });
+
+  it("does not plan again once the first plan uses up the budget", async () => {
+    const nebius = fakeNebius({ plan: () => "length" });
+    const events = await run({ nebius, maxUsd: 0.0001 });
+    expect(types(events)).toEqual(["started", "plan_failed", "budget_exceeded", "done"]);
+    expect(nebius.calls).toEqual(["plan"]);
   });
 
   it("skips the judge when no snippet is found on its page", async () => {
@@ -206,7 +248,7 @@ describe("investigate", () => {
   });
 
   it("flags a verdict that cites a node that does not exist", async () => {
-    const events = await run({ nebius: fakeNebius({ verdict: { ...VERDICT, rationale: "See [n1] and [n9]." } }) });
+    const events = await run({ nebius: fakeNebius({ verdict: () => ({ ...VERDICT, rationale: "See [n1] and [n9]." }) }) });
     const verdict = events.find((e) => e.type === "verdict");
     expect(verdict?.type === "verdict" && verdict.unknownIds).toEqual(["n9"]);
   });

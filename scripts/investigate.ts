@@ -54,6 +54,9 @@ async function main(): Promise<void> {
       case "plan_failed":
         console.log(`1) Planner failed: ${event.reason}`);
         break;
+      case "escalated":
+        console.log(`   trying again on ${event.to}${event.thinking ? "" : " with thinking off"}: ${event.reason}`);
+        break;
       case "planned":
         console.log(`1) Planner (${event.tier}, ${event.latencyMs}ms): ${event.variants.length} variants, ${event.queries.length} queries`);
         for (const q of event.queries) console.log(`   - ${q}`);

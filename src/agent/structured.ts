@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { NebiusClient } from "../lib/server/providers/nebius";
+import type { ErrorKind } from "../lib/server/safe-error";
 import { estimateCostUsd, type ModelSpec } from "./models";
 
 export type StructuredRequest<S extends z.ZodType> = {
@@ -14,11 +15,15 @@ export type StructuredRequest<S extends z.ZodType> = {
   maxTokens: number;
 };
 
+// Why a call failed: the provider's error kind, the token budget running out
+// (often all of it spent thinking), or output that is not valid JSON for the schema.
+export type FailureCause = ErrorKind | "out_of_tokens" | "bad_output";
+
 // usageKnown is false when the provider reported no token usage, or the call
 // failed in a way that may still be billed (a timeout). costUsd then undercounts.
 export type StructuredResult<T> =
   | { ok: true; data: T; costUsd: number; usageKnown: boolean; latencyMs: number }
-  | { ok: false; reason: string; costUsd: number; usageKnown: boolean; latencyMs: number };
+  | { ok: false; cause: FailureCause; reason: string; costUsd: number; usageKnown: boolean; latencyMs: number };
 
 export function toStrictJsonSchema(schema: z.ZodType): Record<string, unknown> {
   const jsonSchema = z.toJSONSchema(schema, { target: "draft-7" }) as Record<string, unknown>;
@@ -49,7 +54,7 @@ export async function callStructured<S extends z.ZodType>(
   });
   if (!result.ok) {
     const reason = `${result.error.kind}: ${result.error.message}`;
-    return { ok: false, reason, costUsd: 0, usageKnown: false, latencyMs: result.latencyMs };
+    return { ok: false, cause: result.error.kind, reason, costUsd: 0, usageKnown: false, latencyMs: result.latencyMs };
   }
 
   const usage = result.completion.usage;
@@ -58,16 +63,23 @@ export async function callStructured<S extends z.ZodType>(
     : 0;
   const choice = result.completion.choices[0];
   const usageKnown = Boolean(usage);
-  const fail = (reason: string) => ({ ok: false as const, reason, costUsd, usageKnown, latencyMs: result.latencyMs });
-  if (choice?.finish_reason === "length") return fail("ran out of tokens");
+  const fail = (cause: FailureCause, reason: string) => ({
+    ok: false as const,
+    cause,
+    reason,
+    costUsd,
+    usageKnown,
+    latencyMs: result.latencyMs,
+  });
+  if (choice?.finish_reason === "length") return fail("out_of_tokens", "ran out of tokens");
 
   let json: unknown;
   try {
     json = JSON.parse(choice?.message.content ?? "");
   } catch {
-    return fail("content is not valid JSON");
+    return fail("bad_output", "content is not valid JSON");
   }
   const parsed = schema.safeParse(json);
-  if (!parsed.success) return fail(`output does not match schema: ${z.prettifyError(parsed.error)}`);
+  if (!parsed.success) return fail("bad_output", `output does not match schema: ${z.prettifyError(parsed.error)}`);
   return { ok: true, data: parsed.data, costUsd, usageKnown, latencyMs: result.latencyMs };
 }
