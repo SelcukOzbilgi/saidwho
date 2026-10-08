@@ -289,10 +289,52 @@ describe("investigate", () => {
     expect(nebius.log.filter((c) => c.name === "read_page").map((c) => c.model)).toEqual([MODELS.lightning.id, MODELS.super.id]);
   });
 
-  it("flags a verdict that cites a node that does not exist", async () => {
-    const events = await run({ nebius: fakeNebius({ verdict: () => ({ ...VERDICT, rationale: "See [n1] and [n9]." }) }) });
-    const verdict = events.find((e) => e.type === "verdict");
-    expect(verdict?.type === "verdict" && verdict.unknownIds).toEqual(["n9"]);
+  it("flags a verdict that cites a node that does not exist and asks Ultra", async () => {
+    const nebius = fakeNebius({
+      verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, rationale: "See [n1] and [n9]." } : VERDICT),
+    });
+    const events = await run({ nebius });
+    expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "verdict", "done"]);
+    const verdicts = events.flatMap((e) => (e.type === "verdict" ? [[e.tier, e.unknownIds]] : []));
+    expect(verdicts).toEqual([
+      ["super", ["n9"]],
+      ["ultra", []],
+    ]);
+    expect(events.at(-3)).toMatchObject({ step: "judge", from: "super", to: "ultra", thinking: true });
+  });
+
+  it("does not ask Ultra about a verdict that stands, even with low confidence", async () => {
+    const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, confidence: "low" }) });
+    await run({ nebius });
+    expect(nebius.log.map((c) => c.model)).not.toContain(MODELS.ultra.id);
+  });
+
+  it("judges again with thinking off when thinking uses up the tokens", async () => {
+    const nebius = fakeNebius({ verdict: ({ thinking }) => (thinking ? "length" : VERDICT) });
+    const events = await run({ nebius });
+    expect(types(events).slice(-4)).toEqual(["judge_failed", "escalated", "verdict", "done"]);
+    expect(events.at(-3)).toMatchObject({ from: "super", to: "super", thinking: false });
+    expect(nebius.log.filter((c) => c.name === "verdict").map((c) => [c.model, c.thinking])).toEqual([
+      [MODELS.super.id, true],
+      [MODELS.super.id, false],
+    ]);
+  });
+
+  it("keeps Super's verdict when Ultra fails", async () => {
+    const nebius = fakeNebius({
+      verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, rationale: "See [n9]." } : null),
+    });
+    const events = await run({ nebius });
+    expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "judge_failed", "done"]);
+    expect(events.at(-2)).toMatchObject({ tier: "ultra" });
+  });
+
+  it("does not ask Ultra once the budget is spent", async () => {
+    const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, rationale: "See [n9]." }) });
+    // Plan, one read and the first verdict fit; nothing after them does.
+    const events = await run({ nebius, maxUsd: 0.0008 });
+    expect(types(events).slice(-3)).toEqual(["verdict", "budget_exceeded", "done"]);
+    expect(nebius.calls).toEqual(["plan", "read_page", "verdict"]);
   });
 
   it("counts a failed search as a call with unknown cost", async () => {

@@ -86,6 +86,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("node_added"), node: evidenceNodeSchema }),
   z.strictObject({ type: z.literal("judge_skipped"), reason: z.string() }),
+  // A run can carry two verdicts when Ultra judges again after Super (see
+  // escalated); the last one stands.
   z.strictObject({
     type: z.literal("verdict"),
     ...spendSchema,

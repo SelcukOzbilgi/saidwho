@@ -44,6 +44,7 @@ async function main(): Promise<void> {
   const nodes: EvidenceNode[] = [];
   const reads = { total: 0, failed: 0, tooLong: 0, again: 0 };
   let searchCredits = 0;
+  let judgePrinted = false;
 
   const print = (event: RunEvent): void => {
     switch (event.type) {
@@ -83,13 +84,17 @@ async function main(): Promise<void> {
       case "judge_skipped":
       case "verdict":
       case "judge_failed":
-        printNodes();
-        console.log("\n5) Judge (super)");
+        // Ultra may judge after Super, so the reader summary and heading print once.
+        if (!judgePrinted) {
+          judgePrinted = true;
+          printNodes();
+          console.log("\n5) Judge");
+        }
         if (event.type === "judge_skipped") console.log(`   skipped: ${event.reason}, so no verdict`);
-        if (event.type === "judge_failed") console.log(`   failed: ${event.reason}`);
+        if (event.type === "judge_failed") console.log(`   ${event.tier} failed: ${event.reason}`);
         if (event.type === "verdict") {
           const j = event.verdict;
-          console.log(`   verdict:   ${j.verdict} (${j.confidence})   expected: ${evalCase.verdict}`);
+          console.log(`   ${event.tier} verdict: ${j.verdict} (${j.confidence})   expected: ${evalCase.verdict}`);
           console.log(`   earliest:  ${j.earliest_author ?? "unknown"}, ${j.earliest_date ?? "?"} [${j.earliest_node ?? "-"}]`);
           console.log(`   expected:  ${evalCase.earliest.author ?? "unknown"}, ${evalCase.earliest.date ?? "?"} (${evalCase.earliest.work})`);
           console.log(`   rationale: ${j.rationale}`);
@@ -99,11 +104,11 @@ async function main(): Promise<void> {
         }
         break;
       case "budget_exceeded":
-        if (reads.total > 0) printNodes();
+        if (reads.total > 0 && !judgePrinted) printNodes();
         console.log(`\nStopped: estimated spend $${event.spentUsd.toFixed(4)} reached the $${event.maxUsd} cap`);
         break;
       case "aborted":
-        if (reads.total > 0) printNodes();
+        if (reads.total > 0 && !judgePrinted) printNodes();
         console.log("\nStopped: aborted");
         break;
       case "done":

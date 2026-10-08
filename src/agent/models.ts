@@ -1,6 +1,7 @@
 // Model tiers on Nebius Token Factory. Prices are USD per 1M tokens.
-// Escalation moves up a tier only when a check fails (invalid JSON, low
-// confidence, conflicting dates); see the orchestrator.
+// A step moves up a tier only when a check fails (a failed call, a snippet not
+// on its page, a verdict pointing at unverified evidence);
+// see the orchestrator.
 
 export type Tier = "lightning" | "nano" | "super" | "ultra";
 

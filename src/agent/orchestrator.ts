@@ -1,5 +1,5 @@
 // One investigation, start to finish:
-// Planner (Super) -> Tavily search -> Readers (Lightning) -> Verifier (code) -> Judge (Super).
+// Planner (Super) -> Tavily search -> Readers (Lightning) -> Verifier (code) -> Judge (Super, then Ultra if needed).
 // A step whose check fails is tried once more, on a bigger model or with thinking off.
 // Every step is reported through onEvent (see events.ts); nothing is printed or stored here.
 
@@ -298,11 +298,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     cited_source: n.reader.cited_source,
     cited_source_date: n.citedSourceDate,
   }));
-  const judge = await callStructured(nebius, {
-    model: MODELS.super,
+  const judgeRequest = {
     schema: judgeOutputSchema,
     name: "verdict",
-    thinking: true,
     maxTokens: 8_000,
     system:
       "You decide where a saying really comes from, using only the evidence nodes given. Every node's snippet was found on its page; " +
@@ -315,16 +313,37 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "only as YYYY, YYYY-MM or YYYY-MM-DD, or null. earliest_author: only the person's name, or null if unknown. " +
       "In the rationale, cite node ids in brackets like [n2] for every claim. If the evidence is thin, say so and lower confidence.",
     user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}`,
-  });
-  const judgeSpend = spend(MODELS.super, judge);
-  if (!judge.ok) {
-    onEvent({ type: "judge_failed", ...judgeSpend, reason: judge.reason });
-    return finish();
-  }
+  };
   const known = new Set(verified.map((n) => n.id));
-  const cited = [...judge.data.rationale.matchAll(/\[(n\d+)\]/g)].map((m) => m[1]);
-  const pointers = [judge.data.earliest_node, judge.data.misattribution_node].filter((id): id is string => id !== null);
-  const unknownIds = [...new Set([...cited, ...pointers].filter((id) => !known.has(id)))];
-  onEvent({ type: "verdict", ...judgeSpend, verdict: judge.data, unknownIds });
+
+  // Judges on one model and reports the result. Returns why a second judge
+  // should try, or null when the verdict stands.
+  const judgeWith = async (model: ModelSpec, thinking: boolean): Promise<{ retry: string | null; outOfTokens: boolean }> => {
+    const judge = await callStructured(nebius, { ...judgeRequest, model, thinking });
+    const judgeSpend = spend(model, judge);
+    if (!judge.ok) {
+      onEvent({ type: "judge_failed", ...judgeSpend, reason: judge.reason });
+      return { retry: worthRetrying(judge.cause) ? judge.reason : null, outOfTokens: judge.cause === "out_of_tokens" };
+    }
+    const cited = [...judge.data.rationale.matchAll(/\[(n\d+)\]/g)].map((m) => m[1]);
+    const pointers = [judge.data.earliest_node, judge.data.misattribution_node].filter((id): id is string => id !== null);
+    const unknownIds = [...new Set([...cited, ...pointers].filter((id) => !known.has(id)))];
+    onEvent({ type: "verdict", ...judgeSpend, verdict: judge.data, unknownIds });
+    if (unknownIds.length > 0) return { retry: `the verdict points at ${unknownIds.join(", ")}, not verified evidence`, outOfTokens: false };
+    return { retry: null, outOfTokens: false };
+  };
+
+  // Super judges first. Ultra judges again when Super's call failed or its verdict
+  // points at evidence that isn't verified. Low confidence alone is not a reason:
+  // Ultra sees the same evidence, and thin evidence is an honest answer. A judge
+  // that ran out of tokens thinking tries again with thinking off instead, since
+  // Ultra could run out the same way. If the second judge fails, the first verdict stands.
+  const first = await judgeWith(MODELS.super, true);
+  if (first.retry && !mustStop()) {
+    const model = first.outOfTokens ? MODELS.super : MODELS.ultra;
+    const thinking = !first.outOfTokens;
+    onEvent({ type: "escalated", step: "judge", from: "super", to: model.tier, thinking, reason: first.retry, url: null });
+    await judgeWith(model, thinking);
+  }
   finish();
 }
