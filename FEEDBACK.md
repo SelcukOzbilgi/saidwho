@@ -49,7 +49,7 @@ Results on three eval cases:
 
 ## 2026-10-08: Second tries
 
-Setup: each step now gets one more try when a check fails. A planner or judge that runs out of tokens tries again on the same model with thinking off. A page whose reader call fails, or whose sentence isn't on the page, is read again on Super. A verdict that fails, or points to evidence that wasn't verified, is judged again on Ultra.
+Setup: a step that fails now gets one more try, unless the failure would repeat (a rejected key, no credits, a rate limit) or the run is over its budget. A planner or judge that runs out of tokens tries again on the same model with thinking off. A page whose reader call fails, or whose sentence isn't on the page, is read again on Super. A verdict that fails, or points to evidence that wasn't verified, is judged again on Ultra.
 
 ### Token Factory
 

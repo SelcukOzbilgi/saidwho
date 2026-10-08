@@ -34,7 +34,7 @@ Each quote will get a small team of AI agents, and each one has a single job:
 - **Genealogist** follows citations backwards ("this 1995 book quotes a 1981 one") until nothing older turns up.
 - **Judge** writes the verdict, and every sentence of it has to point to a source the Checker confirmed.
 
-Small, fast models do most of the reading. A step that fails a check gets one more try on a bigger model. If the Checker can't find a reader's sentence on the page, a larger model reads that page again. If a verdict points to a source the Checker didn't confirm, the largest model writes it again. Everything else stays on the cheaper models, which keeps each investigation cheap.
+Small, fast models do most of the reading. When a step goes wrong, it usually gets one more try. If the Checker can't find a reader's sentence on the page, a larger model reads that page again. If a verdict points to a source the Checker didn't confirm, the largest model writes it again. A model that used up its room while thinking tries again without thinking. A rejected key or a spent budget gets no second try. Everything else stays on the cheaper models, which keeps each investigation cheap.
 
 <details>
 <summary>Models and services</summary>
