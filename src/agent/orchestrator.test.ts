@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ChatParams, NebiusClient } from "../lib/server/providers/nebius";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema } from "./events";
+import { MODELS } from "./models";
 import { investigate } from "./orchestrator";
 import type { JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
 
@@ -240,11 +241,52 @@ describe("investigate", () => {
     expect(nebius.calls).toEqual(["plan"]);
   });
 
+  it("reads a page again on Super when Lightning's snippet is not on the page", async () => {
+    const tidied = "Einstein said doing the same thing twice is madness itself";
+    const nebius = fakeNebius({
+      read: ({ model }) => (model === MODELS.lightning.id ? { ...READ, exact_snippet: tidied } : READ),
+    });
+    const events = await run({ nebius });
+    const start = types(events).indexOf("page_read");
+    expect(types(events).slice(start, start + 5)).toEqual(["page_read", "escalated", "page_read", "node_added", "verdict"]);
+    expect(events[start + 1]).toMatchObject({ step: "read", from: "lightning", to: "super", url: "https://news.example.org/1981" });
+    expect(events[start + 2]).toMatchObject({ tier: "super", outcome: "evidence" });
+    const node = events.find((e) => e.type === "node_added");
+    expect(node?.type === "node_added" && node.node.check.status).toBe("exact");
+  });
+
+  it("reads a page again on Super when Lightning's call fails", async () => {
+    const nebius = fakeNebius({ read: ({ model }) => (model === MODELS.lightning.id ? null : READ) });
+    const events = await run({ nebius });
+    expect(events.filter((e) => e.type === "page_read").map((e) => e.type === "page_read" && e.outcome)).toEqual([
+      "failed",
+      "evidence",
+    ]);
+    expect(events.filter((e) => e.type === "node_added")).toHaveLength(1);
+  });
+
+  it("does not read a page again when it has no quote", async () => {
+    const nebius = fakeNebius({ read: () => ({ ...READ, contains_quote: false, exact_snippet: null }) });
+    const events = await run({ nebius });
+    expect(types(events)).not.toContain("escalated");
+    expect(nebius.calls.filter((c) => c === "read_page")).toHaveLength(1);
+  });
+
+  it("keeps the crossed-out node and reads no further once the budget is spent", async () => {
+    const nebius = fakeNebius({ read: () => ({ ...READ, exact_snippet: "Einstein said doing the same thing twice is madness itself" }) });
+    const events = await run({ nebius, maxUsd: 0.00045 });
+    expect(types(events).slice(-4)).toEqual(["page_read", "node_added", "budget_exceeded", "done"]);
+    expect(nebius.calls).toEqual(["plan", "read_page"]);
+  });
+
   it("skips the judge when no snippet is found on its page", async () => {
     const nebius = fakeNebius({ read: () => ({ ...READ, exact_snippet: "Einstein said doing the same thing twice is madness itself" }) });
     const events = await run({ nebius });
     expect(types(events).slice(-2)).toEqual(["judge_skipped", "done"]);
     expect(nebius.calls).not.toContain("verdict");
+    // Super read it again and failed too; the page still gives one, crossed-out node.
+    expect(events.filter((e) => e.type === "node_added")).toHaveLength(1);
+    expect(nebius.log.filter((c) => c.name === "read_page").map((c) => c.model)).toEqual([MODELS.lightning.id, MODELS.super.id]);
   });
 
   it("flags a verdict that cites a node that does not exist", async () => {

@@ -74,6 +74,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("search_failed"), query: z.string(), reason: z.string() }),
   // Pages on an excluded site are dropped here even if the search let them through.
   z.strictObject({ type: z.literal("pages_ready"), pages: z.number(), droppedExcluded: z.number() }),
+  // A page read again after an escalated event reports a second page_read; one
+  // page still gives at most one node_added, sent once its last reading is done.
   z.strictObject({
     type: z.literal("page_read"),
     ...spendSchema,

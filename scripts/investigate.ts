@@ -42,7 +42,7 @@ async function main(): Promise<void> {
 
   const events: RunEvent[] = [];
   const nodes: EvidenceNode[] = [];
-  const reads = { total: 0, failed: 0, tooLong: 0 };
+  const reads = { total: 0, failed: 0, tooLong: 0, again: 0 };
   let searchCredits = 0;
 
   const print = (event: RunEvent): void => {
@@ -55,7 +55,9 @@ async function main(): Promise<void> {
         console.log(`1) Planner failed: ${event.reason}`);
         break;
       case "escalated":
-        console.log(`   trying again on ${event.to}${event.thinking ? "" : " with thinking off"}: ${event.reason}`);
+        // Re-reads are counted in the reader summary instead of printed one by one.
+        if (event.step === "read") reads.again++;
+        else console.log(`   trying again on ${event.to}${event.thinking ? "" : " with thinking off"}: ${event.reason}`);
         break;
       case "planned":
         console.log(`1) Planner (${event.tier}, ${event.latencyMs}ms): ${event.variants.length} variants, ${event.queries.length} queries`);
@@ -117,8 +119,8 @@ async function main(): Promise<void> {
   const printNodes = (): void => {
     const verified = nodes.filter((n) => n.check.status !== "not_found");
     console.log(
-      `\n3) Readers (lightning): ${reads.total} pages, ${nodes.length} with the quote, ${reads.failed} failed calls, ` +
-        `${reads.tooLong} dropped for over-long fields`,
+      `\n3) Readers (lightning): ${reads.total - reads.again} pages, ${reads.again} read again on super, ` +
+        `${nodes.length} with the quote, ${reads.failed} failed calls, ${reads.tooLong} over-long readings`,
     );
     console.log(
       `4) Verifier: ${verified.length} snippets found in their page, ${nodes.length - verified.length} rejected; ` +
