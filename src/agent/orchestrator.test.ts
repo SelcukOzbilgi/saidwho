@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ChatParams, NebiusClient } from "../lib/server/providers/nebius";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema } from "./events";
+import { MODELS } from "./models";
 import { investigate } from "./orchestrator";
 import type { JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
 
@@ -11,10 +12,16 @@ const QUOTE = "Insanity is doing the same thing over and over again and expectin
 const SECRET = "SENTINEL-PAGE-BODY-7f3a";
 const PAGE_TEXT = `Knoxville News-Sentinel, 1981. ${SECRET} At the meeting a speaker said: "${QUOTE}." ${SECRET}`;
 
+// One model call as the fake sees it, so a reply can depend on the model and thinking setting.
+type Call = { name: string; model: string; thinking: boolean; user: string };
+// null is a failed call (a provider error), "auth" a rejected key and "length" a
+// call that ran out of tokens.
+type Reply<T> = T | null | "auth" | "length";
+
 type Replies = {
-  plan?: PlannerOutput | null;
-  read?: (user: string) => ReaderOutput | null;
-  verdict?: JudgeOutput | null;
+  plan?: (call: Call) => Reply<PlannerOutput>;
+  read?: (call: Call) => Reply<ReaderOutput>;
+  verdict?: (call: Call) => Reply<JudgeOutput>;
   // Milliseconds a reader call takes, by its prompt.
   readDelay?: (user: string) => number;
 };
@@ -38,32 +45,37 @@ const VERDICT: JudgeOutput = {
   rationale: "The 1981 newspaper [n1] has it with no credit to Einstein.",
 };
 
-// A null reply is a failed call (an API error).
-function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[]; prompts: Map<string, string> } {
+function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[]; log: Call[]; prompts: Map<string, string> } {
   const calls: string[] = [];
+  const log: Call[] = [];
   const prompts = new Map<string, string>();
   return {
     calls,
+    log,
     prompts,
     listModels: async () => ({ ok: true, ids: [] }),
     chat: async (params: ChatParams) => {
       const format = params.response_format as { json_schema: { name: string } };
       const name = format.json_schema.name;
-      calls.push(name);
       const user = String(params.messages.at(-1)?.content ?? "");
+      const kwargs = params.chat_template_kwargs as { enable_thinking: boolean };
+      const call = { name, model: params.model, thinking: kwargs.enable_thinking, user };
+      calls.push(name);
+      log.push(call);
       prompts.set(name, user);
       if (name === "read_page") await new Promise((resolve) => setTimeout(resolve, replies.readDelay?.(user) ?? 0));
-      const data =
+      const reply =
         name === "plan"
-          ? replies.plan === undefined ? PLAN : replies.plan
+          ? (replies.plan ?? (() => PLAN))(call)
           : name === "read_page"
-            ? (replies.read ?? (() => READ))(user)
-            : replies.verdict === undefined ? VERDICT : replies.verdict;
-      if (data === null) {
-        return { ok: false, error: { provider: "nebius", kind: "server", message: "boom" }, latencyMs: 5 } as never;
+            ? (replies.read ?? (() => READ))(call)
+            : (replies.verdict ?? (() => VERDICT))(call);
+      if (reply === null || reply === "auth") {
+        const kind = reply === "auth" ? "auth" : "upstream";
+        return { ok: false, error: { provider: "nebius", kind, message: "boom" }, latencyMs: 5 } as never;
       }
       const completion = {
-        choices: [{ finish_reason: "stop", message: { content: JSON.stringify(data) } }],
+        choices: [{ finish_reason: reply === "length" ? "length" : "stop", message: { content: reply === "length" ? "" : JSON.stringify(reply) } }],
         usage: { prompt_tokens: 1_000, completion_tokens: 100 },
       };
       return { ok: true, completion, latencyMs: 5 } as never;
@@ -158,7 +170,7 @@ describe("investigate", () => {
     const controller = new AbortController();
     const nebius = fakeNebius({
       readDelay: (user) => (user.includes("/p1") ? 0 : 20),
-      read: (user) => {
+      read: ({ user }) => {
         if (user.includes("/p1")) controller.abort();
         return READ;
       },
@@ -193,9 +205,100 @@ describe("investigate", () => {
     expect(node?.type === "node_added" && node.node.title.length).toBe(300);
   });
 
-  it("stops after a failed plan without searching", async () => {
-    const events = await run({ nebius: fakeNebius({ plan: null }) });
+  it("plans again with thinking off when thinking uses up the tokens", async () => {
+    const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? "length" : PLAN) });
+    const events = await run({ nebius });
+    expect(types(events).slice(0, 5)).toEqual(["started", "plan_failed", "escalated", "planned", "searched"]);
+    expect(events[2]).toMatchObject({ step: "plan", from: "super", to: "super", thinking: false, reason: "ran out of tokens" });
+    expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
+    expect(events.at(-2)?.type).toBe("verdict");
+  });
+
+  it("searches for the exact quote alone when both plans fail", async () => {
+    const tavily = fakeTavily();
+    const searched: string[] = [];
+    const events = await run({
+      nebius: fakeNebius({ plan: () => null }),
+      tavily: { ...tavily, search: async (query, options) => (searched.push(query), tavily.search(query, options)) },
+    });
+    expect(types(events).slice(0, 5)).toEqual(["started", "plan_failed", "escalated", "plan_failed", "searched"]);
+    expect(types(events)).not.toContain("planned");
+    expect(searched).toEqual([`"${QUOTE}"`]);
+    expect(events.at(-2)?.type).toBe("verdict");
+  });
+
+  it("does not plan again when the key is rejected", async () => {
+    const nebius = fakeNebius({ plan: () => "auth" });
+    const events = await run({ nebius });
     expect(types(events)).toEqual(["started", "plan_failed", "done"]);
+    expect(nebius.calls).toEqual(["plan"]);
+  });
+
+  it("does not plan again once the first plan uses up the budget", async () => {
+    const nebius = fakeNebius({ plan: () => "length" });
+    const events = await run({ nebius, maxUsd: 0.0001 });
+    expect(types(events)).toEqual(["started", "plan_failed", "budget_exceeded", "done"]);
+    expect(nebius.calls).toEqual(["plan"]);
+  });
+
+  it("reads a page again on Super when Lightning's snippet is not on the page", async () => {
+    const tidied = "Einstein said doing the same thing twice is madness itself";
+    const nebius = fakeNebius({
+      read: ({ model }) => (model === MODELS.lightning.id ? { ...READ, exact_snippet: tidied } : READ),
+    });
+    const events = await run({ nebius });
+    const start = types(events).indexOf("page_read");
+    expect(types(events).slice(start, start + 5)).toEqual(["page_read", "escalated", "page_read", "node_added", "verdict"]);
+    expect(events[start + 1]).toMatchObject({ step: "read", from: "lightning", to: "super", url: "https://news.example.org/1981" });
+    expect(events[start + 2]).toMatchObject({ tier: "super", outcome: "evidence" });
+    const node = events.find((e) => e.type === "node_added");
+    expect(node?.type === "node_added" && node.node.check.status).toBe("exact");
+  });
+
+  it("reads a page again on Super when Lightning's call fails", async () => {
+    const nebius = fakeNebius({ read: ({ model }) => (model === MODELS.lightning.id ? null : READ) });
+    const events = await run({ nebius });
+    expect(events.filter((e) => e.type === "page_read").map((e) => e.type === "page_read" && e.outcome)).toEqual([
+      "failed",
+      "evidence",
+    ]);
+    expect(events.filter((e) => e.type === "node_added")).toHaveLength(1);
+  });
+
+  it("keeps Lightning's crossed-out node when Super's re-read gives none", async () => {
+    const tidied = "Einstein said doing the same thing twice is madness itself";
+    for (const superReply of [null, { ...READ, contains_quote: false, exact_snippet: null }]) {
+      const nebius = fakeNebius({ read: ({ model }) => (model === MODELS.lightning.id ? { ...READ, exact_snippet: tidied } : superReply) });
+      const events = await run({ nebius });
+      const added = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
+      expect(added).toHaveLength(1);
+      expect(added[0]).toMatchObject({ id: "n1", check: { status: "not_found" }, reader: { exact_snippet: tidied } });
+      expect(types(events).slice(-2)).toEqual(["judge_skipped", "done"]);
+    }
+  });
+
+  it("reads a page again when an over-long field comes with no quote", async () => {
+    const nebius = fakeNebius({
+      read: ({ model }) =>
+        model === MODELS.lightning.id ? { ...READ, contains_quote: false, exact_snippet: null, page_date: "x".repeat(301) } : READ,
+    });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "page_read")).toMatchObject({ tier: "lightning", outcome: "too_long" });
+    expect(events.filter((e) => e.type === "node_added")).toHaveLength(1);
+  });
+
+  it("does not read a page again when it has no quote", async () => {
+    const nebius = fakeNebius({ read: () => ({ ...READ, contains_quote: false, exact_snippet: null }) });
+    const events = await run({ nebius });
+    expect(types(events)).not.toContain("escalated");
+    expect(nebius.calls.filter((c) => c === "read_page")).toHaveLength(1);
+  });
+
+  it("keeps the crossed-out node and reads no further once the budget is spent", async () => {
+    const nebius = fakeNebius({ read: () => ({ ...READ, exact_snippet: "Einstein said doing the same thing twice is madness itself" }) });
+    const events = await run({ nebius, maxUsd: 0.00045 });
+    expect(types(events).slice(-4)).toEqual(["page_read", "node_added", "budget_exceeded", "done"]);
+    expect(nebius.calls).toEqual(["plan", "read_page"]);
   });
 
   it("skips the judge when no snippet is found on its page", async () => {
@@ -203,12 +306,68 @@ describe("investigate", () => {
     const events = await run({ nebius });
     expect(types(events).slice(-2)).toEqual(["judge_skipped", "done"]);
     expect(nebius.calls).not.toContain("verdict");
+    // Super read it again and failed too; the page still gives one, crossed-out node.
+    const added = events.filter((e) => e.type === "node_added");
+    expect(added).toHaveLength(1);
+    expect(added[0]?.type === "node_added" && added[0].node.check.status).toBe("not_found");
+    expect(nebius.log.filter((c) => c.name === "read_page").map((c) => c.model)).toEqual([MODELS.lightning.id, MODELS.super.id]);
   });
 
-  it("flags a verdict that cites a node that does not exist", async () => {
-    const events = await run({ nebius: fakeNebius({ verdict: { ...VERDICT, rationale: "See [n1] and [n9]." } }) });
-    const verdict = events.find((e) => e.type === "verdict");
-    expect(verdict?.type === "verdict" && verdict.unknownIds).toEqual(["n9"]);
+  it("flags a verdict that cites a node that does not exist and asks Ultra", async () => {
+    const nebius = fakeNebius({
+      verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, rationale: "See [n1] and [n9]." } : VERDICT),
+    });
+    const events = await run({ nebius });
+    expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "verdict", "done"]);
+    const verdicts = events.flatMap((e) => (e.type === "verdict" ? [[e.tier, e.unknownIds]] : []));
+    expect(verdicts).toEqual([
+      ["super", ["n9"]],
+      ["ultra", []],
+    ]);
+    expect(events.at(-3)).toMatchObject({ step: "judge", from: "super", to: "ultra", thinking: true });
+  });
+
+  it("finds an unverified id inside a group of citations", async () => {
+    const nebius = fakeNebius({
+      verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, rationale: "Evidence [n1, n99] and [[n1]] prove this." } : VERDICT),
+    });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "verdict")).toMatchObject({ tier: "super", unknownIds: ["n99"] });
+    expect(events.at(-2)).toMatchObject({ type: "verdict", tier: "ultra" });
+  });
+
+  it("does not ask Ultra about a verdict that stands, even with low confidence", async () => {
+    const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, confidence: "low" }) });
+    await run({ nebius });
+    expect(nebius.log.map((c) => c.model)).not.toContain(MODELS.ultra.id);
+  });
+
+  it("judges again with thinking off when thinking uses up the tokens", async () => {
+    const nebius = fakeNebius({ verdict: ({ thinking }) => (thinking ? "length" : VERDICT) });
+    const events = await run({ nebius });
+    expect(types(events).slice(-4)).toEqual(["judge_failed", "escalated", "verdict", "done"]);
+    expect(events.at(-3)).toMatchObject({ from: "super", to: "super", thinking: false });
+    expect(nebius.log.filter((c) => c.name === "verdict").map((c) => [c.model, c.thinking])).toEqual([
+      [MODELS.super.id, true],
+      [MODELS.super.id, false],
+    ]);
+  });
+
+  it("keeps Super's verdict when Ultra fails", async () => {
+    const nebius = fakeNebius({
+      verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, rationale: "See [n9]." } : null),
+    });
+    const events = await run({ nebius });
+    expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "judge_failed", "done"]);
+    expect(events.at(-2)).toMatchObject({ tier: "ultra" });
+  });
+
+  it("does not ask Ultra once the budget is spent", async () => {
+    const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, rationale: "See [n9]." }) });
+    // Plan, one read and the first verdict fit; nothing after them does.
+    const events = await run({ nebius, maxUsd: 0.0008 });
+    expect(types(events).slice(-3)).toEqual(["verdict", "budget_exceeded", "done"]);
+    expect(nebius.calls).toEqual(["plan", "read_page", "verdict"]);
   });
 
   it("counts a failed search as a call with unknown cost", async () => {

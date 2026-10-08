@@ -48,7 +48,24 @@ export const runEventSchema = z.discriminatedUnion("type", [
     candidateAuthors: z.array(z.string()),
     queries: z.array(z.string()),
   }),
+  // A failed plan is tried once more, on Super with thinking off, unless the
+  // failure would repeat (a rejected key, no credits, a rate limit, a refused
+  // request) or the run must stop; then the run ends here. When the second try
+  // fails too, no planned event follows and the run searches for the exact
+  // quote alone, with no variants.
   z.strictObject({ type: z.literal("plan_failed"), ...spendSchema, reason: z.string() }),
+  // A step is about to be tried again because a check failed: on a bigger model,
+  // or on the same one with thinking off when thinking used up the token budget.
+  // url names the page for a re-read and is null otherwise.
+  z.strictObject({
+    type: z.literal("escalated"),
+    step: z.enum(["plan", "read", "judge"]),
+    from: tierSchema,
+    to: tierSchema,
+    thinking: z.boolean(),
+    reason: z.string(),
+    url: z.string().nullable(),
+  }),
   z.strictObject({
     type: z.literal("searched"),
     query: z.string(),
@@ -60,6 +77,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("search_failed"), query: z.string(), reason: z.string() }),
   // Pages on an excluded site are dropped here even if the search let them through.
   z.strictObject({ type: z.literal("pages_ready"), pages: z.number(), droppedExcluded: z.number() }),
+  // A page read again after an escalated event reports a second page_read; one
+  // page still gives at most one node_added, sent once its last reading is done.
   z.strictObject({
     type: z.literal("page_read"),
     ...spendSchema,
@@ -70,6 +89,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("node_added"), node: evidenceNodeSchema }),
   z.strictObject({ type: z.literal("judge_skipped"), reason: z.string() }),
+  // A run can carry two verdicts when Ultra judges again after Super (see
+  // escalated); the last one stands.
   z.strictObject({
     type: z.literal("verdict"),
     ...spendSchema,

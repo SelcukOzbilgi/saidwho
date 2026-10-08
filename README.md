@@ -34,7 +34,7 @@ Each quote will get a small team of AI agents, and each one has a single job:
 - **Genealogist** follows citations backwards ("this 1995 book quotes a 1981 one") until nothing older turns up.
 - **Judge** writes the verdict, and every sentence of it has to point to a source the Checker confirmed.
 
-Small, fast models will do most of the reading. The largest model will only step in for the final verdict or when sources disagree, which should keep each investigation cheap.
+Small, fast models do most of the reading. When a step goes wrong, it usually gets one more try. If the Checker can't find a reader's sentence on the page, a larger model reads that page again. If a verdict points to a source the Checker didn't confirm, the largest model writes it again. A model that used up its room while thinking tries again without thinking. A rejected key or a spent budget gets no second try. Everything else stays on the cheaper models, which keeps each investigation cheap.
 
 <details>
 <summary>Models and services</summary>
@@ -42,8 +42,8 @@ Small, fast models will do most of the reading. The largest model will only step
 | Job | Planned model or service |
 |-----|---------|
 | Planner, Genealogist | NVIDIA Nemotron 3 Super |
-| Readers | NVIDIA Nemotron 3.5 Lightning |
-| Judge | NVIDIA Nemotron 3 Ultra |
+| Readers | NVIDIA Nemotron 3.5 Lightning, and Nemotron 3 Super for a page read again |
+| Judge | NVIDIA Nemotron 3 Super, and Nemotron 3 Ultra when a verdict fails a check |
 | Search and page reading | Tavily |
 | Checker | Plain TypeScript |
 

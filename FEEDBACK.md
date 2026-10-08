@@ -46,3 +46,17 @@ Results on three eval cases:
 - Super with thinking on took 3–8 s to plan and 5–10 s to judge. That's much faster than the 29 s in the agent cost benchmark, which makes Super practical inside the loop.
 - In one run, Super returned a valid planner output with empty `queries` and `variants` arrays. Strict JSON schema guarantees the shape, not useful content, so the script always adds the exact-phrase query itself.
 - Lightning (thinking off, strict schema) returned valid JSON on all 54 pages. In one case it "tidied" a snippet into the well-known wording instead of copying the page, and the code check caught it. That one rejected snippet carried the 1981 lead. This is why snippets are checked against the page rather than trusted.
+
+## 2026-10-08: Second tries
+
+Setup: a step that fails now gets one more try, unless the failure would repeat (a rejected key, no credits, a rate limit) or the run is over its budget. A planner or judge that runs out of tokens tries again on the same model with thinking off. A page whose reader call fails, or whose sentence isn't on the page, is read again on Super. A verdict that fails, or points to evidence that wasn't verified, is judged again on Ultra.
+
+### Token Factory
+
+- **Thinking can use the whole budget.** While testing the API route, Super with thinking on spent all 8,000 output tokens on reasoning and returned no plan (`finish_reason: "length"`). It's the same thing we saw with Lightning at 64 tokens on day 1, just at a much larger budget. The planner now tries again with thinking off. Calls with thinking off have returned valid structured output in every test so far, but this retry hasn't fired in a real run yet. A way to cap reasoning tokens separately from the answer would help.
+- **Strict schema checks the shape, not the items.** On the "Gel, gel" case, Super returned one `queries` item that held two queries joined by `", "`. It was valid JSON and matched the schema, but it was one string standing in for two.
+- **A bigger judge didn't help with thin evidence.** On "Gel, gel", Super judged `contested` with low confidence, which is the right answer. We had Ultra judge again on low confidence, and it changed the verdict to `no_known_source`, still low. It had the same evidence and could only reread it. Ultra now steps in only when a verdict fails a check, not because it's unsure.
+- The re-read path fired once in three runs: Lightning returned a field over 300 characters on one page, and Super's reading was used.
+
+Costs with second tries: $0.004 for "insanity" (one page read again), $0.003 for "so much owed", and $0.011 for "Gel, gel" while Ultra was still judging low-confidence verdicts.
+
