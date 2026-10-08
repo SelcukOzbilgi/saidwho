@@ -22,9 +22,10 @@ import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toSseChunk } from "./sse";
 export const BYOK_MAX_USD = 0.5;
 export const TRIAL_MAX_USD = 0.1;
 // What a trial run reserves from the daily budget before it starts: its Nebius
-// limit plus five searches at one credit each, with a little room for calls that
-// were already running when the limit was reached.
-export const TRIAL_RESERVE_USD = 0.15;
+// limit, five searches at one credit each ($0.04), and the most one call can add
+// after starting just under the limit. The largest is an Ultra second judge: up
+// to 8,000 output tokens ($0.024) on a prompt of a few thousand tokens.
+export const TRIAL_RESERVE_USD = 0.18;
 const HEARTBEAT_MS = 15_000;
 // The route may run for 300 s (maxDuration). A run starts no new paid call after
 // RUN_DEADLINE_MS, and a call already running gives up after NEBIUS_TIMEOUT_MS,
