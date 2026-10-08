@@ -265,6 +265,28 @@ describe("investigate", () => {
     expect(events.filter((e) => e.type === "node_added")).toHaveLength(1);
   });
 
+  it("keeps Lightning's crossed-out node when Super's re-read gives none", async () => {
+    const tidied = "Einstein said doing the same thing twice is madness itself";
+    for (const superReply of [null, { ...READ, contains_quote: false, exact_snippet: null }]) {
+      const nebius = fakeNebius({ read: ({ model }) => (model === MODELS.lightning.id ? { ...READ, exact_snippet: tidied } : superReply) });
+      const events = await run({ nebius });
+      const added = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
+      expect(added).toHaveLength(1);
+      expect(added[0]).toMatchObject({ id: "n1", check: { status: "not_found" }, reader: { exact_snippet: tidied } });
+      expect(types(events).slice(-2)).toEqual(["judge_skipped", "done"]);
+    }
+  });
+
+  it("reads a page again when an over-long field comes with no quote", async () => {
+    const nebius = fakeNebius({
+      read: ({ model }) =>
+        model === MODELS.lightning.id ? { ...READ, contains_quote: false, exact_snippet: null, page_date: "x".repeat(301) } : READ,
+    });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "page_read")).toMatchObject({ tier: "lightning", outcome: "too_long" });
+    expect(events.filter((e) => e.type === "node_added")).toHaveLength(1);
+  });
+
   it("does not read a page again when it has no quote", async () => {
     const nebius = fakeNebius({ read: () => ({ ...READ, contains_quote: false, exact_snippet: null }) });
     const events = await run({ nebius });
@@ -285,7 +307,9 @@ describe("investigate", () => {
     expect(types(events).slice(-2)).toEqual(["judge_skipped", "done"]);
     expect(nebius.calls).not.toContain("verdict");
     // Super read it again and failed too; the page still gives one, crossed-out node.
-    expect(events.filter((e) => e.type === "node_added")).toHaveLength(1);
+    const added = events.filter((e) => e.type === "node_added");
+    expect(added).toHaveLength(1);
+    expect(added[0]?.type === "node_added" && added[0].node.check.status).toBe("not_found");
     expect(nebius.log.filter((c) => c.name === "read_page").map((c) => c.model)).toEqual([MODELS.lightning.id, MODELS.super.id]);
   });
 
@@ -301,6 +325,15 @@ describe("investigate", () => {
       ["ultra", []],
     ]);
     expect(events.at(-3)).toMatchObject({ step: "judge", from: "super", to: "ultra", thinking: true });
+  });
+
+  it("finds an unverified id inside a group of citations", async () => {
+    const nebius = fakeNebius({
+      verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, rationale: "Evidence [n1, n99] and [[n1]] prove this." } : VERDICT),
+    });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "verdict")).toMatchObject({ tier: "super", unknownIds: ["n99"] });
+    expect(events.at(-2)).toMatchObject({ type: "verdict", tier: "ultra" });
   });
 
   it("does not ask Ultra about a verdict that stands, even with low confidence", async () => {

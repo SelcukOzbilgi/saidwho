@@ -232,17 +232,19 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         report("failed", read.reason);
         return { node: null, retry: worthRetrying(read.cause) ? read.reason : null };
       }
-      if (!read.data.contains_quote || !read.data.exact_snippet) {
-        report("no_quote");
-        return { node: null, retry: null };
-      }
-      const { exact_snippet: snippet, attributed_to: credit } = read.data;
       // Every text field is stored as returned, so every one is capped, dates included.
+      // This comes first: a field that long means the reading went wrong, even
+      // one that says the page has no quote, so it is worth a second reader.
       const fields = Object.values(read.data).filter((value) => typeof value === "string");
       if (fields.some((field) => field.length > MAX_FIELD_CHARS)) {
         report("too_long");
         return { node: null, retry: "a field was too long to be a quote" };
       }
+      if (!read.data.contains_quote || !read.data.exact_snippet) {
+        report("no_quote");
+        return { node: null, retry: null };
+      }
+      const { exact_snippet: snippet, attributed_to: credit } = read.data;
 
       const citedSourceDate = keepDate(read.data.cited_source_date);
       const pageDate = keepDate(read.data.page_date);
@@ -325,7 +327,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       onEvent({ type: "judge_failed", ...judgeSpend, reason: judge.reason });
       return { retry: worthRetrying(judge.cause) ? judge.reason : null, outOfTokens: judge.cause === "out_of_tokens" };
     }
-    const cited = [...judge.data.rationale.matchAll(/\[(n\d+)\]/g)].map((m) => m[1]);
+    // Ids in brackets, alone or grouped: [n2], [n2, n5] and [[n2]] all count.
+    const cited = [...judge.data.rationale.matchAll(/\[[^\]]*\]/g)].flatMap((m) => m[0].match(/\bn\d+\b/g) ?? []);
     const pointers = [judge.data.earliest_node, judge.data.misattribution_node].filter((id): id is string => id !== null);
     const unknownIds = [...new Set([...cited, ...pointers].filter((id) => !known.has(id)))];
     onEvent({ type: "verdict", ...judgeSpend, verdict: judge.data, unknownIds });

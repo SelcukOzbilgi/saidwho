@@ -48,8 +48,11 @@ export const runEventSchema = z.discriminatedUnion("type", [
     candidateAuthors: z.array(z.string()),
     queries: z.array(z.string()),
   }),
-  // A failed plan is tried once more. When no planned event follows, the run
-  // searches for the exact quote alone, with no variants.
+  // A failed plan is tried once more, on Super with thinking off, unless the
+  // failure would repeat (a rejected key, no credits, a rate limit, a refused
+  // request) or the run must stop; then the run ends here. When the second try
+  // fails too, no planned event follows and the run searches for the exact
+  // quote alone, with no variants.
   z.strictObject({ type: z.literal("plan_failed"), ...spendSchema, reason: z.string() }),
   // A step is about to be tried again because a check failed: on a bigger model,
   // or on the same one with thinking off when thinking used up the token budget.
