@@ -5,7 +5,7 @@ import { createInvestigateHandler } from "@/lib/server/investigate-handler";
 import { createNebiusClient } from "@/lib/server/providers/nebius";
 import { createTavilyClient } from "@/lib/server/providers/tavily";
 
-// A run is usually under a minute, but each model call may take up to two.
+// A run is usually under a minute; the handler ends it well before this (RUN_DEADLINE_MS).
 export const maxDuration = 300;
 
 // Answer sites are left out of live runs too, so what you see is the agent

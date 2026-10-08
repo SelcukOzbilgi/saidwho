@@ -26,6 +26,11 @@ export const TRIAL_MAX_USD = 0.1;
 // were already running when the limit was reached.
 export const TRIAL_RESERVE_USD = 0.15;
 const HEARTBEAT_MS = 15_000;
+// The route may run for 300 s (maxDuration). A run starts no new paid call after
+// RUN_DEADLINE_MS, and a call already running gives up after NEBIUS_TIMEOUT_MS,
+// so the stream still ends with a done event before the platform cuts it.
+export const RUN_DEADLINE_MS = 200_000;
+export const NEBIUS_TIMEOUT_MS = 90_000;
 
 export type InvestigateDeps = {
   env: ServerEnv;
@@ -36,6 +41,7 @@ export type InvestigateDeps = {
   createTavily: (options: { apiKey: string }) => TavilyClient;
   investigate: (options: InvestigationOptions) => Promise<void>;
   logError?: (message: string) => void;
+  runDeadlineMs?: number;
 };
 
 // Error bodies carry a fixed code, never provider text or anything the visitor sent.
@@ -66,7 +72,11 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     let nebius: NebiusClient;
     let tavily: TavilyClient;
     try {
-      nebius = deps.createNebius({ apiKey: keys.nebiusApiKey, baseURL: deps.env.NEBIUS_BASE_URL });
+      nebius = deps.createNebius({
+        apiKey: keys.nebiusApiKey,
+        baseURL: deps.env.NEBIUS_BASE_URL,
+        timeoutMs: NEBIUS_TIMEOUT_MS,
+      });
       tavily = deps.createTavily({ apiKey: keys.tavilyApiKey });
     } catch (err: unknown) {
       // Keys were checked by the request schema, so this is server setup (an SDK
@@ -82,12 +92,13 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       if (!reservation) return fail(429, "daily_budget_spent");
     }
 
-    // One controller stops the run, whether the client disconnects (request.signal)
-    // or the stream is cancelled. Model calls already running still finish.
+    // One controller stops the run, whether the client disconnects (request.signal),
+    // the stream is cancelled or the deadline passes. Model calls already running still finish.
     const abort = new AbortController();
     const stop = () => abort.abort();
     if (request.signal.aborted) stop();
     else request.signal.addEventListener("abort", stop, { once: true });
+    const deadline = setTimeout(stop, deps.runDeadlineMs ?? RUN_DEADLINE_MS);
 
     const encoder = new TextEncoder();
     let closed = false;
@@ -126,12 +137,14 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
           })
           .finally(() => {
             clearInterval(heartbeat);
+            clearTimeout(deadline);
             request.signal.removeEventListener("abort", stop);
-            // Without a done event the spend is unknown, so the whole reservation counts.
+            // When some spend is unknown (no done event, or calls that reported no
+            // usage), the run counts as at least its whole reservation.
             const finished = done as DoneEvent | null;
-            reservation?.settle(
-              finished ? finished.nebiusUsd + finished.tavilyCredits * TAVILY_USD_PER_CREDIT : TRIAL_RESERVE_USD,
-            );
+            const counted = finished ? finished.nebiusUsd + finished.tavilyCredits * TAVILY_USD_PER_CREDIT : 0;
+            const allKnown = finished !== null && finished.unknownCostCalls === 0;
+            reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
             if (!closed) {
               closed = true;
               controller.close();

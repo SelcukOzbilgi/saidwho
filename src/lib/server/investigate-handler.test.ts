@@ -4,7 +4,13 @@ import { type RunEvent, runEventSchema } from "../../agent/events";
 import type { InvestigationOptions } from "../../agent/orchestrator";
 import { createDailyLedger } from "./daily-budget";
 import { parseServerEnv } from "./env-schema";
-import { createInvestigateHandler, type InvestigateDeps, TRIAL_MAX_USD, TRIAL_RESERVE_USD } from "./investigate-handler";
+import {
+  createInvestigateHandler,
+  type InvestigateDeps,
+  NEBIUS_TIMEOUT_MS,
+  TRIAL_MAX_USD,
+  TRIAL_RESERVE_USD,
+} from "./investigate-handler";
 import type { NebiusClient } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
 
@@ -130,6 +136,31 @@ describe("POST /api/investigate", () => {
     expect(ledger.spentTodayUsd()).toBeCloseTo(TRIAL_RESERVE_USD);
   });
 
+  it("counts the whole reservation when some calls reported no cost", async () => {
+    const ledger = createDailyLedger(1);
+    const { handler } = setup({
+      envVars: ownerEnv,
+      ledger,
+      run: async ({ onEvent }) => onEvent({ ...DONE, tavilyCredits: 0, unknownCostCalls: 5 } as RunEvent),
+    });
+    await (await handler(post(trial))).text();
+    expect(ledger.spentTodayUsd()).toBeCloseTo(TRIAL_RESERVE_USD);
+  });
+
+  it("stops a run that passes the deadline, so it can still end with done", async () => {
+    const { handler, createNebius } = setup({
+      runDeadlineMs: 10,
+      run: async ({ signal, onEvent }) => {
+        await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+        onEvent({ type: "aborted" });
+        onEvent(DONE);
+      },
+    });
+    const events = frames(await (await handler(post(byok))).text()).map((f) => f.data?.type);
+    expect(events).toEqual(["aborted", "done"]);
+    expect(createNebius).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: NEBIUS_TIMEOUT_MS }));
+  });
+
   it("stops the run when the client disconnects", async () => {
     const client = new AbortController();
     let seen: AbortSignal | undefined;
@@ -160,7 +191,7 @@ describe("POST /api/investigate", () => {
         seen = signal;
         finished = (async () => {
           await new Promise<void>((resolve) => (release = resolve));
-          // Enqueueing on a cancelled stream would throw; the handler must swallow it.
+          // Events after a cancel must be dropped, not written to the closed stream.
           onEvent({ type: "aborted" });
           onEvent(DONE);
         })();

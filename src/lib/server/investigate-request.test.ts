@@ -61,4 +61,25 @@ describe("parseInvestigateRequest", () => {
     const big = JSON.stringify({ ...valid, padding: "x".repeat(MAX_BODY_BYTES) });
     expect(await parseInvestigateRequest(post(big))).toMatchObject({ status: 413 });
   });
+
+  it("stops reading a chunked body with no declared length once it passes the cap", async () => {
+    // 100 KB in 1 KB chunks. Reading it all before checking would pull every chunk.
+    let pulled = 0;
+    const large = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled++;
+        if (pulled > 100) controller.close();
+        else controller.enqueue(new Uint8Array(1_000).fill(0x20));
+      },
+    });
+    const request = new Request("http://localhost/api/investigate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: large,
+      duplex: "half",
+    } as RequestInit);
+    expect(request.headers.get("content-length")).toBeNull();
+    expect(await parseInvestigateRequest(request)).toMatchObject({ status: 413, error: "body_too_large" });
+    expect(pulled).toBeLessThan(20);
+  });
 });

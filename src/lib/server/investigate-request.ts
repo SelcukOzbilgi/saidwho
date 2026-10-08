@@ -43,6 +43,32 @@ export type ParsedRequest =
   | { ok: true; request: InvestigateRequest }
   | { ok: false; status: 400 | 413 | 415; error: string; fields?: string[] };
 
+// A chunked body declares no length, so the cap is enforced while reading: the
+// body is never held in memory past MAX_BODY_BYTES. Returns null when it's over.
+async function readCapped(request: Request, maxBytes: number): Promise<string | null> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 // Reads and validates the body. Error results name the fields that failed,
 // never the values sent.
 export async function parseInvestigateRequest(request: Request): Promise<ParsedRequest> {
@@ -53,8 +79,8 @@ export async function parseInvestigateRequest(request: Request): Promise<ParsedR
 
   let json: unknown;
   try {
-    const raw = await request.text();
-    if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) return { ok: false, status: 413, error: "body_too_large" };
+    const raw = await readCapped(request, MAX_BODY_BYTES);
+    if (raw === null) return { ok: false, status: 413, error: "body_too_large" };
     json = JSON.parse(raw);
   } catch {
     // Bad JSON, or a body the client stopped sending.
