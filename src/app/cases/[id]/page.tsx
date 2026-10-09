@@ -27,7 +27,8 @@ export async function generateMetadata({ params }: PageProps<"/cases/[id]">): Pr
   if (!found) return {};
   return {
     title: `“${found.run.quote}” · Said Who?`,
-    description: `Where this quote, usually credited to ${found.run.popularAttribution}, first appeared: a finished Said Who? run with every step.`,
+    // Not every run finds an origin, so the description doesn't promise one.
+    description: `A finished Said Who? run looking into where this quote, usually credited to ${found.run.popularAttribution}, came from, with every step.`,
   };
 }
 
