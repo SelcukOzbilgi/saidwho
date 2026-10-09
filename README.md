@@ -82,7 +82,7 @@ pnpm dev
 
 `pnpm test` runs the tests. `pnpm smoke:nebius` and `pnpm smoke:tavily` make a few small real calls to check that your keys work.
 
-With `pnpm dev` running, open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. The page shows each agent's step as it happens, a card for every page that carries the quote (oldest first, with the ones the checker couldn't find on the page crossed out) and the verdict with links back to its evidence. The free trial option stays off unless `LIVE_RUNS_ENABLED`, `TRIAL_RUNS_ENABLED` and a `DAILY_BUDGET_USD` above zero are set, along with the server's own keys.
+With `pnpm dev` running, open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. The page shows each agent's step as it happens, a card for every page that carries the quote (oldest first, with the ones the checker couldn't find on the page crossed out) and the verdict with links back to its evidence. The free trial option stays off unless `LIVE_RUNS_ENABLED`, `TRIAL_RUNS_ENABLED` and a `DAILY_BUDGET_USD` of at least $0.20 (what one trial run sets aside before it starts) are set, along with the server's own keys.
 
 `pnpm investigate insanity-same-thing` runs one quote from the [test set](eval/) and prints each step, the verdict and what it cost. Any `id` from `eval/quotes.jsonl` works. In the runs so far, one investigation cost under half a cent of Nebius usage and about 5 Tavily credits; other quotes can cost more. As a safety net, the script starts no new model call once its estimated Nebius spend reaches $0.50, though calls already running still finish.
 
