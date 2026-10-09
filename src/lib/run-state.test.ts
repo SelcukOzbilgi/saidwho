@@ -88,9 +88,14 @@ describe("reduceRun", () => {
     expect(state.nebiusUsd).toBeCloseTo(0.002);
     expect(state.unknownCostCalls).toBe(1);
     expect(state.tavilyCredits).toBe(1);
-    expect(state.reads).toBe(2);
+    expect(state.readUrls).toHaveLength(2);
     const done = reduceRun(state, { type: "done", nebiusUsd: 0.0025, tavilyCredits: 2, unknownCostCalls: 1, seconds: 4 });
     expect(done).toMatchObject({ nebiusUsd: 0.0025, tavilyCredits: 2 });
+  });
+
+  it("counts a page read again once", () => {
+    const read = { type: "page_read" as const, ...spend, url: "https://a.org/", host: "a.org", outcome: "evidence" as const, reason: null };
+    expect(run([read, read]).readUrls).toEqual(["https://a.org/"]);
   });
 
   it("keeps crossed-out nodes and marks them in the log", () => {

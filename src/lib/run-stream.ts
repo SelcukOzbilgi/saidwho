@@ -29,14 +29,15 @@ function parseFrame(block: string): Frame | null {
 // blank line. A frame that isn't a known run event is skipped rather than
 // ending the run, so an older page keeps working if the server adds an event.
 export async function* readRunStream(body: ReadableStream<Uint8Array>): AsyncGenerator<StreamItem> {
-  const reader = body.pipeThrough(new TextDecoderStream()).getReader();
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
   let buffer = "";
   try {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
       // The route ends lines with "\n" only (see lib/server/sse.ts).
-      buffer += value;
+      buffer += decoder.decode(value, { stream: true });
       let end: number;
       while ((end = buffer.indexOf("\n\n")) !== -1) {
         const frame = parseFrame(buffer.slice(0, end));
@@ -57,6 +58,7 @@ export async function* readRunStream(body: ReadableStream<Uint8Array>): AsyncGen
       }
     }
   } finally {
-    reader.releaseLock();
+    // Closes the connection when the caller stops reading early.
+    await reader.cancel().catch(() => {});
   }
 }

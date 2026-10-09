@@ -25,7 +25,8 @@ export type RunState = {
   plan: { variants: string[]; candidateAuthors: string[]; queries: string[] } | null;
   searches: number;
   pages: number | null;
-  reads: number;
+  // Pages read at least once; a page read again counts once.
+  readUrls: string[];
   nodes: EvidenceNode[];
   // The verdict that stands: the last one, when a second judge ran.
   verdict: { tier: Tier; output: JudgeOutput; unknownIds: string[] } | null;
@@ -47,7 +48,7 @@ export const initialRunState: RunState = {
   plan: null,
   searches: 0,
   pages: null,
-  reads: 0,
+  readUrls: [],
   nodes: [],
   verdict: null,
   noVerdict: null,
@@ -132,7 +133,8 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         failed: `Could not read ${event.host}${event.reason ? `: ${event.reason}` : ""}`,
       };
       const tone: Tone = event.outcome === "evidence" ? "good" : event.outcome === "failed" ? "bad" : "neutral";
-      return { ...state, ...spent(event), reads: state.reads + 1, log: log("Reader", text[event.outcome], tone, event) };
+      const readUrls = state.readUrls.includes(event.url) ? state.readUrls : [...state.readUrls, event.url];
+      return { ...state, ...spent(event), readUrls, log: log("Reader", text[event.outcome], tone, event) };
     }
     case "node_added": {
       const { node } = event;
