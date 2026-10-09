@@ -1,0 +1,253 @@
+{
+  "caseId": "good-men-do-nothing",
+  "ranAt": "2026-10-09T13:35:22.064Z",
+  "events": [
+    {
+      "type": "started",
+      "quote": "The only thing necessary for the triumph of evil is for good men to do nothing.",
+      "popularAttribution": "Edmund Burke",
+      "language": "en",
+      "excludeDomains": [
+        "quoteinvestigator.com",
+        "wikiquote.org",
+        "wikipedia.org"
+      ]
+    },
+    {
+      "type": "planned",
+      "tier": "super",
+      "costUsd": 0.0007674,
+      "usageKnown": true,
+      "latencyMs": 4451,
+      "variants": [
+        "\"The only thing necessary for the triumph of evil is for good men to do nothing.\"",
+        "\"All that is needed for the forces of evil to win is for enough good men to do nothing.\"",
+        "\"For evil to flourish, it only requires good men to do nothing.\"",
+        "\"The only thing required for evil to prevail is for good men to do nothing.\"",
+        "\"Evil triumphs when good men do nothing.\""
+      ],
+      "candidateAuthors": [
+        "Edmund Burke",
+        "John Stuart Mill",
+        "William James",
+        "Henry Ward Beecher",
+        "William Lloyd Garrison"
+      ],
+      "queries": [
+        "\"The only thing necessary for the triumph of evil is for good men to do nothing.\"",
+        "\"The only thing necessary for the triumph of evil is for good men to do nothing\" earliest appearance",
+        "\"All that is needed for the forces of evil to win\" quote origin",
+        "Edmund Burke quote \"the only thing necessary for the triumph of evil\" source",
+        "John Stuart Mill \"good men do nothing\" evil triumph"
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "\"The only thing necessary for the triumph of evil is for good men to do nothing.\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1932
+    },
+    {
+      "type": "searched",
+      "query": "\"The only thing necessary for the triumph of evil is for good men to do nothing\" earliest appearance",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2139
+    },
+    {
+      "type": "searched",
+      "query": "\"All that is needed for the forces of evil to win\" quote origin",
+      "results": 0,
+      "credits": 1,
+      "latencyMs": 1464
+    },
+    {
+      "type": "searched",
+      "query": "Edmund Burke quote \"the only thing necessary for the triumph of evil\" source",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1459
+    },
+    {
+      "type": "searched",
+      "query": "John Stuart Mill \"good men do nothing\" evil triumph",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2387
+    },
+    {
+      "type": "pages_ready",
+      "pages": 4,
+      "droppedExcluded": 0
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.000049199999999999997,
+      "usageKnown": true,
+      "latencyMs": 603,
+      "url": "https://www.scribd.com/document/80463526/All-That-is-Necessary-for-the-Triumph-of-Evil-is-That-Good-Men-Do-Nothing",
+      "host": "scribd.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n3",
+        "url": "https://www.scribd.com/document/80463526/All-That-is-Necessary-for-the-Triumph-of-Evil-is-That-Good-Men-Do-Nothing",
+        "host": "scribd.com",
+        "title": "The Cost of Inaction Against Evil | PDF | Edmund Burke | Philosophy",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "All that is necessary for the triumph of evil is that good men do nothing.",
+          "attributed_to": "Edmund Burke",
+          "page_date": null,
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Edmund Burke",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011538,
+      "usageKnown": true,
+      "latencyMs": 620,
+      "url": "https://www.reuters.com/article/fact-check/edmund-burke-did-not-say-evil-triumphs-when-good-men-do-nothing-idUSL1N2PG1EY",
+      "host": "reuters.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://www.reuters.com/article/fact-check/edmund-burke-did-not-say-evil-triumphs-when-good-men-do-nothing-idUSL1N2PG1EY",
+        "host": "reuters.com",
+        "title": "Fact Check: Edmund Burke did not say evil triumphs when good men do nothing",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "The only thing necessary for the triumph of evil is for good men to do nothing",
+          "attributed_to": "Edmund Burke",
+          "page_date": "2021-08-09",
+          "cited_source": "Thoughts on the Cause of the Present Discontents (1770)",
+          "cited_source_date": "1770"
+        },
+        "attributedTo": "Edmund Burke",
+        "pageDate": "2021-08-09",
+        "citedSourceDate": "1770",
+        "date": "1770"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008435999999999999,
+      "usageKnown": true,
+      "latencyMs": 625,
+      "url": "https://www.goodreads.com/quotes/370-the-only-thing-necessary-for-the-triumph-of-evil-is",
+      "host": "goodreads.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n1",
+        "url": "https://www.goodreads.com/quotes/370-the-only-thing-necessary-for-the-triumph-of-evil-is",
+        "host": "goodreads.com",
+        "title": "Quote by Edmund Burke: “The only thing necessary for the triumph of evi...”",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "The only thing necessary for the triumph of evil is for good men to do nothing.",
+          "attributed_to": "Edmund Burke",
+          "page_date": "2026",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Edmund Burke",
+        "pageDate": "2026",
+        "citedSourceDate": null,
+        "date": "2026"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00007908,
+      "usageKnown": true,
+      "latencyMs": 668,
+      "url": "https://www.openculture.com/2016/03/edmund-burkeon-in-action.html",
+      "host": "openculture.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://www.openculture.com/2016/03/edmund-burkeon-in-action.html",
+        "host": "openculture.com",
+        "title": "“The only thing necessary for the triumph of evil is for good men to do nothing,” a Quote Falsely Attributed to Edmund Burke | Open Culture",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "The only thing necessary for the triumph of evil is for good men to do nothing.",
+          "attributed_to": "Edmund Burke",
+          "page_date": "March 13th, 2016",
+          "cited_source": "John Stuart Mill",
+          "cited_source_date": "1867"
+        },
+        "attributedTo": "Edmund Burke",
+        "pageDate": "2016",
+        "citedSourceDate": "1867",
+        "date": "1867"
+      }
+    },
+    {
+      "type": "verdict",
+      "tier": "super",
+      "costUsd": 0.0010206,
+      "usageKnown": true,
+      "latencyMs": 5942,
+      "verdict": {
+        "verdict": "misattributed",
+        "earliest_node": "n4",
+        "earliest_author": "John Stuart Mill",
+        "earliest_date": "1867",
+        "misattribution_node": "n2",
+        "confidence": "medium",
+        "rationale": "The OpenCulture article explicitly states the quote is falsely attributed to Edmund Burke and traces it to John Stuart Mill in 1867 [n4]. No earlier appearance of the saying is provided in the evidence; the Reuters fact‑check notes that Burke did not say it, citing his 1770 work but not showing the quote there [n2]. Thus the saying predates any Burke attribution and originates with Mill, making the Burke credit a misattribution."
+      },
+      "unknownIds": []
+    },
+    {
+      "type": "done",
+      "nebiusUsd": 0.0021160199999999997,
+      "tavilyCredits": 5,
+      "unknownCostCalls": 0,
+      "seconds": 20
+    }
+  ]
+}

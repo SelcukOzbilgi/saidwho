@@ -1,0 +1,531 @@
+{
+  "caseId": "faster-horses",
+  "ranAt": "2026-10-09T13:35:45.728Z",
+  "events": [
+    {
+      "type": "started",
+      "quote": "If I had asked people what they wanted, they would have said faster horses.",
+      "popularAttribution": "Henry Ford",
+      "language": "en",
+      "excludeDomains": [
+        "quoteinvestigator.com",
+        "wikiquote.org",
+        "wikipedia.org"
+      ]
+    },
+    {
+      "type": "planned",
+      "tier": "super",
+      "costUsd": 0.0006708,
+      "usageKnown": true,
+      "latencyMs": 4342,
+      "variants": [
+        "If I had asked customers what they wanted, they would have said faster horses.",
+        "Had I asked the public what they desired, they would have answered with faster horses.",
+        "If I had surveyed the market, people would have demanded quicker horses."
+      ],
+      "candidateAuthors": [
+        "Henry Ford",
+        "Thomas Edison",
+        "Steve Jobs"
+      ],
+      "queries": [
+        "\"If I had asked people what they wanted, they would have said faster horses.\"",
+        "\"If I had asked people what they wanted, they would have said faster horses\" earliest appearance",
+        "Henry Ford \"If I had asked people what they wanted\" quote origin",
+        "Thomas Edison similar quote about asking people what they wanted",
+        "Steve Jobs quote about asking people what they wanted"
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "\"If I had asked people what they wanted, they would have said faster horses.\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1736
+    },
+    {
+      "type": "searched",
+      "query": "\"If I had asked people what they wanted, they would have said faster horses\" earliest appearance",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1511
+    },
+    {
+      "type": "searched",
+      "query": "Henry Ford \"If I had asked people what they wanted\" quote origin",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1319
+    },
+    {
+      "type": "searched",
+      "query": "Thomas Edison similar quote about asking people what they wanted",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2370
+    },
+    {
+      "type": "searched",
+      "query": "Steve Jobs quote about asking people what they wanted",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2636
+    },
+    {
+      "type": "pages_ready",
+      "pages": 16,
+      "droppedExcluded": 0
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008141999999999999,
+      "usageKnown": true,
+      "latencyMs": 688,
+      "url": "https://www.goodreads.com/quotes/15297-if-i-had-asked-people-what-they-wanted-they-would",
+      "host": "goodreads.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://www.goodreads.com/quotes/15297-if-i-had-asked-people-what-they-wanted-they-would",
+        "host": "goodreads.com",
+        "title": "Quote by Henry Ford: “If I had asked people what they wanted, they wo...”",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If I had asked people what they wanted, they would have said faster horses.",
+          "attributed_to": "Henry Ford",
+          "page_date": null,
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009834,
+      "usageKnown": true,
+      "latencyMs": 723,
+      "url": "https://chattermill.com/blog/the-faster-horses-myth-and-3-cx-lessons-from-henry-ford",
+      "host": "chattermill.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n3",
+        "url": "https://chattermill.com/blog/the-faster-horses-myth-and-3-cx-lessons-from-henry-ford",
+        "host": "chattermill.com",
+        "title": "The Faster Horses Myth: 3 CX Lessons from Henry Ford",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If I had asked people what they wanted, they would have said faster horses.",
+          "attributed_to": "Henry Ford",
+          "page_date": "July 1, 2025",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": "2025",
+        "citedSourceDate": null,
+        "date": "2025"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010319999999999999,
+      "usageKnown": true,
+      "latencyMs": 754,
+      "url": "https://www.infinify.com/lets-talk-about-faster-horses",
+      "host": "infinify.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://www.infinify.com/lets-talk-about-faster-horses",
+        "host": "infinify.com",
+        "title": "Let’s Talk About Faster Horses • Deep Product",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "if Henry Ford canvassed people on whether or not he should build a motor car, they’d probably tell him what they really wanted was a faster horse.",
+          "attributed_to": "John McNeece",
+          "page_date": "1999",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "John McNeece",
+        "pageDate": "1999",
+        "citedSourceDate": null,
+        "date": "1999"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00007092,
+      "usageKnown": true,
+      "latencyMs": 761,
+      "url": "https://medium.com/@adrianh/faster-horses-50ff8bb1bb62",
+      "host": "medium.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n5",
+        "url": "https://medium.com/@adrianh/faster-horses-50ff8bb1bb62",
+        "host": "medium.com",
+        "title": "Faster Horses",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If I had asked people what they wanted, they would have said faster horses.",
+          "attributed_to": "Henry Ford did not say this",
+          "page_date": "2019-09-09",
+          "cited_source": "Marketing Week",
+          "cited_source_date": "2001"
+        },
+        "attributedTo": "Henry Ford did not say this",
+        "pageDate": "2019-09-09",
+        "citedSourceDate": "2001",
+        "date": "2001"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0001095,
+      "usageKnown": true,
+      "latencyMs": 848,
+      "url": "https://www.snopes.com/news/2025/02/23/horses-quote-henry-ford",
+      "host": "snopes.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n1",
+        "url": "https://www.snopes.com/news/2025/02/23/horses-quote-henry-ford",
+        "host": "snopes.com",
+        "title": "No proof Henry Ford said if he'd asked what customers wanted, they would have said 'faster horses' | Snopes.com",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "if Henry Ford canvassed people on whether or not he should build a motor car, they'd probably tell him what they really wanted was a faster horse.",
+          "attributed_to": "John McNeece",
+          "page_date": "2025-02-23",
+          "cited_source": "The Cruise Industry News Quarterly (1999)",
+          "cited_source_date": "1999"
+        },
+        "attributedTo": "John McNeece",
+        "pageDate": "2025-02-23",
+        "citedSourceDate": "1999",
+        "date": "1999"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009005999999999999,
+      "usageKnown": true,
+      "latencyMs": 393,
+      "url": "https://brianketcham786410.substack.com/p/12-thomas-edison",
+      "host": "brianketcham786410.substack.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011153999999999999,
+      "usageKnown": true,
+      "latencyMs": 430,
+      "url": "https://www.iheart.com/podcast/1297-whats-your-problem-93024648/episode/introducing-business-history-the-edison-invention-307595977",
+      "host": "iheart.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0000924,
+      "usageKnown": true,
+      "latencyMs": 465,
+      "url": "https://www.thomasedison.org/edison-quotes",
+      "host": "thomasedison.org",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008832,
+      "usageKnown": true,
+      "latencyMs": 545,
+      "url": "https://www.antonsten.com/articles/henry-ford-horse-problem",
+      "host": "antonsten.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n6",
+        "url": "https://www.antonsten.com/articles/henry-ford-horse-problem",
+        "host": "antonsten.com",
+        "title": "Henry Ford's horse problem wasn't about imagination – Anton Sten",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If I had asked people what they wanted, they would have said faster horses.",
+          "attributed_to": "Henry Ford (allegedly)",
+          "page_date": "2024",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford (allegedly)",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009167999999999999,
+      "usageKnown": true,
+      "latencyMs": 660,
+      "url": "https://worksinprogress.co/issue/thomas-edison-tinkerer",
+      "host": "worksinprogress.co",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00003558,
+      "usageKnown": true,
+      "latencyMs": 500,
+      "url": "https://www.goodreads.com/author/quotes/3091287.Thomas_A_Edison",
+      "host": "goodreads.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00007062,
+      "usageKnown": true,
+      "latencyMs": 607,
+      "url": "https://www.goodreads.com/quotes/988332-some-people-say-give-the-customers-what-they-want-but",
+      "host": "goodreads.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n12",
+        "url": "https://www.goodreads.com/quotes/988332-some-people-say-give-the-customers-what-they-want-but",
+        "host": "goodreads.com",
+        "title": "Quote by Steve Jobs: “Some people say, \"Give the customers what they ...”",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If I'd asked customers what they wanted, they would have told me, 'A faster horse!'",
+          "attributed_to": "Henry Ford",
+          "page_date": "2024",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008736,
+      "usageKnown": true,
+      "latencyMs": 443,
+      "url": "https://medium.com/@TomvanB/it-s-not-the-customer-s-job-to-know-what-they-want-this-great-quote-by-steve-jobs-is-what-i-want-3cc2201fcabd",
+      "host": "medium.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011597999999999998,
+      "usageKnown": true,
+      "latencyMs": 796,
+      "url": "https://wisdomquotes.com/steve-jobs-quotes",
+      "host": "wisdomquotes.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n14",
+        "url": "https://wisdomquotes.com/steve-jobs-quotes",
+        "host": "wisdomquotes.com",
+        "title": "201 Steve Jobs Quotes (The Ultimate List)",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "You can’t go out and ask people, you know, what the next big thing is. There’s a great quote by Henry Ford, right? He said, ‘If I’d have asked my customers what they wanted, they would have told me ‘A faster horse’.', ",
+          "attributed_to": "Steve Jobs",
+          "page_date": "201 Steve Jobs Quotes (The Ultimate List)",
+          "cited_source": "Henry Ford",
+          "cited_source_date": null
+        },
+        "attributedTo": "Steve Jobs",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011009999999999999,
+      "usageKnown": true,
+      "latencyMs": 825,
+      "url": "https://theworkaround.substack.com/p/best-of-that-steve-jobs-research",
+      "host": "theworkaround.substack.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n13",
+        "url": "https://theworkaround.substack.com/p/best-of-that-steve-jobs-research",
+        "host": "theworkaround.substack.com",
+        "title": "BEST OF: That Steve Jobs Research Quote Should RIP",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If I’d asked customers what they wanted, they would have told me, \"A faster horse!\", People don’t know what they want until you show it to them. That’s why I never rely on market research. Our task is to read things that are not yet on the page.",
+          "attributed_to": "Steve Jobs",
+          "page_date": "2024-01-15",
+          "cited_source": "Walter Isaacson’s biography",
+          "cited_source_date": "2011"
+        },
+        "attributedTo": "Steve Jobs",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008369999999999999,
+      "usageKnown": true,
+      "latencyMs": 581,
+      "url": "https://www.inc.com/jason-aten/this-was-steve-jobs-most-controversial-legacy-it-was-also-his-most-brilliant.html",
+      "host": "inc.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n16",
+        "url": "https://www.inc.com/jason-aten/this-was-steve-jobs-most-controversial-legacy-it-was-also-his-most-brilliant.html",
+        "host": "inc.com",
+        "title": "This Is Steve Jobs's Most Controversial Legacy. It Is Also His Most Brilliant",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If I'd ask customers what they wanted, they would've told me a faster horse.",
+          "attributed_to": "Steve Jobs",
+          "page_date": "2023",
+          "cited_source": "Henry Ford",
+          "cited_source_date": null
+        },
+        "attributedTo": "Steve Jobs",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "verdict",
+      "tier": "super",
+      "costUsd": 0.0014676000000000001,
+      "usageKnown": true,
+      "latencyMs": 7222,
+      "verdict": {
+        "verdict": "misattributed",
+        "earliest_node": "n1",
+        "earliest_author": "John McNeece",
+        "earliest_date": "1999",
+        "misattribution_node": null,
+        "confidence": "medium",
+        "rationale": "The earliest verifiable appearance of the idea comes from a 1999 source cited by Snopes (n1) and repeated on infinify.com (n4), both attributing the formulation to John McNeece, not Henry Ford. No evidence predating 1999 shows Ford using the exact wording. Nodes that credit Ford (e.g., n2, n3, n6, n12) lack dates or are later repetitions, making the Ford attribution unsupported. Thus the saying is misattributed to Ford."
+      },
+      "unknownIds": []
+    },
+    {
+      "type": "done",
+      "nebiusUsd": 0.00357912,
+      "tavilyCredits": 5,
+      "unknownCostCalls": 0,
+      "seconds": 23
+    }
+  ]
+}

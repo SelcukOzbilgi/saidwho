@@ -1,0 +1,603 @@
+{
+  "caseId": "let-them-eat-cake",
+  "ranAt": "2026-10-09T13:37:37.482Z",
+  "events": [
+    {
+      "type": "started",
+      "quote": "Let them eat cake.",
+      "popularAttribution": "Marie Antoinette",
+      "language": "en",
+      "excludeDomains": [
+        "quoteinvestigator.com",
+        "wikiquote.org",
+        "wikipedia.org",
+        "en.wikiquote.org",
+        "en.wikipedia.org"
+      ]
+    },
+    {
+      "type": "planned",
+      "tier": "super",
+      "costUsd": 0.00038520000000000004,
+      "usageKnown": true,
+      "latencyMs": 2848,
+      "variants": [
+        "\"Qu'ils mangent de la brioche.\""
+      ],
+      "candidateAuthors": [
+        "Jean-Jacques Rousseau",
+        "Marie-Thérèse d'Autriche"
+      ],
+      "queries": [
+        "\"Let them eat cake.\"",
+        "\\\"Let them eat cake\\\" earliest appearance",
+        "\\\"Qu'ils mangent de la brioche\\\" Rousseau",
+        "\\\"Let them eat cake\\\" newspaper 1780s",
+        "\\\"Marie Antoinette\\\" \\\"Let them eat cake\\\" origin"
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "\"Let them eat cake.\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 698
+    },
+    {
+      "type": "searched",
+      "query": "\\\"Let them eat cake\\\" earliest appearance",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2162
+    },
+    {
+      "type": "searched",
+      "query": "\\\"Qu'ils mangent de la brioche\\\" Rousseau",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1668
+    },
+    {
+      "type": "searched",
+      "query": "\\\"Let them eat cake\\\" newspaper 1780s",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1532
+    },
+    {
+      "type": "searched",
+      "query": "\\\"Marie Antoinette\\\" \\\"Let them eat cake\\\" origin",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1660
+    },
+    {
+      "type": "pages_ready",
+      "pages": 14,
+      "droppedExcluded": 0
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00007212000000000001,
+      "usageKnown": true,
+      "latencyMs": 473,
+      "url": "https://www.history.com/articles/did-marie-antoinette-really-say-let-them-eat-cake",
+      "host": "history.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00005928,
+      "usageKnown": true,
+      "latencyMs": 692,
+      "url": "https://www.habsburger.net/en/chapter/if-they-have-no-bread-let-them-eat-cake",
+      "host": "habsburger.net",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n5",
+        "url": "https://www.habsburger.net/en/chapter/if-they-have-no-bread-let-them-eat-cake",
+        "host": "habsburger.net",
+        "title": "‘If they have no bread, let them eat cake’! | Die Welt der Habsburger",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Often attributed to Marie Antoinette, this phrase was in fact never uttered by her.",
+          "attributed_to": "Marie Antoinette",
+          "page_date": null,
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Marie Antoinette",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010278,
+      "usageKnown": true,
+      "latencyMs": 748,
+      "url": "https://www.britannica.com/story/did-marie-antoinette-really-say-let-them-eat-cake",
+      "host": "britannica.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n1",
+        "url": "https://www.britannica.com/story/did-marie-antoinette-really-say-let-them-eat-cake",
+        "host": "britannica.com",
+        "title": "Did Marie-Antoinette Really Say “Let Them Eat Cake”?",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Let them eat cake!",
+          "attributed_to": "Marie-Antoinette",
+          "page_date": "2024",
+          "cited_source": "Jean-Jacques Rousseau, Confessions, Book VI (written about 1767)",
+          "cited_source_date": "1767"
+        },
+        "attributedTo": "Marie-Antoinette",
+        "pageDate": null,
+        "citedSourceDate": "1767",
+        "date": "1767"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012972,
+      "usageKnown": true,
+      "latencyMs": 835,
+      "url": "https://debbmarie.wordpress.com/the-story-of-let-them-eat-cake",
+      "host": "debbmarie.wordpress.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://debbmarie.wordpress.com/the-story-of-let-them-eat-cake",
+        "host": "debbmarie.wordpress.com",
+        "title": "The story of “Let Them Eat Cake” | LET THEM EAT CAKE",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "It is thought that the word cake may have been substituted because it was more familiar to English speakers then brioche.",
+          "attributed_to": "Marie-Antoinette",
+          "page_date": "October 2026",
+          "cited_source": "French law required bakers to sell loaves at fixed prices and fancy loaves were to be sold at the same price as basic breads",
+          "cited_source_date": null
+        },
+        "attributedTo": "Marie-Antoinette",
+        "pageDate": "2026",
+        "citedSourceDate": null,
+        "date": "2026"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010991999999999999,
+      "usageKnown": true,
+      "latencyMs": 970,
+      "url": "https://ginaferrariart.substack.com/p/let-them-eat-cake",
+      "host": "ginaferrariart.substack.com",
+      "outcome": "too_long",
+      "reason": null
+    },
+    {
+      "type": "escalated",
+      "step": "read",
+      "from": "lightning",
+      "to": "super",
+      "thinking": false,
+      "reason": "a field was too long to be a quote",
+      "url": "https://ginaferrariart.substack.com/p/let-them-eat-cake"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010835999999999999,
+      "usageKnown": true,
+      "latencyMs": 621,
+      "url": "https://www.cakeinn.com/where-did-the-phrase-let-them-eat-cake-come-from",
+      "host": "cakeinn.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n6",
+        "url": "https://www.cakeinn.com/where-did-the-phrase-let-them-eat-cake-come-from",
+        "host": "cakeinn.com",
+        "title": "Where Did The Phrase “Let Them Eat Cake” Come From?",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "she stated upon hearing that the peasants of France have no bread, “let them eat brioche”.",
+          "attributed_to": "Marie Antoinette",
+          "page_date": "November 10, 2022",
+          "cited_source": "The Confessions",
+          "cited_source_date": "1782"
+        },
+        "attributedTo": "Marie Antoinette",
+        "pageDate": "2022",
+        "citedSourceDate": "1782",
+        "date": "1782"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009659999999999999,
+      "usageKnown": true,
+      "latencyMs": 410,
+      "url": "https://www.21cr.ie/let-them-eat-brioche.html",
+      "host": "21cr.ie",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n8",
+        "url": "https://www.21cr.ie/let-them-eat-brioche.html",
+        "host": "21cr.ie",
+        "title": "Beautiful book illustrating history, art and science since the Renaissance in 100 designs & 1000 facts. The ultimate coffee table book - a visual intellectual feast. - 21st Century Renaissance",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Finally,",
+          "attributed_to": "Jean-Jacques Rousseau",
+          "page_date": "16 Oct 2016",
+          "cited_source": "Confessions",
+          "cited_source_date": "1782"
+        },
+        "attributedTo": "Jean-Jacques Rousseau",
+        "pageDate": "2016",
+        "citedSourceDate": "1782",
+        "date": "1782"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011556,
+      "usageKnown": true,
+      "latencyMs": 545,
+      "url": "https://www.iheart.com/podcast/105-stuff-you-missed-in-histor-21124503/episode/did-marie-antoinette-really-tell-french-30208472",
+      "host": "iheart.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n7",
+        "url": "https://www.iheart.com/podcast/105-stuff-you-missed-in-histor-21124503/episode/did-marie-antoinette-really-tell-french-30208472",
+        "host": "iheart.com",
+        "title": "Did Marie Antoinette really tell French peasants to eat cake? Stuff You Missed in History Class | iHeart",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Marie Antoinette posedly said, left the meat cake.",
+          "attributed_to": "Marie Antoinette",
+          "page_date": null,
+          "cited_source": "Jean-Jacques Rousseau's Confessions",
+          "cited_source_date": "1765"
+        },
+        "attributedTo": "Marie Antoinette",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009113999999999998,
+      "usageKnown": true,
+      "latencyMs": 503,
+      "url": "https://www.instagram.com/p/DOvUHGpjCFz",
+      "host": "instagram.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n9",
+        "url": "https://www.instagram.com/p/DOvUHGpjCFz",
+        "host": "instagram.com",
+        "title": "Instagram",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "\"Let them eat cake\" is a quote famously, though falsely, attributed to Marie Antoinette.",
+          "attributed_to": "Marie Antoinette",
+          "page_date": "September 18, 2025",
+          "cited_source": "Jean-Jacques Rousseau's Confessions",
+          "cited_source_date": "1765"
+        },
+        "attributedTo": "Marie Antoinette",
+        "pageDate": "2025",
+        "citedSourceDate": "1765",
+        "date": "1765"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011556,
+      "usageKnown": true,
+      "latencyMs": 730,
+      "url": "https://www.radiofrance.fr/francebleu/podcasts/stephane-bern-voyage-dans-le-temps/qu-ils-mangent-de-la-brioche-la-phrase-que-marie-antoinette-n-a-jamais-prononcee-8102931",
+      "host": "radiofrance.fr",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n10",
+        "url": "https://www.radiofrance.fr/francebleu/podcasts/stephane-bern-voyage-dans-le-temps/qu-ils-mangent-de-la-brioche-la-phrase-que-marie-antoinette-n-a-jamais-prononcee-8102931",
+        "host": "radiofrance.fr",
+        "title": "“Qu’ils mangent de la brioche” : la phrase que Marie-Antoinette n’a jamais prononcée | ICI",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Qu’ils mangent de la brioche",
+          "attributed_to": "Jean-Jacques Rousseau (as the origin of the rumor, not Marie-Antoinette)",
+          "page_date": "2024-10-09",
+          "cited_source": "Jean-Jacques Rousseau, Confessions, Livre VI (1765)",
+          "cited_source_date": "1765"
+        },
+        "attributedTo": "Jean-Jacques Rousseau (as the origin of the rumor, not Marie-Antoinette)",
+        "pageDate": null,
+        "citedSourceDate": "1765",
+        "date": "1765"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "super",
+      "costUsd": 0.0004782,
+      "usageKnown": true,
+      "latencyMs": 891,
+      "url": "https://ginaferrariart.substack.com/p/let-them-eat-cake",
+      "host": "ginaferrariart.substack.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://ginaferrariart.substack.com/p/let-them-eat-cake",
+        "host": "ginaferrariart.substack.com",
+        "title": "Let Them Eat Cake - Gina Ferrari Art",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "I’m sure everyone is familiar with the words “Let them eat cake” or to quote its original form “Qu’ils mangent de la brioche”, words often attributed to Marie-Antoinette",
+          "attributed_to": "Marie-Antoinette",
+          "page_date": null,
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Marie-Antoinette",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011046,
+      "usageKnown": true,
+      "latencyMs": 737,
+      "url": "https://memories-france.travel/blog/let-them-eat-cake-myth",
+      "host": "memories-france.travel",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n11",
+        "url": "https://memories-france.travel/blog/let-them-eat-cake-myth",
+        "host": "memories-france.travel",
+        "title": "Did Marie Antoinette Really Say \"Let Them Eat Cake\"? The Truth Behind the MythDid Marie Antoinette Really Say \"Let Them Eat Cake\"? The Truth Behind the Myth | Memories France",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "In one of his most read works, he speaks of a \"great princess\" who, when told the peasants had no bread, responded, \"Qu'ils mangent de la brioche,\" which we have long translated as \"Let them eat cake.\"",
+          "attributed_to": "Jean-Jacques Rousseau",
+          "page_date": null,
+          "cited_source": "Jean-Jacques Rousseau's work (1765)",
+          "cited_source_date": "1765"
+        },
+        "attributedTo": "Jean-Jacques Rousseau",
+        "pageDate": null,
+        "citedSourceDate": "1765",
+        "date": "1765"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00017388,
+      "usageKnown": true,
+      "latencyMs": 584,
+      "url": "https://www.facebook.com/61560411886130/posts/marie-antoinette-almost-certainly-never-said-let-them-eat-cake-but-the-myth-surv/122198786474347062",
+      "host": "facebook.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n13",
+        "url": "https://www.facebook.com/61560411886130/posts/marie-antoinette-almost-certainly-never-said-let-them-eat-cake-but-the-myth-surv/122198786474347062",
+        "host": "facebook.com",
+        "title": "Eats History - Marie Antoinette almost certainly never...",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "The phrase usually attributed to her comes from the French “Qu’ils mangent de la brioche.”",
+          "attributed_to": "Jean-Jacques Rousseau (as cited in the page)",
+          "page_date": "3 February",
+          "cited_source": "Jean-Jacques Rousseau's Confessions",
+          "cited_source_date": null
+        },
+        "attributedTo": "Jean-Jacques Rousseau (as cited in the page)",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012288,
+      "usageKnown": true,
+      "latencyMs": 704,
+      "url": "https://link.springer.com/article/10.1007/s10887-023-09230-y",
+      "host": "link.springer.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n12",
+        "url": "https://link.springer.com/article/10.1007/s10887-023-09230-y",
+        "host": "link.springer.com",
+        "title": "“Let them eat cake”: drought, peasant uprisings, and demand for institutional change in the French Revolution | Journal of Economic Growth | Springer Nature Link",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "The sentence “Let them eat cake” (fr. “Qu’ils mangent de la brioche” ) was attributed to Marie-Antoinette (1755–1793), wife of King Louis XVI, to illustrate the selfishness and ignorance of the French upper class",
+          "attributed_to": "Marie-Antoinette",
+          "page_date": "2024",
+          "cited_source": "Jean-Jacques Rousseau wrote this sentence already in 1765 in Confessions: “At length I remembered the last resort of a great princess who, when told that the peasants had no bread, replied: “Then let them eat brioches.”",
+          "cited_source_date": "1765"
+        },
+        "attributedTo": "Marie-Antoinette",
+        "pageDate": "2024",
+        "citedSourceDate": "1765",
+        "date": "1765"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008046000000000001,
+      "usageKnown": true,
+      "latencyMs": 461,
+      "url": "https://www.ripleys.com/stories/let-them-eat-cake",
+      "host": "ripleys.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n14",
+        "url": "https://www.ripleys.com/stories/let-them-eat-cake",
+        "host": "ripleys.com",
+        "title": "Marie Antoinette Never Said “Let Them Eat Cake” | Ripley's Believe It or Not! | Aquariums, Attractions, Museums",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "The line she's quoted using is actually: \"Qu’ils mangent de la brioche.\"",
+          "attributed_to": "Jean-Jacques Rousseau",
+          "page_date": "2024",
+          "cited_source": "Jean-Jacques Rousseau's writings",
+          "cited_source_date": "1760s"
+        },
+        "attributedTo": "Jean-Jacques Rousseau",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "verdict",
+      "tier": "super",
+      "costUsd": 0.0017193,
+      "usageKnown": true,
+      "latencyMs": 6855,
+      "verdict": {
+        "verdict": "misattributed",
+        "earliest_node": "n9",
+        "earliest_author": "Jean-Jacques Rousseau",
+        "earliest_date": "1765",
+        "misattribution_node": "n6",
+        "confidence": "high",
+        "rationale": "Multiple sources trace the phrase to Jean-Jacques Rousseau’s Confessions, written circa 1765 (see n9, n10, n11, n12), showing it predates Marie Antoinette and was originally attributed to a ‘great princess’ in Rousseau’s work. The earliest dated node that credits Marie Antoinette herself is n6 (2022), which repeats the claim without earlier support. Because the saying’s earliest appearance is in Rousseau’s writing and not in any record of Marie Antoinette’s speech, the attribution to her is incorrect."
+      },
+      "unknownIds": []
+    },
+    {
+      "type": "done",
+      "nebiusUsd": 0.004071420000000001,
+      "tavilyCredits": 5,
+      "unknownCostCalls": 0,
+      "seconds": 20
+    }
+  ]
+}
