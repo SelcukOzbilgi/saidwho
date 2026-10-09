@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
+/* Paper and ink, with the banner's marker orange, tick green and cross red. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f4ef;
+  --foreground: #1c1a16;
+  --card: #fffdf8;
+  --muted: #6b665c;
+  --line: #e2ddd2;
+  --accent: #ef7d1a;
+  --good: #3f9d27;
+  --bad: #d8382c;
+  --warn: #c98a07;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #14130f;
+    --foreground: #ece8df;
+    --card: #1d1b17;
+    --muted: #a39d90;
+    --line: #34312a;
+    --accent: #f59a45;
+    --good: #6cc24a;
+    --bad: #f0645a;
+    --warn: #e5b23a;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-newsreader);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
+}
+
+/* New cards and log lines slide in as the run reports them. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.arrive {
+  animation: arrive 300ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrive {
+    animation: none;
+  }
 }
