@@ -22,12 +22,12 @@ export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttr
   const name = popularAttribution ?? "The named person";
 
   if (!verdict) {
-    if (!noVerdict && !(finished && stopped)) return null;
+    if (!noVerdict && !finished) return null;
     return (
       <section className="rounded-xl border border-line bg-card p-5">
         <p className="text-xs font-medium uppercase tracking-wider text-muted">No verdict</p>
         <p className="mt-1 text-lg">
-          {noVerdict ? capitalize(noVerdict) : stopped === "budget" ? "The run hit its spending limit first." : "The run stopped first."}
+          {noVerdict ? capitalize(noVerdict) : stopped === "budget" ? "The run hit its spending limit first." : "The run ended before a verdict."}
         </p>
       </section>
     );

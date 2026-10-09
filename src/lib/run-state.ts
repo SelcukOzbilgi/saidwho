@@ -5,7 +5,9 @@ import type { JudgeOutput } from "../agent/schemas";
 // replay of a saved run give the same screen.
 
 export type Tier = "lightning" | "nano" | "super" | "ultra";
-export type Phase = "planning" | "searching" | "reading" | "judging" | "finished";
+// The step a run reached. It stays put once the run is done, so a run that
+// ended early shows where.
+export type Phase = "planning" | "searching" | "reading" | "judging";
 export type Agent = "Planner" | "Search" | "Reader" | "Checker" | "Judge" | "Run";
 export type Tone = "neutral" | "good" | "warn" | "bad";
 
@@ -95,6 +97,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         ...state,
         ...spent(event),
         phase: "searching",
+        noVerdict: null,
         plan: { variants: event.variants, candidateAuthors: event.candidateAuthors, queries: event.queries },
         log: log(
           "Planner",
@@ -104,7 +107,13 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         ),
       };
     case "plan_failed":
-      return { ...state, ...spent(event), log: log("Planner", `Planning failed: ${event.reason}`, "bad", event) };
+      // When the run ends here, this is why; the run going on clears it.
+      return {
+        ...state,
+        ...spent(event),
+        noVerdict: `Planning failed: ${event.reason}`,
+        log: log("Planner", `Planning failed: ${event.reason}`, "bad", event),
+      };
     case "escalated": {
       const how = event.from === event.to ? `again on ${event.to} with thinking off` : `again on ${event.to}`;
       const agent: Agent = event.step === "plan" ? "Planner" : event.step === "read" ? "Reader" : "Judge";
@@ -115,12 +124,13 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       return {
         ...state,
         phase: "searching",
+        noVerdict: null,
         searches: state.searches + 1,
         tavilyCredits: state.tavilyCredits + (event.credits ?? 0),
         log: log("Search", `${event.results} results for ${event.query}`),
       };
     case "search_failed":
-      return { ...state, phase: "searching", log: log("Search", `Search failed (${event.reason}): ${event.query}`, "bad") };
+      return { ...state, phase: "searching", noVerdict: null, log: log("Search", `Search failed (${event.reason}): ${event.query}`, "bad") };
     case "pages_ready": {
       const dropped = event.droppedExcluded ? `, ${event.droppedExcluded} from excluded sites dropped` : "";
       return { ...state, phase: "reading", pages: event.pages, log: log("Search", `${event.pages} pages to read${dropped}`) };
@@ -186,7 +196,6 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       // The server's totals replace the running sums: they are what the run was charged.
       return {
         ...state,
-        phase: "finished",
         finished: true,
         nebiusUsd: event.nebiusUsd,
         tavilyCredits: event.tavilyCredits,

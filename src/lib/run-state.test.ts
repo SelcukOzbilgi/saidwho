@@ -50,7 +50,7 @@ describe("reduceRun", () => {
     const reading = reduceRun(planned, { type: "pages_ready", pages: 3, droppedExcluded: 0 });
     expect(reading.phase).toBe("reading");
     const finished = reduceRun(reading, { type: "done", nebiusUsd: 0.002, tavilyCredits: 1, unknownCostCalls: 0, seconds: 9 });
-    expect(finished).toMatchObject({ phase: "finished", finished: true, seconds: 9 });
+    expect(finished).toMatchObject({ phase: "reading", finished: true, seconds: 9 });
   });
 
   it("keeps the last verdict when a second judge ran", () => {
@@ -76,6 +76,12 @@ describe("reduceRun", () => {
   it("says why there is no verdict", () => {
     expect(run([{ type: "judge_skipped", reason: "no verified evidence" }]).noVerdict).toBe("no verified evidence");
     expect(run([{ type: "judge_failed", ...spend, reason: "bad output" }]).noVerdict).toBe("bad output");
+    expect(run([{ type: "plan_failed", ...spend, reason: "auth: rejected" }]).noVerdict).toBe("Planning failed: auth: rejected");
+    const searchedAnyway = run([
+      { type: "plan_failed", ...spend, reason: "timeout" },
+      { type: "searched", query: "q", results: 1, credits: 1, latencyMs: 1 },
+    ]);
+    expect(searchedAnyway.noVerdict).toBeNull();
   });
 
   it("adds up spend as it streams, then takes the server's totals", () => {

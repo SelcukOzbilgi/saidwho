@@ -7,15 +7,13 @@ const STEPS: { phase: Phase; label: string }[] = [
   { phase: "judging", label: "Judge" },
 ];
 
-const ORDER: Phase[] = ["planning", "searching", "reading", "judging", "finished"];
-
 type Props = Pick<
   RunState,
-  "phase" | "searches" | "pages" | "readUrls" | "nodes" | "nebiusUsd" | "unknownCostCalls" | "tavilyCredits" | "seconds"
+  "phase" | "finished" | "searches" | "pages" | "readUrls" | "nodes" | "nebiusUsd" | "unknownCostCalls" | "tavilyCredits" | "seconds"
 > & { running: boolean };
 
-export function Progress({ running, phase, searches, pages, readUrls, nodes, ...cost }: Props) {
-  const at = ORDER.indexOf(phase);
+export function Progress({ running, phase, finished, searches, pages, readUrls, nodes, ...cost }: Props) {
+  const at = STEPS.findIndex((step) => step.phase === phase);
   const confirmed = nodes.filter((n) => n.check.status !== "not_found").length;
   const detail: Partial<Record<Phase, string>> = {
     searching: searches ? `${searches} done` : undefined,
@@ -26,8 +24,9 @@ export function Progress({ running, phase, searches, pages, readUrls, nodes, ...
     <div className="flex flex-col gap-3">
       <ol className="grid grid-cols-4 gap-2" aria-label="Progress">
         {STEPS.map((step, i) => {
-          // A run that stopped or broke leaves its last step unfinished.
-          const state = i < at ? "done" : i === at && running ? "now" : "later";
+          // A run that ended early, stopped or broke leaves its last step unfinished.
+          const ended = finished && phase === "judging";
+          const state = i < at || (i === at && ended) ? "done" : i === at && running ? "now" : "later";
           return (
             <li key={step.phase} aria-current={state === "now" ? "step" : undefined}>
               <div
