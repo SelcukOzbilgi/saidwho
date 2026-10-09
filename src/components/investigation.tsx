@@ -53,6 +53,9 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
 
     // Only the latest run may touch the screen; a stopped one goes quiet.
     const live = () => controller.current === abort && !abort.signal.aborted;
+    const stopped = () => {
+      if (controller.current === abort) setStatus("stopped");
+    };
     const fail = (code: string) => {
       setProblem(code);
       setStatus("failed");
@@ -68,6 +71,7 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
       });
       if (!response.ok || !response.body) {
         const body: unknown = await response.json().catch(() => null);
+        if (!live()) return stopped();
         const code = body && typeof body === "object" && "error" in body ? String(body.error) : "unreachable";
         return fail(code in PROBLEMS ? code : "unreachable");
       }
@@ -82,11 +86,10 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
       }
       if (done) setStatus("finished");
       else if (live()) fail("connection_lost");
-      else if (controller.current === abort) setStatus("stopped");
+      else stopped();
     } catch {
-      if (controller.current !== abort) return;
-      if (abort.signal.aborted) setStatus("stopped");
-      else fail(heard ? "connection_lost" : "unreachable");
+      if (abort.signal.aborted) stopped();
+      else if (controller.current === abort) fail(heard ? "connection_lost" : "unreachable");
     }
   }
 
