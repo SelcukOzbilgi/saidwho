@@ -1,0 +1,55 @@
+import type { Phase, RunState } from "../lib/run-state";
+
+const STEPS: { phase: Phase; label: string }[] = [
+  { phase: "planning", label: "Plan" },
+  { phase: "searching", label: "Search" },
+  { phase: "reading", label: "Read and check" },
+  { phase: "judging", label: "Judge" },
+];
+
+const ORDER: Phase[] = ["planning", "searching", "reading", "judging", "finished"];
+
+type Props = Pick<
+  RunState,
+  "phase" | "searches" | "pages" | "readUrls" | "nodes" | "nebiusUsd" | "unknownCostCalls" | "tavilyCredits" | "seconds"
+> & { running: boolean };
+
+export function Progress({ running, phase, searches, pages, readUrls, nodes, ...cost }: Props) {
+  const at = ORDER.indexOf(phase);
+  const confirmed = nodes.filter((n) => n.check.status !== "not_found").length;
+  const detail: Partial<Record<Phase, string>> = {
+    searching: searches ? `${searches} done` : undefined,
+    reading: pages !== null ? `${readUrls.length} of ${pages} pages, ${confirmed} confirmed` : undefined,
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <ol className="grid grid-cols-4 gap-2" aria-label="Progress">
+        {STEPS.map((step, i) => {
+          // A run that stopped or broke leaves its last step unfinished.
+          const state = i < at ? "done" : i === at && running ? "now" : "later";
+          return (
+            <li key={step.phase} aria-current={state === "now" ? "step" : undefined}>
+              <div
+                className={`h-1 rounded-full ${state === "done" ? "bg-foreground" : state === "now" ? "animate-pulse bg-accent" : "bg-line"}`}
+              />
+              <p className={`mt-1.5 text-xs font-medium ${state === "later" ? "text-muted" : ""}`}>{step.label}</p>
+              {detail[step.phase] && <p className="text-[11px] text-muted tabular-nums">{detail[step.phase]}</p>}
+            </li>
+          );
+        })}
+      </ol>
+      <Cost {...cost} />
+    </div>
+  );
+}
+
+function Cost({ nebiusUsd, unknownCostCalls, tavilyCredits, seconds }: Pick<RunState, "nebiusUsd" | "unknownCostCalls" | "tavilyCredits" | "seconds">) {
+  return (
+    <p className="font-mono text-xs text-muted tabular-nums">
+      ${nebiusUsd.toFixed(4)} on Nebius · {tavilyCredits} Tavily credit{tavilyCredits === 1 ? "" : "s"}
+      {unknownCostCalls > 0 && ` · ${unknownCostCalls} call${unknownCostCalls === 1 ? "" : "s"} with unknown cost`}
+      {seconds !== null && ` · ${seconds}s`}
+    </p>
+  );
+}
