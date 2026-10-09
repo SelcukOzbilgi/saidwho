@@ -59,7 +59,7 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] Tried out all four Nemotron models, and checked that Tavily can read old sources like archive.org and Wikisource
 - [x] A [test set](eval/) of 20 quotes whose real origins are already known
 - [x] [First full investigation](https://github.com/SelcukOzbilgi/saidwho/releases/tag/v0.1.0), start to finish, from the command line
-- [ ] The live timeline and verdict page
+- [x] The live timeline and verdict page
 - [ ] A public demo with finished example cases
 
 Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
@@ -81,6 +81,8 @@ pnpm dev
 ```
 
 `pnpm test` runs the tests. `pnpm smoke:nebius` and `pnpm smoke:tavily` make a few small real calls to check that your keys work.
+
+With `pnpm dev` running, open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. The page shows each agent's step as it happens, a card for every page that carries the quote (oldest first, with the ones the checker couldn't find on the page crossed out) and the verdict with links back to its evidence. The free trial option stays off unless `LIVE_RUNS_ENABLED`, `TRIAL_RUNS_ENABLED` and a `DAILY_BUDGET_USD` above zero are set, along with the server's own keys.
 
 `pnpm investigate insanity-same-thing` runs one quote from the [test set](eval/) and prints each step, the verdict and what it cost. Any `id` from `eval/quotes.jsonl` works. In the runs so far, one investigation cost under half a cent of Nebius usage and about 5 Tavily credits; other quotes can cost more. As a safety net, the script starts no new model call once its estimated Nebius spend reaches $0.50, though calls already running still finish.
 
