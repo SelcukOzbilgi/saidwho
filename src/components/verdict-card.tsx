@@ -2,7 +2,7 @@ import type { JudgeOutput } from "../agent/schemas";
 import { type RunState, verdictWords } from "../lib/run-state";
 import { TierChip } from "./tier-chip";
 
-const LOOK: Record<JudgeOutput["verdict"], string> = {
+export const VERDICT_LOOK: Record<JudgeOutput["verdict"], string> = {
   misattributed: "text-bad",
   correct: "text-good",
   contested: "text-warn",
@@ -39,7 +39,7 @@ export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttr
   return (
     <section aria-label="Verdict" className="arrive rounded-xl border border-line bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span className={`font-medium uppercase tracking-wider ${LOOK[output.verdict]}`}>{verdictWords(output.verdict)}</span>
+        <span className={`font-medium uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>{verdictWords(output.verdict)}</span>
         <span>· {output.confidence} confidence</span>
         <span className="ml-auto flex items-center gap-1.5">
           judged on <TierChip tier={tier} />
