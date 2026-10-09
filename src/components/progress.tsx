@@ -30,7 +30,7 @@ export function Progress({ running, phase, finished, searches, pages, readUrls, 
           return (
             <li key={step.phase} aria-current={state === "now" ? "step" : undefined}>
               <div
-                className={`h-1 rounded-full ${state === "done" ? "bg-foreground" : state === "now" ? "animate-pulse bg-accent" : "bg-line"}`}
+                className={`h-1 rounded-full ${state === "done" ? "bg-foreground" : state === "now" ? "motion-safe:animate-pulse bg-accent" : "bg-line"}`}
               />
               <p className={`mt-1.5 text-xs font-medium ${state === "later" ? "text-muted" : ""}`}>{step.label}</p>
               {detail[step.phase] && <p className="text-[11px] text-muted tabular-nums">{detail[step.phase]}</p>}
