@@ -12,10 +12,11 @@ export const VERDICT_LOOK: Record<JudgeOutput["verdict"], string> = {
 };
 
 // name is null only when no one was named: the visitor left it blank and the
-// planner didn't know.
+// planner didn't know. With no credit to weigh, the headline only points to the
+// evidence; the earliest trace below says where it leads.
 const HEADLINE: Record<JudgeOutput["verdict"], (name: string | null) => string> = {
-  misattributed: (name) => (name ? `${name} probably didn't say it` : "The usual credit is probably wrong"),
-  correct: (name) => (name ? `${name} said it` : "The usual credit holds up"),
+  misattributed: (name) => (name ? `${name} probably didn't say it` : "What the sources show"),
+  correct: (name) => (name ? `${name} said it` : "What the sources show"),
   contested: (name) => (name ? `Whether ${name} said it is contested` : "Where it comes from is contested"),
   no_known_source: () => "No source old enough to settle it",
 };
