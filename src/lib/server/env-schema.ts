@@ -22,10 +22,6 @@ export const serverEnvSchema = z.object({
   ),
   TAVILY_API_KEY: optionalSecret,
 
-  LANGSMITH_TRACING: flag,
-  LANGSMITH_API_KEY: optionalSecret,
-  LANGSMITH_PROJECT: z.preprocess(blankToUndefined, z.string().default("saidwho")),
-
   // Spend controls for runs paid with owner keys.
   LIVE_RUNS_ENABLED: flag,
   TRIAL_RUNS_ENABLED: flag,

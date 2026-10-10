@@ -12,8 +12,6 @@ export type RunKeys = {
   source: "byok" | "owner";
   nebiusApiKey: string;
   tavilyApiKey: string;
-  // LangSmith tracing is for owner-paid runs only; visitor runs are never traced.
-  tracingAllowed: boolean;
 };
 
 export type RunKeysResult =
@@ -25,18 +23,13 @@ export function resolveRunKeys(request: RunRequest, env: ServerEnv): RunKeysResu
     const nebiusApiKey = request.nebiusApiKey?.trim() ?? "";
     const tavilyApiKey = request.tavilyApiKey?.trim() ?? "";
     if (!nebiusApiKey || !tavilyApiKey) return { ok: false, reason: "byok_incomplete" };
-    return { ok: true, keys: { source: "byok", nebiusApiKey, tavilyApiKey, tracingAllowed: false } };
+    return { ok: true, keys: { source: "byok", nebiusApiKey, tavilyApiKey } };
   }
 
   if (!env.LIVE_RUNS_ENABLED || !env.TRIAL_RUNS_ENABLED) return { ok: false, reason: "trial_disabled" };
   if (!env.NEBIUS_API_KEY || !env.TAVILY_API_KEY) return { ok: false, reason: "owner_keys_missing" };
   return {
     ok: true,
-    keys: {
-      source: "owner",
-      nebiusApiKey: env.NEBIUS_API_KEY,
-      tavilyApiKey: env.TAVILY_API_KEY,
-      tracingAllowed: env.LANGSMITH_TRACING,
-    },
+    keys: { source: "owner", nebiusApiKey: env.NEBIUS_API_KEY, tavilyApiKey: env.TAVILY_API_KEY },
   };
 }

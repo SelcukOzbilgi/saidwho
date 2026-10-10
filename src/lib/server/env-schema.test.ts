@@ -13,10 +13,10 @@ describe("parseServerEnv", () => {
   });
 
   it("treats blank values as unset", () => {
-    const env = parseServerEnv({ NEBIUS_API_KEY: "   ", TAVILY_API_KEY: "", LANGSMITH_TRACING: "" });
+    const env = parseServerEnv({ NEBIUS_API_KEY: "   ", TAVILY_API_KEY: "", LIVE_RUNS_ENABLED: "" });
     expect(env.NEBIUS_API_KEY).toBeUndefined();
     expect(env.TAVILY_API_KEY).toBeUndefined();
-    expect(env.LANGSMITH_TRACING).toBe(false);
+    expect(env.LIVE_RUNS_ENABLED).toBe(false);
   });
 
   it("parses flags and budget", () => {
