@@ -53,7 +53,7 @@ Each run took 18 to 34 seconds and cost half a cent or less in model use, except
 
 Each quote goes through five steps, each with one job:
 
-- **Planner** thinks of other ways the quote has been worded or translated, who might have said it, and what to search for. If you left the name blank, it also says who the quote is usually credited to.
+- **Planner** thinks of other ways the quote has been worded or translated, who might have said it, and what to search for. If you left the name blank, it also tries to say who the quote is usually credited to.
 - **Search** runs up to five web searches through Tavily, always starting with the exact quote. Sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia, are left out, so the trail has to be found from scratch.
 - **Readers** go through up to 20 of the pages that come back. For each one they copy the sentence that carries the quote and note who it's credited to, the date, and any older source the page names.
 - **Checker** looks for the copied sentence, or a very close match, in the page's own text. This step is plain code, not AI, so it can't be talked into a sentence the page doesn't have.
@@ -109,7 +109,7 @@ pnpm dev
 
 ### Using it locally
 
-Open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. You can leave the name blank. The Planner then names who it's usually credited to, and the run marks that name as the Planner's. Your keys are only needed for new runs; the example cases work without them.
+Open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. You can leave the name blank. The Planner then tries to name who it's usually credited to, and when it does, the run marks that name as the Planner's. Your keys are only needed for new runs; the example cases work without them.
 
 The free trial option, which runs on the server's own keys, stays off unless all of these are set in `.env.local`:
 
