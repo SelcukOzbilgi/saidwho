@@ -5,8 +5,12 @@ import { isRunId } from "./run-id";
 // route takes a POST body (keys never go in a URL), so EventSource is out and
 // the frames are parsed here by hand.
 
-// saved carries the id of the run's public page, once the server has saved it.
-export type StreamItem = { kind: "event"; event: RunEvent } | { kind: "run_failed" } | { kind: "saved"; id: string };
+// run carries the id the run will be saved under; saved says it now is.
+export type StreamItem =
+  | { kind: "event"; event: RunEvent }
+  | { kind: "run_failed" }
+  | { kind: "run"; id: string }
+  | { kind: "saved"; id: string };
 
 // One SSE frame: its event name (if any) and its data lines joined by "\n".
 type Frame = { event: string | null; data: string };
@@ -55,9 +59,9 @@ export async function* readRunStream(body: ReadableStream<Uint8Array>): AsyncGen
         } catch {
           continue;
         }
-        if (frame.event === "saved") {
+        if (frame.event === "run" || frame.event === "saved") {
           const id = (json as { id?: unknown } | null)?.id;
-          if (typeof id === "string" && isRunId(id)) yield { kind: "saved", id };
+          if (typeof id === "string" && isRunId(id)) yield frame.event === "run" ? { kind: "run", id } : { kind: "saved", id };
           continue;
         }
         const parsed = runEventSchema.safeParse(json);
