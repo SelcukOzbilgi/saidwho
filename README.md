@@ -130,6 +130,14 @@ pnpm investigate insanity-same-thing
 
 This runs one quote from the test set and prints each step, the verdict and what it cost. Any `id` from `eval/quotes.jsonl` works. It also skips the sites the known answer comes from, so the run can't simply copy them. As a safety net, it starts no new model call once its estimated Nebius spend reaches $0.50, though calls already running still finish. Each run is saved to `.runs/`.
 
+### Running the eval
+
+```bash
+pnpm eval
+```
+
+This runs every quote in the test set three ways and scores each run against the known answer: the way the app runs it, with every step on Nemotron 3 Ultra, and with every step on Nemotron 3.5 Lightning. The scores go to `eval/results.md`. `--setup cascade` runs only the app's way, and `--only insanity-same-thing,be-the-change` runs only those quotes. Each run is saved to `.runs/eval/`, and a quote that already has a log there isn't run again, so a stopped eval picks up where it left off. One quote run the app's way costs about half a cent of Nebius and 7 or 8 Tavily credits.
+
 ### Adding an example case
 
 1. Run `pnpm investigate <id>`.
@@ -148,13 +156,14 @@ This runs one quote from the test set and prints each step, the verdict and what
 ## Where things are
 
 ```text
-src/agent/        the investigation: planner, readers, checker, judge and retries
+src/agent/        the investigation: planner, readers, checker, genealogist, judge and retries
 src/app/          the pages and the /api/investigate route
 src/components/   the form, timeline, verdict card and case replay
 src/cases/        the ten finished example cases
 src/lib/          run state, streaming, and server code (keys, budget, providers)
+src/eval/         the test set's format, and how a run is scored against it
 eval/             the test set of 20 quotes with known origins
-scripts/          the command-line investigation and the smoke tests
+scripts/          the command-line investigation, the eval and the smoke tests
 ```
 
 ## Security

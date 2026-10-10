@@ -11,6 +11,8 @@ Each line records:
 
 Most answers come from [Quote Investigator](https://quoteinvestigator.com/). The rest come from original records, like the British parliamentary record for a Churchill speech, or from encyclopedias and academic papers. I checked each date and wording against the page itself. During test runs, Said Who? isn't allowed to search sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia, or the sites each answer comes from. It has to find the trail on its own.
 
+`pnpm eval` runs all twenty and scores each run: whether the verdict matches, and whether the earliest date it found is within two years of the known one. It runs them the way the app does, then with every step on Nemotron 3 Ultra and with every step on Nemotron 3.5 Lightning, so the results show what the mix of models costs and whether it loses anything. The scores are written to `results.md`.
+
 Not every quote is misattributed. Six of the twenty really were said by the person they're credited to. A tool that calls every famous quote fake would fail those.
 
 Some answers are deliberately not clean. "Gel, gel, ne olursan ol yine gel" is usually credited to Mevlana (Rumi), but scholars say nobody knows who wrote it, so the right answer there is "contested". Saying so is the honest result, not a failure.
