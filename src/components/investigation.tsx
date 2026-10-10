@@ -26,19 +26,46 @@ const PROBLEMS: Record<string, string> = {
 };
 
 type Status = "idle" | "running" | "finished" | "stopped" | "failed";
+
+// A stopped run is saved once the calls it had running finish, which can take
+// up to a minute and a half (NEBIUS_TIMEOUT_MS), and the save itself up to ten
+// seconds more. Its stream is closed by then, so the page checks every few
+// seconds, for two minutes, whether the run's page exists, and links to it once
+// it does.
+const SAVE_CHECKS = 40;
+const SAVE_CHECK_MS = 3_000;
+
+async function waitForSave(id: string, current: () => boolean, onSaved: (id: string) => void): Promise<void> {
+  for (let i = 0; i < SAVE_CHECKS; i++) {
+    await new Promise((resolve) => setTimeout(resolve, SAVE_CHECK_MS));
+    if (!current()) return;
+    const res = await fetch(`/runs/${id}`, { method: "HEAD", cache: "no-store" }).catch(() => null);
+    if (!current()) return;
+    if (res?.ok) return onSaved(id);
+  }
+}
 type Action = { type: "reset" } | { type: "event"; event: RunEvent };
 
 const reducer = (state: RunState, action: Action): RunState =>
   action.type === "reset" ? initialRunState : reduceRun(state, action.event);
 
-export function Investigation({ trialOpen }: { trialOpen: boolean }) {
+export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; savesRuns: boolean }) {
   const [run, dispatch] = useReducer(reducer, initialRunState);
   const [status, setStatus] = useState<Status>("idle");
   const [problem, setProblem] = useState<string | null>(null);
+  // The id of the run's public page, once the server has saved it.
+  const [savedId, setSavedId] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
 
   // Leaving the page ends the run, which stops the spend on the server too.
-  useEffect(() => () => controller.current?.abort(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      controller.current?.abort();
+    };
+  }, []);
 
   async function start(request: QuoteRequest) {
     controller.current?.abort();
@@ -46,12 +73,17 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
     controller.current = abort;
     dispatch({ type: "reset" });
     setProblem(null);
+    setSavedId(null);
     setStatus("running");
 
     // Only the latest run may touch the screen; a stopped one goes quiet.
     const live = () => controller.current === abort && !abort.signal.aborted;
+    // The id the server will save this run under, when it saves runs.
+    let runId: string | null = null;
     const stopped = () => {
-      if (controller.current === abort) setStatus("stopped");
+      if (controller.current !== abort) return;
+      setStatus("stopped");
+      if (runId) void waitForSave(runId, () => mounted.current && controller.current === abort, setSavedId);
     };
     const fail = (code: string) => {
       setProblem(code);
@@ -74,14 +106,28 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
       }
 
       let done = false;
+      let broke = false;
       for await (const item of readRunStream(response.body)) {
         if (!live()) break;
-        if (item.kind === "run_failed") return fail("run_failed");
+        // A run that broke is still saved, and its id comes after, so reading goes on.
+        if (item.kind === "run_failed") {
+          broke = true;
+          continue;
+        }
+        if (item.kind === "run") {
+          runId = item.id;
+          continue;
+        }
+        if (item.kind === "saved") {
+          setSavedId(item.id);
+          continue;
+        }
         heard = true;
         if (item.event.type === "done") done = true;
         dispatch({ type: "event", event: item.event });
       }
-      if (done) setStatus("finished");
+      if (broke && live()) fail("run_failed");
+      else if (done) setStatus("finished");
       else if (live()) fail("connection_lost");
       else stopped();
     } catch {
@@ -96,7 +142,13 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
   return (
     <div className="flex flex-col gap-10">
       <div className="rounded-2xl border border-line bg-card/60 p-5 shadow-sm sm:p-6">
-        <QuoteForm trialOpen={trialOpen} running={running} onStart={start} onStop={() => controller.current?.abort()} />
+        <QuoteForm
+          trialOpen={trialOpen}
+          savesRuns={savesRuns}
+          running={running}
+          onStart={start}
+          onStop={() => controller.current?.abort()}
+        />
       </div>
 
       {problem && (
@@ -110,12 +162,34 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
           run={run}
           running={running}
           note={
-            status === "stopped" && (
-              <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>
-            )
+            <>
+              {status === "stopped" && <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>}
+              {savedId && <SavedLink id={savedId} />}
+            </>
           }
         />
       )}
     </div>
+  );
+}
+
+// The saved run's public page, to open or share.
+function SavedLink({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/runs/${id}`;
+  return (
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <span className="text-muted">Saved. Anyone with this link can see the run:</span>
+      <a href={`/runs/${id}`} className="font-mono text-xs underline underline-offset-4 hover:text-accent">
+        {url}
+      </a>
+      <button
+        type="button"
+        onClick={() => navigator.clipboard.writeText(url).then(() => setCopied(true), () => {})}
+        className="rounded-md border border-line px-2 py-0.5 text-xs hover:border-foreground"
+      >
+        {copied ? "Copied" : "Copy link"}
+      </button>
+    </p>
   );
 }

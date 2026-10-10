@@ -26,6 +26,11 @@ export const serverEnvSchema = z.object({
   LIVE_RUNS_ENABLED: flag,
   TRIAL_RUNS_ENABLED: flag,
   DAILY_BUDGET_USD: z.preprocess(blankToUndefined, z.coerce.number().min(0).max(100).default(0)),
+
+  // Where runs are saved, so each one gets a public link. Both unset means runs
+  // aren't saved. The secret key bypasses row level security: server only.
+  SUPABASE_URL: z.preprocess(blankToUndefined, z.url({ protocol: /^https$/ }).optional()),
+  SUPABASE_SECRET_KEY: optionalSecret,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
