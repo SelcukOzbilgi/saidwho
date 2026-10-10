@@ -77,9 +77,14 @@ export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; sa
       }
 
       let done = false;
+      let broke = false;
       for await (const item of readRunStream(response.body)) {
         if (!live()) break;
-        if (item.kind === "run_failed") return fail("run_failed");
+        // A run that broke is still saved, and its id comes after, so reading goes on.
+        if (item.kind === "run_failed") {
+          broke = true;
+          continue;
+        }
         if (item.kind === "saved") {
           setSavedId(item.id);
           continue;
@@ -88,7 +93,8 @@ export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; sa
         if (item.event.type === "done") done = true;
         dispatch({ type: "event", event: item.event });
       }
-      if (done) setStatus("finished");
+      if (broke && live()) fail("run_failed");
+      else if (done) setStatus("finished");
       else if (live()) fail("connection_lost");
       else stopped();
     } catch {
