@@ -49,6 +49,7 @@ const VERDICT: JudgeOutput = {
   misattribution_node: null,
   confidence: "medium",
   rationale: "The 1981 newspaper [n1] has it with no credit to Einstein.",
+  lineage: [{ node: "n1", change: "first", note: "A 1981 newspaper has it, credited to no one." }],
 };
 
 function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[]; log: Call[]; prompts: Map<string, string> } {
@@ -496,6 +497,29 @@ describe("investigate", () => {
       ["ultra", []],
     ]);
     expect(events.at(-3)).toMatchObject({ step: "judge", from: "super", to: "ultra", thinking: true });
+  });
+
+  it("asks Ultra when a lineage step is on a node that isn't verified", async () => {
+    const stray = { ...VERDICT, lineage: [...(VERDICT.lineage ?? []), { node: "n7", change: "credit" as const, note: "Einstein from here." }] };
+    const nebius = fakeNebius({ verdict: ({ model }) => (model === MODELS.super.id ? stray : VERDICT) });
+    const events = await run({ nebius });
+    const verdicts = events.flatMap((e) => (e.type === "verdict" ? [[e.tier, e.unknownIds]] : []));
+    expect(verdicts).toEqual([
+      ["super", ["n7"]],
+      ["ultra", []],
+    ]);
+  });
+
+  it("drops a lineage step whose note is broken or too long", async () => {
+    const lineage = [
+      { node: "n1", change: "first" as const, note: "A 1981 newspaper has it." },
+      { node: "n1", change: "wording" as const, note: 'Worded as “the same thing.”}, {"node": "n1' },
+      { node: "n1", change: "credit" as const, note: "x".repeat(301) },
+    ];
+    const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, lineage }) });
+    const events = await run({ nebius });
+    const verdict = events.find((e) => e.type === "verdict");
+    expect(verdict?.type === "verdict" && verdict.verdict.lineage).toEqual([lineage[0]]);
   });
 
   it("finds an unverified id inside a group of citations", async () => {
