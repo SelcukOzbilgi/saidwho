@@ -53,6 +53,19 @@ describe("reduceRun", () => {
     expect(finished).toMatchObject({ phase: "reading", finished: true, seconds: 9 });
   });
 
+  it("takes the planner's name for the usual credit only when none was given", () => {
+    // Runs saved before the planner named anyone have no foundAttribution at all.
+    const older: RunEvent = { type: "planned", ...spend, tier: "super", variants: [], candidateAuthors: [], queries: ["q"] };
+    const planned: RunEvent = { ...older, foundAttribution: "Mark Twain" };
+    const blank = run([{ ...STARTED, popularAttribution: null }]);
+    expect(blank).toMatchObject({ popularAttribution: null, attributionFrom: null });
+    const found = reduceRun(blank, planned);
+    expect(found).toMatchObject({ popularAttribution: "Mark Twain", attributionFrom: "planner" });
+    expect(found.log.at(-1)?.text).toContain("usually credited to Mark Twain");
+    expect(run([STARTED, planned])).toMatchObject({ popularAttribution: "Einstein", attributionFrom: "visitor" });
+    expect(reduceRun(blank, older)).toMatchObject({ popularAttribution: null, attributionFrom: null });
+  });
+
   it("keeps the last verdict when a second judge ran", () => {
     const state = run([
       STARTED,

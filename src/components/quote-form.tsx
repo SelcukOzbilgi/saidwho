@@ -53,10 +53,8 @@ export function QuoteForm({ trialOpen, running, onStart, onStop }: Props) {
   const [nebiusApiKey, setNebiusApiKey] = useState("");
   const [tavilyApiKey, setTavilyApiKey] = useState("");
 
-  const ready =
-    quote.trim() !== "" &&
-    popularAttribution.trim() !== "" &&
-    (mode === "trial" || (nebiusApiKey.trim() !== "" && tavilyApiKey.trim() !== ""));
+  // The name is optional: left blank, the planner says who it's usually credited to.
+  const ready = quote.trim() !== "" && (mode === "trial" || (nebiusApiKey.trim() !== "" && tavilyApiKey.trim() !== ""));
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -111,16 +109,15 @@ export function QuoteForm({ trialOpen, running, onStart, onStop }: Props) {
       <div className="grid gap-4 sm:grid-cols-[1fr_11rem]">
         <div>
           <label htmlFor={`${id}-name`} className="mb-1 block text-sm font-medium">
-            Who it&apos;s usually credited to
+            Who it&apos;s usually credited to <span className="font-normal text-muted">(optional)</span>
           </label>
           <input
             id={`${id}-name`}
             value={popularAttribution}
             onChange={(e) => setPopularAttribution(e.target.value)}
             maxLength={200}
-            required
             disabled={running}
-            placeholder="Albert Einstein"
+            placeholder="Not sure? Leave it blank"
             className={field}
           />
         </div>

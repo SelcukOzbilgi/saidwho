@@ -12,6 +12,9 @@ export const plannerOutputSchema = z.strictObject({
   candidate_authors: z.array(z.string()),
   // Web search queries, most promising first.
   queries: z.array(z.string()),
+  // Who the saying is usually credited to, asked for only when the visitor gave
+  // no name. It comes from the model, not from a page.
+  usual_attribution: z.string().nullable(),
 });
 
 export const readerOutputSchema = z.strictObject({

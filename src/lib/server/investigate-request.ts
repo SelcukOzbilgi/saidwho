@@ -8,11 +8,17 @@ export const MAX_BODY_BYTES = 8_000;
 
 // Pasted text often carries line breaks and tabs; any run of whitespace or
 // control characters becomes one space.
-const text = (max: number) =>
-  z
-    .string()
-    .transform((value) => value.replace(/[\s\u0000-\u001f\u007f]+/g, " ").trim())
-    .pipe(z.string().min(1).max(max));
+const squash = (value: string) => value.replace(/[\s\u0000-\u001f\u007f]+/g, " ").trim();
+const text = (max: number) => z.string().transform(squash).pipe(z.string().min(1).max(max));
+
+// A visitor doesn't always know who a saying is credited to. Blank or left out,
+// the name is null and the planner names the usual credit itself.
+const optionalName = z
+  .string()
+  .transform(squash)
+  .pipe(z.string().max(200))
+  .nullish()
+  .transform((value) => value || null);
 
 // A key is one printable token. Blank is allowed here so resolveRunKeys can
 // report an incomplete BYOK request; anything with spaces or control characters
@@ -26,7 +32,7 @@ const apiKey = z
 
 export const investigateRequestSchema = z.strictObject({
   quote: text(500),
-  popularAttribution: text(200),
+  popularAttribution: optionalName,
   language: z
     .string()
     .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/)

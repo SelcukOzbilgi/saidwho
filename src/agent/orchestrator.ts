@@ -23,6 +23,8 @@ const READER_CHARS = 6_000;
 // Reader fields longer than this are dropped, and titles cut to it: they may be page
 // text, which is never stored.
 const MAX_FIELD_CHARS = 300;
+// The same cap as a name a visitor types.
+const MAX_NAME_CHARS = 200;
 const READER_CONCURRENCY = 5;
 
 const READER_PROMPT =
@@ -36,7 +38,8 @@ const READER_PROMPT =
 
 export type InvestigationInput = {
   quote: string;
-  popularAttribution: string;
+  // null when the visitor gave no name; the planner then names the usual credit.
+  popularAttribution: string | null;
   language: string;
   excludeDomains: readonly string[];
 };
@@ -56,6 +59,13 @@ export type InvestigationOptions = {
 // limit or a request the provider refuses would fail the same way again.
 const worthRetrying = (cause: FailureCause): boolean =>
   !["auth", "quota", "rate_limit", "bad_request", "not_found"].includes(cause);
+
+// A name from the model goes into prompts and onto the page, so it gets the
+// same cap as one a visitor types. Blank or over-long means no name.
+const cleanName = (raw: string | null): string | null => {
+  const name = raw?.replace(/\s+/g, " ").trim() ?? "";
+  return name !== "" && name.length <= MAX_NAME_CHARS ? name : null;
+};
 
 export const hostOf = (url: string): string => {
   try {
@@ -131,8 +141,10 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "people it may really come from, and up to five web search queries. " +
       "The search engine does not support operators such as site:, before:, after:, OR or year ranges; write plain queries. " +
       "Start with the saying in double quotes, then queries about its origin and first appearance " +
-      "(for example: earliest newspaper, book or speech where it appeared), and one per candidate author.",
-    user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution}\nLanguage: ${language}`,
+      "(for example: earliest newspaper, book or speech where it appeared), and one per candidate author. " +
+      "usual_attribution: only when no credit is given, the person the saying is most often credited to, name only; " +
+      "null when a credit is given or you don't know one.",
+    user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language}`,
   };
   let plan = await callStructured(nebius, { ...planRequest, thinking: true });
   if (!plan.ok) {
@@ -144,6 +156,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     if (!plan.ok) onEvent({ type: "plan_failed", ...spend(MODELS.super, plan), reason: plan.reason });
   }
   const variants = plan.ok ? plan.data.variants : [];
+  // With no name given, the planner's name for the usual credit stands in for it.
+  const foundAttribution = popularAttribution === null && plan.ok ? cleanName(plan.data.usual_attribution) : null;
+  const credit = popularAttribution ?? foundAttribution;
   // The exact phrase always goes first, even if the planner leaves it out (or returns nothing).
   const queries = [`"${quote}"`, ...(plan.ok ? plan.data.queries : [])]
     .filter((q, i, all) => all.findIndex((other) => normalizeText(other) === normalizeText(q)) === i)
@@ -155,6 +170,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       variants,
       candidateAuthors: plan.data.candidate_authors,
       queries,
+      foundAttribution,
     });
   }
 
@@ -314,7 +330,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "earliest_date: when the saying itself first appeared (a node's cited_source_date when it names an earlier source), " +
       "only as YYYY, YYYY-MM or YYYY-MM-DD, or null. earliest_author: only the person's name, or null if unknown. " +
       "In the rationale, cite node ids in brackets like [n2] for every claim. If the evidence is thin, say so and lower confidence.",
-    user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}`,
+    user: `Saying: "${quote}"\nUsually credited to: ${credit ?? "no one named"}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}`,
   };
   const known = new Set(verified.map((n) => n.id));
 

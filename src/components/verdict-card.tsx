@@ -11,18 +11,19 @@ export const VERDICT_LOOK: Record<JudgeOutput["verdict"], string> = {
   no_known_source: "text-muted",
 };
 
-const HEADLINE: Record<JudgeOutput["verdict"], (name: string) => string> = {
-  misattributed: (name) => `${name} probably didn't say it`,
-  correct: (name) => `${name} said it`,
-  contested: (name) => `Whether ${name} said it is contested`,
+// name is null only when no one was named: the visitor left it blank and the
+// planner didn't know. With no credit to weigh, the headline only points to the
+// evidence; the earliest trace below says where it leads.
+const HEADLINE: Record<JudgeOutput["verdict"], (name: string | null) => string> = {
+  misattributed: (name) => (name ? `${name} probably didn't say it` : "What the sources show"),
+  correct: (name) => (name ? `${name} said it` : "What the sources show"),
+  contested: (name) => (name ? `Whether ${name} said it is contested` : "Where it comes from is contested"),
   no_known_source: () => "No source old enough to settle it",
 };
 
 type Props = Pick<RunState, "verdict" | "noVerdict" | "stopped" | "finished" | "popularAttribution" | "nodes">;
 
 export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttribution, nodes }: Props) {
-  const name = popularAttribution ?? "The named person";
-
   if (!verdict) {
     if (!noVerdict && !finished) return null;
     return (
@@ -48,7 +49,7 @@ export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttr
         </span>
       </div>
 
-      <h2 className="mt-2 font-serif text-3xl leading-tight font-semibold">{HEADLINE[output.verdict](name)}</h2>
+      <h2 className="mt-2 font-serif text-3xl leading-tight font-semibold">{HEADLINE[output.verdict](popularAttribution)}</h2>
 
       {(output.earliest_author || output.earliest_date) && (
         <p className="mt-3 text-sm">
