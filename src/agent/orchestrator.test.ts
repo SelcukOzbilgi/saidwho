@@ -206,17 +206,18 @@ describe("investigate", () => {
       );
       let traces = 0;
       const nebius = fakeNebius({
-        read: ({ user }) => (user.includes(BOOK) ? { ...READ, cited_source: "Sudden Death", cited_source_date: "1983" } : CITES_BOOK),
+        read: ({ user }) => (user.includes(BOOK) ? { ...READ, page_date: "1983" } : CITES_BOOK),
         trace: () => (++traces === 1 ? { leads: [LEAD] } : { leads: [] }),
       });
       const events = await run({ nebius, tavily });
 
-      expect(nebius.calls).toEqual(["plan", "read_page", "trace", "read_page", "trace", "verdict"]);
+      // The book names no older work, so there is nothing for a second round.
+      expect(nebius.calls).toEqual(["plan", "read_page", "trace", "read_page", "verdict"]);
       expect(queries.at(-1)).toBe(LEAD.query);
       // A lead is looked for in digital libraries only; the first searches are open.
       expect(options.at(-1)).toMatchObject({ includeDomains: LIBRARY_SITES, includeDomainsMode: "restrict" });
       expect(options[0]).not.toHaveProperty("includeDomains");
-      expect(nebius.prompts.get("trace")).toContain("- n2: Sudden Death");
+      expect(nebius.prompts.get("trace")).toContain("- n1: Rita Mae Brown, Sudden Death (1983)");
       expect(events.find((e) => e.type === "traced")).toMatchObject({
         round: 1,
         leads: [{ fromNode: "n1", work: LEAD.work, query: LEAD.query }],
@@ -231,6 +232,7 @@ describe("investigate", () => {
       expect(added[1].date).toBe("1983");
       const bookRead = nebius.log.find((c) => c.name === "read_page" && c.user.includes(BOOK));
       expect(bookRead?.user).toContain("Lead: this page turned up in a search for Sudden Death by Rita Mae Brown (1983)");
+      expect(bookRead?.user).toContain("put the date this page gives for the work in page_date");
       expect(nebius.prompts.get("verdict")).toContain('"looking_for": "Sudden Death by Rita Mae Brown"');
       for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
       expect(JSON.stringify(events)).not.toContain(SECRET);
@@ -239,12 +241,12 @@ describe("investigate", () => {
     it("does not take a year from the lead that the page doesn't give", async () => {
       const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK] : [NEWS]), (url) => (url === BOOK ? `"${QUOTE}"` : PAGE_TEXT));
       const nebius = fakeNebius({
-        read: ({ user }) => (user.includes(BOOK) ? { ...READ, page_date: null, cited_source: "Sudden Death", cited_source_date: "1983" } : CITES_BOOK),
+        read: ({ user }) => (user.includes(BOOK) ? { ...READ, page_date: "1983" } : CITES_BOOK),
         trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
       });
       const events = await run({ nebius, tavily });
       const book = events.flatMap((e) => (e.type === "node_added" && e.node.url === BOOK ? [e.node] : []))[0];
-      expect(book).toMatchObject({ citedSourceDate: null, date: null });
+      expect(book).toMatchObject({ pageDate: null, date: null });
     });
 
     it("never follows a citation from a crossed-out reading", async () => {
