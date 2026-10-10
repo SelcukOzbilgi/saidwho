@@ -122,6 +122,14 @@ async function run(
 const types = (events: readonly RunEvent[]) => events.map((e) => e.type);
 
 describe("investigate", () => {
+  it("trims stray brackets and quotes off the planner's wordings and keeps each once", async () => {
+    const variants = ["] Gel, gel[", "“Gel gel”", "gel, gel", "x".repeat(301), "  ", "[Come, come again]"];
+    const nebius = fakeNebius({ plan: () => ({ ...PLAN, variants }) });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "planned")).toMatchObject({ variants: ["Gel, gel", "Come, come again"] });
+    expect(nebius.prompts.get("read_page")).toContain("Variants: Gel, gel | Come, come again");
+  });
+
   it("reports each step in order and ends with a verdict", async () => {
     const events = await run();
     expect(types(events)).toEqual([

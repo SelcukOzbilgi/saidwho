@@ -67,6 +67,21 @@ const cleanName = (raw: string | null): string | null => {
   return name !== "" && name.length <= MAX_NAME_CHARS ? name : null;
 };
 
+// The planner sometimes wraps a wording in stray brackets or quotes ("] Gel, gel[").
+// Variants go into every reader's prompt, so they are trimmed, capped like reader
+// fields, and kept once each.
+const cleanVariants = (raw: readonly string[]): string[] => {
+  const out: string[] = [];
+  for (const variant of raw) {
+    const text = variant
+      .replace(/\s+/g, " ")
+      .replace(/^[\s[\]{}"'“”‘’«»]+|[\s[\]{}"'“”‘’«»]+$/g, "")
+      .trim();
+    if (text && text.length <= MAX_FIELD_CHARS && !out.some((v) => normalizeText(v) === normalizeText(text))) out.push(text);
+  }
+  return out;
+};
+
 export const hostOf = (url: string): string => {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -155,7 +170,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     plan = await callStructured(nebius, { ...planRequest, thinking: false });
     if (!plan.ok) onEvent({ type: "plan_failed", ...spend(MODELS.super, plan), reason: plan.reason });
   }
-  const variants = plan.ok ? plan.data.variants : [];
+  const variants = plan.ok ? cleanVariants(plan.data.variants) : [];
   // With no name given, the planner's name for the usual credit stands in for it.
   const foundAttribution = popularAttribution === null && plan.ok ? cleanName(plan.data.usual_attribution) : null;
   const credit = popularAttribution ?? foundAttribution;
