@@ -61,6 +61,8 @@ Each quote goes through five steps, each with one job:
 
 Small, fast models do most of the reading. If a model call fails, it gets one more try. If the Checker can't find a reader's sentence on the page, a larger model reads that page again. If the Judge fails or cites a page the Checker didn't confirm, the verdict is written once more, usually by the largest model. Errors that would only happen again, like a rejected key or a rate limit, aren't retried, and nothing new starts once the budget is spent or the run is stopped.
 
+Under the steps, the page shows what the run cost on Nebius and what the same calls would have cost at Nemotron 3 Ultra's prices. That second number takes the token counts each call reported and prices them at Ultra's rates. It isn't a separate run on Ultra, which would probably think longer and cost more.
+
 <details>
 <summary>Models and services</summary>
 

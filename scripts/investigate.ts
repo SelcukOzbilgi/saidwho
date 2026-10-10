@@ -6,6 +6,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import type { EvidenceNode, RunEvent } from "../src/agent/events";
+import { estimateCostUsd, MODELS } from "../src/agent/models";
 import { ANSWER_SITES, hostOf, investigate } from "../src/agent/orchestrator";
 import { cleanDate } from "../src/agent/schemas";
 import { parseEvalCases } from "../src/eval/cases";
@@ -112,13 +113,17 @@ async function main(): Promise<void> {
         if (reads.total > 0 && !judgePrinted) printNodes();
         console.log("\nStopped: aborted");
         break;
-      case "done":
+      case "done": {
+        // The same token counts priced at Ultra's rates, not a separate all-Ultra run.
+        const ultraUsd = events.reduce((sum, e) => sum + ("tokens" in e && e.tokens ? estimateCostUsd(MODELS.ultra, e.tokens) : 0), 0);
         console.log(
-          `\nCost: $${event.nebiusUsd.toFixed(4)} Nebius (estimated), ${event.tavilyCredits} Tavily credits` +
+          `\nCost: $${event.nebiusUsd.toFixed(4)} Nebius (estimated; $${ultraUsd.toFixed(4)} for the same calls at Ultra prices), ` +
+            `${event.tavilyCredits} Tavily credits` +
             (event.unknownCostCalls ? `, plus ${event.unknownCostCalls} calls with unknown cost` : "") +
             `, ${event.seconds}s`,
         );
         break;
+      }
     }
   };
 
