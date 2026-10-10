@@ -140,6 +140,13 @@ describe("investigate", () => {
     expect(verdict?.type === "verdict" && verdict.unknownIds).toEqual([]);
   });
 
+  it("keeps each call's token counts, and none for a call that never answered", async () => {
+    const events = await run();
+    expect(events.find((e) => e.type === "planned")).toMatchObject({ tokens: { promptTokens: 1_000, completionTokens: 100 } });
+    const rejected = await run({ nebius: fakeNebius({ plan: () => "auth" }) });
+    expect(rejected.find((e) => e.type === "plan_failed")).not.toHaveProperty("tokens");
+  });
+
   it("asks the planner for the usual credit when no name was given, and judges against it", async () => {
     const nebius = fakeNebius({ plan: () => ({ ...PLAN, usual_attribution: "  Albert\nEinstein " }) });
     const events = await run({ nebius, name: null });

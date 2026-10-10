@@ -1,4 +1,5 @@
 import type { EvidenceNode, RunEvent } from "../agent/events";
+import { estimateCostUsd, MODELS, type TokenUsage } from "../agent/models";
 import type { JudgeOutput } from "../agent/schemas";
 
 // Folds a run's events into what the page shows. Pure, so a live stream and a
@@ -38,6 +39,9 @@ export type RunState = {
   noVerdict: string | null;
   stopped: "budget" | "aborted" | null;
   nebiusUsd: number;
+  // The same calls priced at Ultra's rates, from the token counts each one
+  // reported. null for runs saved before token counts were kept.
+  ultraUsd: number | null;
   unknownCostCalls: number;
   tavilyCredits: number;
   seconds: number | null;
@@ -59,6 +63,7 @@ export const initialRunState: RunState = {
   noVerdict: null,
   stopped: null,
   nebiusUsd: 0,
+  ultraUsd: 0,
   unknownCostCalls: 0,
   tavilyCredits: 0,
   seconds: null,
@@ -75,7 +80,7 @@ const VERDICT_WORDS: Record<JudgeOutput["verdict"], string> = {
 
 const usd = (value: number): string => `$${value.toFixed(4)}`;
 
-type Spend = { tier: Tier; costUsd: number; usageKnown: boolean };
+type Spend = { tier: Tier; costUsd: number; usageKnown: boolean; tokens?: TokenUsage };
 
 export function reduceRun(state: RunState, event: RunEvent): RunState {
   const log = (agent: Agent, text: string, tone: Tone = "neutral", spend?: Spend): LogEntry[] => [
@@ -84,6 +89,14 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
   ];
   const spent = (spend: Spend) => ({
     nebiusUsd: state.nebiusUsd + spend.costUsd,
+    // A call with unknown usage adds nothing to either sum, so both still cover
+    // the same calls, and the cost line says how many were left out. A call with
+    // known usage but no counts comes from an older log: there the Nebius sum has
+    // it and the Ultra one can't, so the comparison is dropped.
+    ultraUsd:
+      state.ultraUsd === null || (spend.usageKnown && !spend.tokens)
+        ? null
+        : state.ultraUsd + (spend.tokens ? estimateCostUsd(MODELS.ultra, spend.tokens) : 0),
     unknownCostCalls: state.unknownCostCalls + (spend.usageKnown ? 0 : 1),
   });
 

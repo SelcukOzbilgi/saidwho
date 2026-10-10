@@ -10,11 +10,14 @@ import { judgeOutputSchema, readerOutputSchema } from "./schemas";
 const tierSchema = z.enum(["lightning", "nano", "super", "ultra"]);
 
 // Spend of one model call. usageKnown is false when the provider reported no
-// usage or the call failed in a way that may still be billed.
+// usage or the call failed in a way that may still be billed. tokens are the
+// provider's counts, so the same calls can be priced on another tier; runs saved
+// before they were kept have no key.
 const spendSchema = {
   tier: tierSchema,
   costUsd: z.number(),
   usageKnown: z.boolean(),
+  tokens: z.strictObject({ promptTokens: z.number(), completionTokens: z.number() }).optional(),
   latencyMs: z.number(),
 };
 

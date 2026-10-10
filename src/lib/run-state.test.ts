@@ -112,6 +112,14 @@ describe("reduceRun", () => {
     expect(done).toMatchObject({ nebiusUsd: 0.0025, tavilyCredits: 2 });
   });
 
+  it("prices the same calls at Ultra's rates, and drops that for logs without token counts", () => {
+    const read = { type: "page_read" as const, ...spend, url: "https://a.org/", host: "a.org", outcome: "no_quote" as const, reason: null };
+    const tokens = { promptTokens: 1_000, completionTokens: 100 };
+    // 1,000 tokens in at $1/M and 100 out at $3/M. A call with no usage adds nothing.
+    expect(run([{ ...read, tokens }, { ...read, usageKnown: false }]).ultraUsd).toBeCloseTo(0.0013);
+    expect(run([{ ...read, tokens }, read]).ultraUsd).toBeNull();
+  });
+
   it("counts a page read again once", () => {
     const read = { type: "page_read" as const, ...spend, url: "https://a.org/", host: "a.org", outcome: "evidence" as const, reason: null };
     expect(run([read, read]).readUrls).toEqual(["https://a.org/"]);
