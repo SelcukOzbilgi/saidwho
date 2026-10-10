@@ -4,6 +4,8 @@
 
 <p align="center"><b>Who really said it?</b><br>Paste a quote you saw online. Said Who? looks for the place it first appeared and shows you the trail, with a link for every step.</p>
 
+<p align="center"><a href="https://saidwho.vercel.app"><b>Try it at saidwho.vercel.app</b></a></p>
+
 ## Why I'm building this
 
 Quotes travel. Every time one gets shared it can lose a word, pick up a new one, or end up with a more famous name attached. A few years later everyone "knows" who said it, and nobody can point to where.
@@ -60,13 +62,13 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] A [test set](eval/) of 20 quotes whose real origins are already known
 - [x] [First full investigation](https://github.com/SelcukOzbilgi/saidwho/releases/tag/v0.1.0), start to finish, from the command line
 - [x] The live timeline and verdict page
-- [ ] A public demo with finished example cases
+- [x] A [public demo](https://saidwho.vercel.app) with finished example cases
 
 Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
 
 ## Trying it
 
-Once the demo is live, anyone will be able to browse finished investigations for free. To run a new one, you'll paste in your own Nebius and Tavily keys. Your keys are used for that one run and passed only to those two services. They're never saved or written to logs.
+The demo is at [saidwho.vercel.app](https://saidwho.vercel.app). Anyone can browse the ten finished investigations there for free, step by step. To run a new one, paste in your own Nebius and Tavily keys. Your keys are used for that one run and passed only to those two services. They're never saved or written to logs. The free trial option on the form is off for now.
 
 ## Running it locally
 
