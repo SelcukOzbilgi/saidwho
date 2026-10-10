@@ -18,6 +18,7 @@ type Props = Pick<
   | "nodes"
   | "leads"
   | "nebiusUsd"
+  | "ultraUsd"
   | "unknownCostCalls"
   | "tavilyCredits"
   | "seconds"
@@ -60,10 +61,20 @@ export function Progress({ running, phase, finished, searches, pages, readUrls, 
   );
 }
 
-function Cost({ nebiusUsd, unknownCostCalls, tavilyCredits, seconds }: Pick<RunState, "nebiusUsd" | "unknownCostCalls" | "tavilyCredits" | "seconds">) {
+// Ultra's figure prices the same token counts at Ultra's rates. It is not a
+// separate all-Ultra run, which would likely think longer and cost more.
+function Cost({
+  nebiusUsd,
+  ultraUsd,
+  unknownCostCalls,
+  tavilyCredits,
+  seconds,
+}: Pick<RunState, "nebiusUsd" | "ultraUsd" | "unknownCostCalls" | "tavilyCredits" | "seconds">) {
   return (
     <p className="font-mono text-xs text-muted tabular-nums">
-      ${nebiusUsd.toFixed(4)} on Nebius · {tavilyCredits} Tavily credit{tavilyCredits === 1 ? "" : "s"}
+      ${nebiusUsd.toFixed(4)} on Nebius
+      {ultraUsd !== null && ultraUsd > 0 && ` (same calls at Ultra prices: $${ultraUsd.toFixed(4)})`}
+      {` · ${tavilyCredits} Tavily credit${tavilyCredits === 1 ? "" : "s"}`}
       {unknownCostCalls > 0 && ` · ${unknownCostCalls} call${unknownCostCalls === 1 ? "" : "s"} with unknown cost`}
       {seconds !== null && ` · ${seconds}s`}
     </p>
