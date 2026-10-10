@@ -28,10 +28,11 @@ const PROBLEMS: Record<string, string> = {
 type Status = "idle" | "running" | "finished" | "stopped" | "failed";
 
 // A stopped run is saved once the calls it had running finish, which can take
-// up to a minute and a half (NEBIUS_TIMEOUT_MS). Its stream is closed by then, so
-// the page checks every few seconds whether the run's page exists, and links to
-// it once it does.
-const SAVE_CHECKS = 30;
+// up to a minute and a half (NEBIUS_TIMEOUT_MS), and the save itself up to ten
+// seconds more. Its stream is closed by then, so the page checks every few
+// seconds, for two minutes, whether the run's page exists, and links to it once
+// it does.
+const SAVE_CHECKS = 40;
 const SAVE_CHECK_MS = 3_000;
 
 async function waitForSave(id: string, current: () => boolean, onSaved: (id: string) => void): Promise<void> {
