@@ -5,11 +5,8 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import type { RunEvent } from "../agent/events";
 import { initialRunState, reduceRun, type RunState } from "../lib/run-state";
 import { readRunStream } from "../lib/run-stream";
-import { Progress } from "./progress";
 import { QuoteForm, type QuoteRequest } from "./quote-form";
-import { RunLog } from "./run-log";
-import { Timeline } from "./timeline";
-import { VerdictCard } from "./verdict-card";
+import { RunView } from "./run-view";
 
 // What went wrong, keyed by the codes POST /api/investigate returns, plus a few
 // the page finds on its own.
@@ -95,7 +92,6 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
 
   const running = status === "running";
   const started = status !== "idle";
-  const verdict = run.verdict?.output;
 
   return (
     <div className="flex flex-col gap-10">
@@ -110,38 +106,15 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
       )}
 
       {started && run.quote && (
-        <div className="flex flex-col gap-8">
-          <header>
-            <blockquote className="font-serif text-2xl leading-snug italic sm:text-3xl">“{run.quote}”</blockquote>
-            <p className="mt-2 text-muted">
-              Usually credited to <span className="text-foreground">{run.popularAttribution}</span>
-            </p>
-          </header>
-
-          <Progress running={running} {...run} />
-
-          {status === "stopped" && (
-            <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>
-          )}
-
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
-            <div className="flex min-w-0 flex-col gap-8">
-              <VerdictCard {...run} />
-              <Timeline
-                nodes={run.nodes}
-                marks={{
-                  earliest: verdict?.earliest_node ?? null,
-                  // Judges sometimes fill this in for other verdicts too; it only means something here.
-                  misattribution: verdict?.verdict === "misattributed" ? verdict.misattribution_node : null,
-                }}
-              />
-              {run.nodes.length === 0 && running && (
-                <p className="text-sm text-muted">Pages that carry the quote will show up here as they are checked.</p>
-              )}
-            </div>
-            <RunLog log={run.log} />
-          </div>
-        </div>
+        <RunView
+          run={run}
+          running={running}
+          note={
+            status === "stopped" && (
+              <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>
+            )
+          }
+        />
       )}
     </div>
   );

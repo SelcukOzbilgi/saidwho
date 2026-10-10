@@ -1,0 +1,463 @@
+{
+  "caseId": "so-much-owed",
+  "ranAt": "2026-10-08T15:50:58.085Z",
+  "events": [
+    {
+      "type": "started",
+      "quote": "Never in the field of human conflict was so much owed by so many to so few.",
+      "popularAttribution": "Winston Churchill",
+      "language": "en",
+      "excludeDomains": [
+        "quoteinvestigator.com",
+        "wikiquote.org",
+        "wikipedia.org",
+        "api.parliament.uk"
+      ]
+    },
+    {
+      "type": "planned",
+      "tier": "super",
+      "costUsd": 0.0006921000000000001,
+      "usageKnown": true,
+      "latencyMs": 5219,
+      "variants": [
+        "Never before has so much been owed by so many to so few.",
+        "In no field of human conflict has so much been owed by so many to so few.",
+        "Never has so much been owed by so many to so few.",
+        "Never in the annals of war have so few owed so much to so many."
+      ],
+      "candidateAuthors": [
+        "Winston Churchill – British Prime Minister, speaker of the 20 August 1940 House of Commons address.",
+        "Clement Attlee – Deputy Prime Minister who may have echoed the line in wartime speeches.",
+        "Anthony Eden – Foreign Secretary, sometimes quoted using similar phrasing in 1940‑41 broadcasts.",
+        "Franklin D. Roosevelt – U.S. President, whose 1941 State of the Union contained a comparable tribute to the armed forces.",
+        "Rudyard Kipling – Poet whose works contain patriotic lines that could have inspired the wording."
+      ],
+      "queries": [
+        "\"Never in the field of human conflict was so much owed by so many to so few.\"",
+        "\"Never in the field of human conflict\"",
+        "\"so much owed by so many to so few\" origin",
+        "Churchill August 20 1940 speech never in the field",
+        "earliest known use of never in the field quote"
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "\"Never in the field of human conflict was so much owed by so many to so few.\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1874
+    },
+    {
+      "type": "searched",
+      "query": "\"Never in the field of human conflict\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1366
+    },
+    {
+      "type": "searched",
+      "query": "\"so much owed by so many to so few\" origin",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1684
+    },
+    {
+      "type": "searched",
+      "query": "Churchill August 20 1940 speech never in the field",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1614
+    },
+    {
+      "type": "searched",
+      "query": "earliest known use of never in the field quote",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1031
+    },
+    {
+      "type": "pages_ready",
+      "pages": 14,
+      "droppedExcluded": 0
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010026,
+      "usageKnown": true,
+      "latencyMs": 1171,
+      "url": "https://winstonchurchill.org/resources/speeches/1940-the-finest-hour/the-few",
+      "host": "winstonchurchill.org",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://winstonchurchill.org/resources/speeches/1940-the-finest-hour/the-few",
+        "host": "winstonchurchill.org",
+        "title": "The Few - International Churchill Society",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Never in the field of human conflict was so much owed by so many to so few.",
+          "attributed_to": "Winston Churchill",
+          "page_date": "1940",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": "1940",
+        "citedSourceDate": null,
+        "date": "1940"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00005273999999999999,
+      "usageKnown": true,
+      "latencyMs": 1200,
+      "url": "https://www.rafbf.org/battle-of-britain/about-battle-britain/winston-churchill",
+      "host": "rafbf.org",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n3",
+        "url": "https://www.rafbf.org/battle-of-britain/about-battle-britain/winston-churchill",
+        "host": "rafbf.org",
+        "title": "Winston Churchill | Battle of Britain | RAF Benevolent Fund",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Never in the field of human conflict, was so much owed by so many to so few.",
+          "attributed_to": "Winston Churchill",
+          "page_date": "2024",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011873999999999999,
+      "usageKnown": true,
+      "latencyMs": 1212,
+      "url": "https://www.ospreypublishing.com/ca/osprey-blog/2015/never-in-the-field-of-human-conflict-was-so-much-owed-by-so-many-to-so-few-winston-churchill",
+      "host": "ospreypublishing.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://www.ospreypublishing.com/ca/osprey-blog/2015/never-in-the-field-of-human-conflict-was-so-much-owed-by-so-many-to-so-few-winston-churchill",
+        "host": "ospreypublishing.com",
+        "title": "'Never in the field of human conflict was so much owed by so many to so few.' - Winston Churchill - Osprey",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Never in the field of human conflict was so much owed by so many to so few.",
+          "attributed_to": "Winston Churchill",
+          "page_date": "20 August 1940",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": "1940",
+        "citedSourceDate": null,
+        "date": "1940"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00005082,
+      "usageKnown": true,
+      "latencyMs": 1300,
+      "url": "https://www.youtube.com/watch?v=Y0t-RqjMH-A",
+      "host": "youtube.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n1",
+        "url": "https://www.youtube.com/watch?v=Y0t-RqjMH-A",
+        "host": "youtube.com",
+        "title": "Never was so much owed by so many to so few - Winston Churchill Speeches",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Never was so much owed by so many to so few",
+          "attributed_to": "Winston Churchill",
+          "page_date": "2010-10-31",
+          "cited_source": "Winston Churchill speech on 20 August 1940",
+          "cited_source_date": "1940-08-20"
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": "2010-10-31",
+        "citedSourceDate": "1940-08-20",
+        "date": "1940-08-20"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012366,
+      "usageKnown": true,
+      "latencyMs": 1302,
+      "url": "https://www.parliament.uk/about/living-heritage/transformingsociety/private-lives/yourcountry/collections/churchillexhibition/churchill-the-orator/human-conflict",
+      "host": "parliament.uk",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n5",
+        "url": "https://www.parliament.uk/about/living-heritage/transformingsociety/private-lives/yourcountry/collections/churchillexhibition/churchill-the-orator/human-conflict",
+        "host": "parliament.uk",
+        "title": "'Never in the field of human conflict was so much owed by so many to so few' - UK Parliament",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Never in the field of human conflict was so much been owed by so many to so few",
+          "attributed_to": "Winston Churchill",
+          "page_date": "20th August 1940",
+          "cited_source": "Hansard, 5th Series, Volume 364, cc 1159",
+          "cited_source_date": "1940"
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": "1940",
+        "citedSourceDate": "1940",
+        "date": "1940"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011724,
+      "usageKnown": true,
+      "latencyMs": 841,
+      "url": "https://www.merriam-webster.com/dictionary/early",
+      "host": "merriam-webster.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008082,
+      "usageKnown": true,
+      "latencyMs": 1101,
+      "url": "https://marshallrotary.org/stories/never-in-the-history-of-human-conflict",
+      "host": "marshallrotary.org",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n6",
+        "url": "https://marshallrotary.org/stories/never-in-the-history-of-human-conflict",
+        "host": "marshallrotary.org",
+        "title": "Never In The History Of Human Conflict | Rotary Club of Marshall",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "never, in the field of human conflict was so much owed by so many to so few",
+          "attributed_to": "Winston Churchill",
+          "page_date": null,
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010439999999999999,
+      "usageKnown": true,
+      "latencyMs": 1470,
+      "url": "https://jennifermistmorgan.com/how-winston-churchill-used-words-as-weapons",
+      "host": "jennifermistmorgan.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n8",
+        "url": "https://jennifermistmorgan.com/how-winston-churchill-used-words-as-weapons",
+        "host": "jennifermistmorgan.com",
+        "title": "How Winston Churchill used words as weapons - Jennifer Mistmorgan",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Never in the field of human conflict was so much owed by so many to so few.",
+          "attributed_to": "Winston Churchill",
+          "page_date": "2020",
+          "cited_source": "House of Commons, 20 August 1940",
+          "cited_source_date": "1940"
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": null,
+        "citedSourceDate": "1940",
+        "date": "1940"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00006053999999999999,
+      "usageKnown": true,
+      "latencyMs": 1585,
+      "url": "https://www.youtube.com/watch?v=hkFLDCsofvY",
+      "host": "youtube.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n7",
+        "url": "https://www.youtube.com/watch?v=hkFLDCsofvY",
+        "host": "youtube.com",
+        "title": "Winston Churchill's 'The Few' Speech | \"Never was so much owed by so many to so few\" | RAF WWII",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Never was so much owed by so many to so few",
+          "attributed_to": "Winston Churchill",
+          "page_date": "2024-02-28",
+          "cited_source": "House of Commons speech on 20th August 1940",
+          "cited_source_date": "1940-08-20"
+        },
+        "attributedTo": "Winston Churchill",
+        "pageDate": "2024-02-28",
+        "citedSourceDate": "1940-08-20",
+        "date": "1940-08-20"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009378,
+      "usageKnown": true,
+      "latencyMs": 1602,
+      "url": "https://www.nationalchurchillmuseum.org/we-shall-fight-on-the-beaches.html",
+      "host": "nationalchurchillmuseum.org",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009096,
+      "usageKnown": true,
+      "latencyMs": 1328,
+      "url": "https://twominenglish.com/is-it-correct-to-say-at-earliest",
+      "host": "twominenglish.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0000645,
+      "usageKnown": true,
+      "latencyMs": 1596,
+      "url": "https://en.wiktionary.org/wiki/earliest",
+      "host": "en.wiktionary.org",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.000046679999999999994,
+      "usageKnown": true,
+      "latencyMs": 1768,
+      "url": "https://www.thefreedictionary.com/earliest",
+      "host": "thefreedictionary.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0000957,
+      "usageKnown": true,
+      "latencyMs": 1756,
+      "url": "https://www.merriam-webster.com/thesaurus/earliest",
+      "host": "merriam-webster.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "verdict",
+      "tier": "super",
+      "costUsd": 0.0009351000000000001,
+      "usageKnown": true,
+      "latencyMs": 4680,
+      "verdict": {
+        "verdict": "correct",
+        "earliest_node": "n2",
+        "earliest_author": "Winston Churchill",
+        "earliest_date": "1940-08-20",
+        "misattribution_node": null,
+        "confidence": "high",
+        "rationale": "Multiple contemporary sources attribute the quotation to Winston Churchill’s House of Commons speech on 20 August 1940. Node n1 cites the speech directly with a cited_source_date of 1940‑08‑20 [n1]; node n5 references Hansard from that date [n5]; node n8 likewise cites the House of Commons, 20 August 1940 [n8]. The earliest appearance of the exact phrasing appears in sources dated 1940 (e.g., n2, n4, n5), with the most precise date being 1940‑08‑20 from n1. No evidence points to an earlier or different origin, so the saying is correctly credited to Churchill."
+      },
+      "unknownIds": []
+    },
+    {
+      "type": "done",
+      "nebiusUsd": 0.00282804,
+      "tavilyCredits": 5,
+      "unknownCostCalls": 0,
+      "seconds": 22
+    }
+  ]
+}

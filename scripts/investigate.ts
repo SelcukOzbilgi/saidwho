@@ -1,7 +1,7 @@
 // Runs one eval case through the orchestrator and prints its events.
 // Sites that already wrote up the answer are excluded, so the trail has to be found.
 // Run: pnpm investigate insanity-same-thing   (a few cents of Nebius, ~5-10 Tavily credits)
-// The run's events (snippets only, no page text) go to .runs/, in the same form a replay reads.
+// The run's events (snippets only, no page text) go to .runs/, in the form src/cases/ keeps finished cases in.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
@@ -17,10 +17,10 @@ import { redactSecrets } from "../src/lib/server/safe-error";
 // A runaway run stops here instead of draining the key.
 const MAX_USD = 0.5;
 
-function saveLog(caseId: string, events: readonly RunEvent[]): void {
+function saveLog(caseId: string, ranAt: string, events: readonly RunEvent[]): void {
   mkdirSync(new URL("../.runs/", import.meta.url), { recursive: true });
-  const url = new URL(`../.runs/${new Date().toISOString().replace(/[:.]/g, "-")}-${caseId}.json`, import.meta.url);
-  writeFileSync(url, `${JSON.stringify({ caseId, events }, null, 2)}\n`);
+  const url = new URL(`../.runs/${ranAt.replace(/[:.]/g, "-")}-${caseId}.json`, import.meta.url);
+  writeFileSync(url, `${JSON.stringify({ caseId, ranAt, events }, null, 2)}\n`);
   console.log(`Log: ${url.pathname}`);
 }
 
@@ -140,6 +140,7 @@ async function main(): Promise<void> {
     }
   };
 
+  const ranAt = new Date().toISOString();
   await investigate({
     nebius,
     tavily,
@@ -155,7 +156,7 @@ async function main(): Promise<void> {
       print(event);
     },
   });
-  saveLog(caseId, events);
+  saveLog(caseId, ranAt, events);
   const last = events.at(-1);
   // Exit 0 only when the run reached a verdict, or searched and found nothing to judge.
   // A run whose every search failed found nothing because it looked nowhere.

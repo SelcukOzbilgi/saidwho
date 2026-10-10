@@ -45,8 +45,10 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
   );
 }
 
-// Readers often copy the page's own quotation marks; the card adds its own.
-const unquote = (text: string): string => text.replace(/^["'“”‘’«»„\s]+|["'“”‘’«»„\s]+$/g, "");
+// Readers often copy the page's own quotation marks, and the "> " that marks a
+// quoted line in page text; the card adds its own marks.
+const unquote = (text: string): string =>
+  text.replace(/^[ \t]*>[ \t]?/gm, "").replace(/^["'“”‘’«»„\s]+|["'“”‘’«»„\s]+$/g, "");
 
 // Links come from search results; only web pages get to be one.
 const webUrl = (url: string): string | undefined => (/^https?:\/\//i.test(url) ? url : undefined);
@@ -97,7 +99,8 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
         {node.reader.cited_source && (
           <Row label="Cites">
             {node.reader.cited_source}
-            {node.citedSourceDate ? ` (${node.citedSourceDate})` : ""}
+            {/* Readers often put the date in the source's name already. */}
+            {node.citedSourceDate && !node.reader.cited_source.includes(node.citedSourceDate) ? ` (${node.citedSourceDate})` : ""}
           </Row>
         )}
       </dl>

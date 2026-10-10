@@ -1,0 +1,461 @@
+{
+  "caseId": "gel-ne-olursan-ol",
+  "ranAt": "2026-10-08T15:51:10.384Z",
+  "events": [
+    {
+      "type": "started",
+      "quote": "Gel, gel, ne olursan ol yine gel",
+      "popularAttribution": "Mevlana (Rumi)",
+      "language": "tr",
+      "excludeDomains": [
+        "quoteinvestigator.com",
+        "wikiquote.org",
+        "wikipedia.org",
+        "hdl.handle.net",
+        "islamansiklopedisi.org.tr"
+      ]
+    },
+    {
+      "type": "planned",
+      "tier": "super",
+      "costUsd": 0.0006075000000000001,
+      "usageKnown": true,
+      "latencyMs": 4341,
+      "variants": [
+        "] Gel, gel, ne olursan ol yine gel[",
+        "] Gel gel ne olursan ol yine gel[",
+        "] BİA BİA NE OLSAN YINE BİA[",
+        "] بیای، بیای، چه شد بیای[",
+        "] Come, come, whatever you are, come again["
+      ],
+      "candidateAuthors": [
+        "Mevlana Jalāl ad-Dīn Rūmī (Persian Sufi poet)",
+        "Yunus Emre (13th‑century Turkish poet)",
+        "Hacı Bektaş Veli (Anatolian saint)",
+        "Ibn Arabi (Andalusian mystic)",
+        "Anonymous folk proverb / oral tradition"
+      ],
+      "queries": [
+        "\"Gel, gel, ne olursan ol yine gel\"",
+        "\"Gel gel ne olursan ol yine gel\" anlamı",
+        "\"Gel gel ne olursan ol yine gel\" ilk kaynağı Rumi",
+        "\"Come come whatever you are come again\" Persian poem source",
+        "\"Gel gel ne olursan ol yine gel\" Yunus Emre\", \"Gel gel ne olursan ol yine gel\" atasözü kökeni"
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "\"Gel, gel, ne olursan ol yine gel\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1943
+    },
+    {
+      "type": "searched",
+      "query": "\"Gel gel ne olursan ol yine gel\" anlamı",
+      "results": 0,
+      "credits": 1,
+      "latencyMs": 3158
+    },
+    {
+      "type": "searched",
+      "query": "\"Gel gel ne olursan ol yine gel\" ilk kaynağı Rumi",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1503
+    },
+    {
+      "type": "searched",
+      "query": "\"Come come whatever you are come again\" Persian poem source",
+      "results": 1,
+      "credits": 1,
+      "latencyMs": 1231
+    },
+    {
+      "type": "searched",
+      "query": "\"Gel gel ne olursan ol yine gel\" Yunus Emre\", \"Gel gel ne olursan ol yine gel\" atasözü kökeni",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2056
+    },
+    {
+      "type": "pages_ready",
+      "pages": 9,
+      "droppedExcluded": 0
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00005694,
+      "usageKnown": true,
+      "latencyMs": 2143,
+      "url": "https://15temmuziho.meb.k12.tr/icerikler/gelgelneolursanolyinegel_16927602.html",
+      "host": "15temmuziho.meb.k12.tr",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n5",
+        "url": "https://15temmuziho.meb.k12.tr/icerikler/gelgelneolursanolyinegel_16927602.html",
+        "host": "15temmuziho.meb.k12.tr",
+        "title": "\"GEL, GEL, NE OLURSAN OL YİNE GEL\" - 15 Temmuz Milli İrade İmam Hatip Ortaokulu",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "GEL, GEL, NE OLURSAN OL YİNE GEL",
+          "attributed_to": null,
+          "page_date": "2025-12-08",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": null,
+        "pageDate": "2025-12-08",
+        "citedSourceDate": null,
+        "date": "2025-12-08"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00018174,
+      "usageKnown": true,
+      "latencyMs": 2253,
+      "url": "https://www.youtube.com/watch?v=Ce30XWnNZ5Y",
+      "host": "youtube.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n3",
+        "url": "https://www.youtube.com/watch?v=Ce30XWnNZ5Y",
+        "host": "youtube.com",
+        "title": "GEL, GEL, NE OLURSAN OL YİNE GEL Mevlana Celaleddin Rumi 796553907038769",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Gel, gel, ne olursan ol yine gel",
+          "attributed_to": "Mevlana Celaleddin Rumi",
+          "page_date": "2014-03-13",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Mevlana Celaleddin Rumi",
+        "pageDate": "2014-03-13",
+        "citedSourceDate": null,
+        "date": "2014-03-13"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012581999999999998,
+      "usageKnown": true,
+      "latencyMs": 2522,
+      "url": "https://www.islamveihsan.com/ne-olursan-ol-yine-gel-sozunun-anlami-nedir.html",
+      "host": "islamveihsan.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://www.islamveihsan.com/ne-olursan-ol-yine-gel-sozunun-anlami-nedir.html",
+        "host": "islamveihsan.com",
+        "title": "“Ne Olursan Ol Yine Gel!” Sözünün Anlamı Nedir? | İslam ve İhsan",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Gel, gel, ne olursan ol yine gel!",
+          "attributed_to": "Hz. Mevlana",
+          "page_date": "02 Ağustos 2023",
+          "cited_source": "Osman Nuri Topbaş, Müslümanın Gönül Dünyası, Erkam Yayınları",
+          "cited_source_date": null
+        },
+        "attributedTo": "Hz. Mevlana",
+        "pageDate": "2023",
+        "citedSourceDate": null,
+        "date": "2023"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00015791999999999998,
+      "usageKnown": true,
+      "latencyMs": 2626,
+      "url": "https://www.malumatfurus.org/mevlanaya-atfedilen-yine-gel-rubaisi-hakkinda-kose-yazarlarinin-yanlis-bildikleri",
+      "host": "malumatfurus.org",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://www.malumatfurus.org/mevlanaya-atfedilen-yine-gel-rubaisi-hakkinda-kose-yazarlarinin-yanlis-bildikleri",
+        "host": "malumatfurus.org",
+        "title": "\"Yine Gel Yine Gel Kim Olursan Ol Yine Gel\" Rubaisinin Mevlânâ'ya Ait Olduğu İddiası - Malumatfuruş",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Yine gel, yine gel! Kim olursan ol, yine gel! / Bz  bz  her n çi hestî bz  / بز‌آ‌ بز‌آ‌ هر‌آنچه‌‌ هستی باز آ",
+          "attributed_to": null,
+          "page_date": "7 dakika",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": null,
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00015516,
+      "usageKnown": true,
+      "latencyMs": 3707,
+      "url": "https://www.harbiye79.com?Syf=22&Mkl=825428",
+      "host": "harbiye79.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n1",
+        "url": "https://www.harbiye79.com?Syf=22&Mkl=825428",
+        "host": "harbiye79.com",
+        "title": "Gel, gel, ne olursan ol yine gel.",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Gel, gel, ne olursan ol yine gel.  27/09/2015 Mevlna'nın diye bildiğimiz rubai şu şekildedir: \"Gel, gel, ne olursan ol yine gel İster Kfir, ister Mecusi, ister puta tapan ol, yine gel Bizim derghımız, ümitsizlik derghı değildir Yüz kere tövbeni bozmuş olsan da yine gel...\"",
+          "attributed_to": "Mevlna (Rumi)",
+          "page_date": "27/09/2015",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Mevlna (Rumi)",
+        "pageDate": "2015",
+        "citedSourceDate": null,
+        "date": "2015"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009888,
+      "usageKnown": true,
+      "latencyMs": 1666,
+      "url": "https://internationaled.illinois.edu/programs/icu",
+      "host": "internationaled.illinois.edu",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n7",
+        "url": "https://internationaled.illinois.edu/programs/icu",
+        "host": "internationaled.illinois.edu",
+        "title": "iCU Intercultural Dialogue Series | International Education | Illinois",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Rumi's words, \"Come, come, whatever you are, come again\"",
+          "attributed_to": "Rumi",
+          "page_date": "Fall 2022",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Rumi",
+        "pageDate": "2022",
+        "citedSourceDate": null,
+        "date": "2022"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0001467,
+      "usageKnown": true,
+      "latencyMs": 1736,
+      "url": "https://karyay.karatay.edu.tr/images/nesneler/20241009052544-2-uluslararasi-mevlana-dusuncesinde-beseri-munasebetler-sempozyumu-kitabi-pdf.pdf",
+      "host": "karyay.karatay.edu.tr",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n8",
+        "url": "https://karyay.karatay.edu.tr/images/nesneler/20241009052544-2-uluslararasi-mevlana-dusuncesinde-beseri-munasebetler-sempozyumu-kitabi-pdf.pdf",
+        "host": "karyay.karatay.edu.tr",
+        "title": "Untitled - KAR-YAY - KTO Karatay Üniversitesi",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Gel, gel, ne olursan ol yine gel.",
+          "attributed_to": "Mevlana",
+          "page_date": "2024",
+          "cited_source": "Tuğrul İnançer, Şefik Can",
+          "cited_source_date": null
+        },
+        "attributedTo": "Mevlana",
+        "pageDate": "2024",
+        "citedSourceDate": null,
+        "date": "2024"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009312,
+      "usageKnown": true,
+      "latencyMs": 2218,
+      "url": "https://www.istanbul.gov.tr/prof-dr-gunduz-hz-mevlana-747-senedir-bize-yol-gosteriyor",
+      "host": "istanbul.gov.tr",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n6",
+        "url": "https://www.istanbul.gov.tr/prof-dr-gunduz-hz-mevlana-747-senedir-bize-yol-gosteriyor",
+        "host": "istanbul.gov.tr",
+        "title": "T.C. İstanbul Valiliği - Prof. Dr. Gündüz: “Hz. Mevlana, 747 Senedir Bize Yol Gösteriyor”",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Gel, gel, ne olursan ol yine gel, İster kfir, ister mecusi, ister puta tapan ol yine gel, Bizim derghımız, ümitsizlik derghı değildir, Yüz kere tövbeni bozmuş olsan da yine gel...",
+          "attributed_to": "Mevlana Celaleddin-i Rumi",
+          "page_date": "17.12.2020",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Mevlana Celaleddin-i Rumi",
+        "pageDate": "2020",
+        "citedSourceDate": null,
+        "date": "2020"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00016511999999999996,
+      "usageKnown": true,
+      "latencyMs": 2322,
+      "url": "https://kpfu.ru/portal/docs/F_2095074545/1.pdf",
+      "host": "kpfu.ru",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n9",
+        "url": "https://kpfu.ru/portal/docs/F_2095074545/1.pdf",
+        "host": "kpfu.ru",
+        "title": "А.М. Тузлу Турецкая культура в контексте ислама",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Gel, gel yine gel Her kim olursan ol yine gel Kâfir ya da Mecusi, Puta tapan yine gel Yoktur kapımızda hiç ümitsizlik bil Yüz kere tövbeni bozsan da gel.",
+          "attributed_to": "Mevlâna Celalettin-i Rumî",
+          "page_date": "2013",
+          "cited_source": "M.Hengirmen Türkçe Öğreniyoruz 3. S. 96 – 97",
+          "cited_source_date": "2013"
+        },
+        "attributedTo": "Mevlâna Celalettin-i Rumî",
+        "pageDate": "2013",
+        "citedSourceDate": "2013",
+        "date": "2013"
+      }
+    },
+    {
+      "type": "verdict",
+      "tier": "super",
+      "costUsd": 0.0016068000000000002,
+      "usageKnown": true,
+      "latencyMs": 7525,
+      "verdict": {
+        "verdict": "contested",
+        "earliest_node": "n9",
+        "earliest_author": null,
+        "earliest_date": null,
+        "misattribution_node": null,
+        "confidence": "low",
+        "rationale": "All dated sources that mention the phrase attribute it to Mevlana/Rumi (e.g., n9 from 2013, n3 from 2014‑03‑13, n1 from 2015, etc.) but none provide an earlier source for the wording itself. One source (n4) explicitly discusses the claim of Mevlana authorship without endorsing it, indicating scholarly doubt about the attribution. Because the evidence shows later attributions and a source questioning the link, the credit is contested rather than firmly correct or misattributed to an earlier origin."
+      },
+      "unknownIds": []
+    },
+    {
+      "type": "escalated",
+      "step": "judge",
+      "from": "super",
+      "to": "ultra",
+      "thinking": true,
+      "reason": "the verdict has low confidence",
+      "url": null
+    },
+    {
+      "type": "verdict",
+      "tier": "ultra",
+      "costUsd": 0.007756,
+      "usageKnown": true,
+      "latencyMs": 7566,
+      "verdict": {
+        "verdict": "no_known_source",
+        "earliest_node": "n9",
+        "earliest_author": null,
+        "earliest_date": "2013",
+        "misattribution_node": "n9",
+        "confidence": "low",
+        "rationale": "All evidence nodes are modern (2013–2025) and attribute the saying to Mevlana/Rumi without citing any primary source from Rumi’s lifetime (13th century). The earliest dated appearance in the set is node n9 (2013), which cites a Turkish textbook (M. Hengirmen, 2013) but provides no manuscript or classical reference. Nodes n1, n3, n6, n7, n8 also attribute the saying to Rumi but offer no earlier source. Node n4 shows a Persian/Arabic script version without attribution or date. No node points to an origin earlier than 2013, nor does any node present a conflicting attribution. Therefore, based solely on the provided evidence, the credit to Rumi is unsupported and no earlier origin is documented."
+      },
+      "unknownIds": []
+    },
+    {
+      "type": "done",
+      "nebiusUsd": 0.0111517,
+      "tavilyCredits": 5,
+      "unknownCostCalls": 0,
+      "seconds": 34
+    }
+  ]
+}

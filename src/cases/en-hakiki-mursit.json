@@ -1,0 +1,203 @@
+{
+  "caseId": "en-hakiki-mursit",
+  "ranAt": "2026-10-09T13:36:51.064Z",
+  "events": [
+    {
+      "type": "started",
+      "quote": "Hayatta en hakiki mürşit ilimdir.",
+      "popularAttribution": "Mustafa Kemal Atatürk",
+      "language": "tr",
+      "excludeDomains": [
+        "quoteinvestigator.com",
+        "wikiquote.org",
+        "wikipedia.org",
+        "erdem.gov.tr",
+        "tr.wikiquote.org"
+      ]
+    },
+    {
+      "type": "planned",
+      "tier": "super",
+      "costUsd": 0.0005718,
+      "usageKnown": true,
+      "latencyMs": 3792,
+      "variants": [
+        "Hayatta en hakiki mürşit bilimdir.",
+        "Hayatta en hakiki müreşşid ilimdir.",
+        "Hayatta en hakiki murshid ilimdir.",
+        "Hayatta en hakiki müreşşid bilimdir.",
+        "Hayatta en hakiki ilim mürşettir."
+      ],
+      "candidateAuthors": [
+        "Mustafa Kemal Atatürk",
+        "Yunus Emre",
+        "Mevlana Celaleddin Rumi",
+        "Fuzûlî",
+        "Şeyh Galip"
+      ],
+      "queries": [
+        "\"Hayatta en hakiki mürşit ilimdir.\"",
+        "\"Hayatta en hakiki mürşit ilim\"",
+        "\"en hakiki mürşit ilimdir\" Atatürk",
+        "\"hayatta en hakiki mürşit\" kitap",
+        "\"en hakiki murshid ilim\" Türkçe"
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "\"Hayatta en hakiki mürşit ilimdir.\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2124
+    },
+    {
+      "type": "searched",
+      "query": "\"Hayatta en hakiki mürşit ilim\"",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1104
+    },
+    {
+      "type": "searched",
+      "query": "\"en hakiki mürşit ilimdir\" Atatürk",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2069
+    },
+    {
+      "type": "searched",
+      "query": "\"hayatta en hakiki mürşit\" kitap",
+      "results": 0,
+      "credits": 1,
+      "latencyMs": 3160
+    },
+    {
+      "type": "searched",
+      "query": "\"en hakiki murshid ilim\" Türkçe",
+      "results": 0,
+      "credits": 1,
+      "latencyMs": 1129
+    },
+    {
+      "type": "pages_ready",
+      "pages": 2,
+      "droppedExcluded": 0
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0000984,
+      "usageKnown": true,
+      "latencyMs": 804,
+      "url": "https://www.ackizyurdu.com/blog/hayatta-en-hakkiki-mursit-ilimdir-mustafa-kemal-ataturk",
+      "host": "ackizyurdu.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n1",
+        "url": "https://www.ackizyurdu.com/blog/hayatta-en-hakkiki-mursit-ilimdir-mustafa-kemal-ataturk",
+        "host": "ackizyurdu.com",
+        "title": "“Hayatta en hakkiki mürşit ilimdir.”- Mustafa Kemal ATATÜRK - A&C Kız Yurdu - Gazi Kız Yurdu - Ankara Kız Öğrenci Yurdu",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Dünyada her şey için, maddiyat için, maneviyat için, başarı için en hakiki mürşit ilimdir, fendir. İlim ve fennin haricinde mürşit aramak gaflettir, cehalettir, delalettir. Yalnız ilim ve fennin yaşadığımız her dakikadaki safhalarının gelişimini anlamak ve zamanla takip etmek gerekir",
+          "attributed_to": "Mustafa Kemal ATATÜRK",
+          "page_date": "19/11/2019",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Mustafa Kemal ATATÜRK",
+        "pageDate": "2019",
+        "citedSourceDate": null,
+        "date": "2019"
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00016572,
+      "usageKnown": true,
+      "latencyMs": 916,
+      "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi",
+      "host": "kemalataturk.net",
+      "outcome": "too_long",
+      "reason": null
+    },
+    {
+      "type": "escalated",
+      "step": "read",
+      "from": "lightning",
+      "to": "super",
+      "thinking": false,
+      "reason": "a field was too long to be a quote",
+      "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi"
+    },
+    {
+      "type": "page_read",
+      "tier": "super",
+      "costUsd": 0.0006588,
+      "usageKnown": true,
+      "latencyMs": 801,
+      "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi",
+      "host": "kemalataturk.net",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi",
+        "host": "kemalataturk.net",
+        "title": "Hayatta En Hakiki Mürşit İlimdir Sözü Mustafa Kemal Atatürk – Atatürk Sitesi",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Hayatta En Hakiki Mürşit İlimdir",
+          "attributed_to": "Mustafa Kemal Atatürk",
+          "page_date": "2020-05-16",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Mustafa Kemal Atatürk",
+        "pageDate": "2020-05-16",
+        "citedSourceDate": null,
+        "date": "2020-05-16"
+      }
+    },
+    {
+      "type": "verdict",
+      "tier": "super",
+      "costUsd": 0.0006069,
+      "usageKnown": true,
+      "latencyMs": 3390,
+      "verdict": {
+        "verdict": "no_known_source",
+        "earliest_node": "n1",
+        "earliest_author": null,
+        "earliest_date": null,
+        "misattribution_node": null,
+        "confidence": "low",
+        "rationale": "Both pieces of evidence (n1 and n2) simply repeat the quotation and attribute it to Mustafa Kemal Atatürk without citing any primary source or earlier occurrence. They provide no independent verification that Atatürk actually said or wrote the phrase, nor do they point to any alternative origin. Because there is no documented source linking the saying to Atatürk and no evidence of an earlier or different author, the attribution remains unsupported by verifiable evidence."
+      },
+      "unknownIds": []
+    },
+    {
+      "type": "done",
+      "nebiusUsd": 0.00210162,
+      "tavilyCredits": 5,
+      "unknownCostCalls": 0,
+      "seconds": 19
+    }
+  ]
+}

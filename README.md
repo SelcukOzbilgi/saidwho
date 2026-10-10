@@ -86,6 +86,8 @@ With `pnpm dev` running, open http://localhost:3000, paste a quote and the name 
 
 `pnpm investigate insanity-same-thing` runs one quote from the [test set](eval/) and prints each step, the verdict and what it cost. Any `id` from `eval/quotes.jsonl` works. In the runs so far, one investigation cost under half a cent of Nebius usage and about 5 Tavily credits; other quotes can cost more. As a safety net, the script starts no new model call once its estimated Nebius spend reaches $0.50, though calls already running still finish.
 
+Below the form, the home page lists ten finished cases. Each is a quote from the test set, run with `pnpm investigate` and saved as it happened, and each has its own page, such as `/cases/insanity-same-thing`. A case page shows every step, can play the run again, and puts the test set's answer next to the run's own verdict. Six of the ten reach the same verdict as the test set; the page says so when one doesn't. To add a case, run `pnpm investigate <id>`, copy the log it writes to `.runs/` into `src/cases/`, and add it to the list in `src/cases/cases.ts`.
+
 ## Security
 
 If you find a security problem, please report it privately. See [SECURITY.md](SECURITY.md).
