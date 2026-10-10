@@ -16,3 +16,31 @@ Most answers come from [Quote Investigator](https://quoteinvestigator.com/). The
 Not every quote is misattributed. Six of the twenty really were said by the person they're credited to. A tool that calls every famous quote fake would fail those.
 
 Some answers are deliberately not clean. "Gel, gel, ne olursan ol yine gel" is usually credited to Mevlana (Rumi), but scholars say nobody knows who wrote it, so the right answer there is "contested". Saying so is the honest result, not a failure.
+
+## Running the eval on Nebius Serverless AI Jobs
+
+The full eval takes about an hour, so it can run as a [Serverless AI job](https://docs.nebius.com/serverless/jobs/manage) instead of on a laptop. The job uses the public Node.js image, clones this repo and runs [`job.sh`](job.sh), so there's no image to build.
+
+1. Install the [Nebius AI Cloud CLI](https://docs.nebius.com/cli) and log in.
+2. In the Nebius console, create a secret named `saidwho-eval-keys` with two keys, `NEBIUS_API_KEY` and `TAVILY_API_KEY`, so the keys never appear in a command.
+3. Optionally, create an Object Storage bucket for the runs and scores, here `saidwho-eval`.
+4. Start the job. `--env-secret` names the secret from step 2, never a key:
+
+```bash
+SECRET=saidwho-eval-keys
+nebius ai job create \
+  --name saidwho-eval \
+  --image node:24-bookworm \
+  --container-command bash \
+  --args "-c 'git clone https://github.com/SelcukOzbilgi/saidwho.git /work && bash /work/eval/job.sh'" \
+  --platform cpu-d3 \
+  --preset 2vcpu-8gb \
+  --timeout 3h \
+  --restart-policy never \
+  --env-secret "NEBIUS_API_KEY=$SECRET,TAVILY_API_KEY=$SECRET" \
+  --volume 's3://saidwho-eval:/output:rw:default'
+```
+
+5. Follow it with `nebius ai job logs <job ID> --follow`. The scores are printed at the end, and with the bucket mounted, each run's events are in `eval/` there.
+
+Leave out `--volume` to get only the scores in the log. Set `--env EVAL_ARGS="--setup cascade"` to run only the app's way.
