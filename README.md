@@ -51,12 +51,13 @@ Each run took 18 to 34 seconds and cost half a cent or less in model use, except
 
 ## How it works
 
-Each quote goes through five steps, each with one job:
+Each quote goes through six steps, each with one job:
 
 - **Planner** thinks of other ways the quote has been worded or translated, who might have said it, and what to search for. If you left the name blank, it also tries to say who the quote is usually credited to.
 - **Search** runs up to five web searches through Tavily, always starting with the exact quote. Sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia, are left out, so the trail has to be found from scratch.
 - **Readers** go through up to 20 of the pages that come back. For each one they copy the sentence that carries the quote and note who it's credited to, the date, and any older source the page names.
 - **Checker** looks for the copied sentence, or a very close match, in the page's own text. This step is plain code, not AI, so it can't be talked into a sentence the page doesn't have.
+- **Genealogist** looks at the older works the confirmed pages name, such as the book a page says the quote came from. It picks up to three, looks for each one in digital libraries like archive.org, Wikisource and Project Gutenberg through Tavily, and sends what turns up through the Readers and Checker again. It goes back at most two rounds, and each page it finds shows which page's citation led to it.
 - **Judge** sees only the pages the Checker confirmed and writes the verdict. It's asked to back every claim with one of those pages. Plain code checks the pages it cites, and if one wasn't confirmed, the verdict is written once more.
 
 Small, fast models do most of the reading. If a model call fails, it gets one more try. If the Checker can't find a reader's sentence on the page, a larger model reads that page again. If the Judge fails or cites a page the Checker didn't confirm, the verdict is written once more, usually by the largest model. Errors that would only happen again, like a rejected key or a rate limit, aren't retried, and nothing new starts once the budget is spent or the run is stopped.
@@ -87,7 +88,7 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] The live timeline and verdict page
 - [x] Ten finished example cases that can be played again
 - [x] A [public demo](https://saidwho.vercel.app)
-- [ ] Following the older sources a page names, to look for something earlier still
+- [x] Following the older sources a page names, to look for something earlier still
 
 Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
 
