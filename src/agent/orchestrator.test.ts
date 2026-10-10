@@ -4,8 +4,8 @@ import type { ChatParams, NebiusClient } from "../lib/server/providers/nebius";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema } from "./events";
 import { MODELS } from "./models";
-import { investigate } from "./orchestrator";
-import type { JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
+import { investigate, LIBRARY_SITES } from "./orchestrator";
+import type { GenealogistOutput, JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
 
 const QUOTE = "Insanity is doing the same thing over and over again and expecting different results";
 // Page text that must never reach an event: events are stored and streamed.
@@ -21,6 +21,7 @@ type Reply<T> = T | null | "auth" | "length";
 type Replies = {
   plan?: (call: Call) => Reply<PlannerOutput>;
   read?: (call: Call) => Reply<ReaderOutput>;
+  trace?: (call: Call) => Reply<GenealogistOutput>;
   verdict?: (call: Call) => Reply<JudgeOutput>;
   // Milliseconds a reader call takes, by its prompt.
   readDelay?: (user: string) => number;
@@ -74,7 +75,9 @@ function fakeNebius(replies: Replies = {}): NebiusClient & { calls: string[]; lo
           ? (replies.plan ?? (() => PLAN))(call)
           : name === "read_page"
             ? (replies.read ?? (() => READ))(call)
-            : (replies.verdict ?? (() => VERDICT))(call);
+            : name === "trace"
+              ? (replies.trace ?? (() => ({ leads: [] })))(call)
+              : (replies.verdict ?? (() => VERDICT))(call);
       if (reply === null || reply === "auth") {
         const kind = reply === "auth" ? "auth" : "upstream";
         return { ok: false, error: { provider: "nebius", kind, message: "boom" }, latencyMs: 5 } as never;
@@ -101,6 +104,36 @@ function fakeTavily(urls: readonly string[] = ["https://news.example.org/1981"])
       }) as never,
   };
 }
+
+// A search fake whose results depend on the query, with page text by URL.
+function tavilyFor(urlsFor: (query: string) => readonly string[], textOf: (url: string) => string = () => PAGE_TEXT) {
+  const queries: string[] = [];
+  const options: unknown[] = [];
+  const tavily: TavilyClient = {
+    extract: async () => {
+      throw new Error("not used");
+    },
+    search: async (query: string, searchOptions?: unknown) => {
+      queries.push(query);
+      options.push(searchOptions);
+      const results = urlsFor(query).map((url) => ({ url, title: `Page at ${url}`, rawContent: textOf(url) }));
+      return { ok: true, latencyMs: 5, data: { results, usage: { credits: 1 } } } as never;
+    },
+  };
+  return { tavily, queries, options };
+}
+
+const NEWS = "https://news.example.org/1981";
+const BOOK = "https://archive.org/details/sudden-death";
+const BOOK_TEXT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} She said "${QUOTE}." ${SECRET}`;
+const CITES_BOOK: ReaderOutput = { ...READ, cited_source: "Rita Mae Brown, Sudden Death (1983)", cited_source_date: "1983" };
+const LEAD = {
+  from_node: "n1",
+  work: "Sudden Death by Rita Mae Brown",
+  year: "1983",
+  query: "Sudden Death Rita Mae Brown novel",
+  wording: null,
+};
 
 const INPUT = { quote: QUOTE, popularAttribution: "Albert Einstein", language: "en", excludeDomains: ["quoteinvestigator.com"] };
 
@@ -162,6 +195,111 @@ describe("investigate", () => {
     const events = await run({ nebius, name: null });
     expect(events.find((e) => e.type === "planned")).toMatchObject({ foundAttribution: null });
     expect(nebius.prompts.get("verdict")).toContain("Usually credited to: no one named\n");
+  });
+
+  describe("Genealogist", () => {
+    it("follows a confirmed page's citation and reads what turns up", async () => {
+      // The lead's search finds the page already read, an excluded site and the book itself.
+      const { tavily, queries, options } = tavilyFor(
+        (q) => (q === LEAD.query ? [NEWS, "https://quoteinvestigator.com/same", BOOK] : [NEWS]),
+        (url) => (url === BOOK ? BOOK_TEXT : PAGE_TEXT),
+      );
+      let traces = 0;
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(BOOK) ? { ...READ, cited_source: "Sudden Death", cited_source_date: "1983" } : CITES_BOOK),
+        trace: () => (++traces === 1 ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+
+      expect(nebius.calls).toEqual(["plan", "read_page", "trace", "read_page", "trace", "verdict"]);
+      expect(queries.at(-1)).toBe(LEAD.query);
+      // A lead is looked for in digital libraries only; the first searches are open.
+      expect(options.at(-1)).toMatchObject({ includeDomains: LIBRARY_SITES, includeDomainsMode: "restrict" });
+      expect(options[0]).not.toHaveProperty("includeDomains");
+      expect(nebius.prompts.get("trace")).toContain("- n2: Sudden Death");
+      expect(events.find((e) => e.type === "traced")).toMatchObject({
+        round: 1,
+        leads: [{ fromNode: "n1", work: LEAD.work, query: LEAD.query }],
+      });
+      expect(events.find((e) => e.type === "pages_ready" && e.round === 1)).toMatchObject({ pages: 1, droppedExcluded: 1 });
+      const added = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
+      expect(added.map((n) => [n.id, n.url, n.foundVia ?? null])).toEqual([
+        ["n1", NEWS, null],
+        ["n2", BOOK, { node: "n1", work: LEAD.work }],
+      ]);
+      // The book's year is kept because the page itself says 1983, not because the lead did.
+      expect(added[1].date).toBe("1983");
+      const bookRead = nebius.log.find((c) => c.name === "read_page" && c.user.includes(BOOK));
+      expect(bookRead?.user).toContain("Lead: this page turned up in a search for Sudden Death by Rita Mae Brown (1983)");
+      expect(nebius.prompts.get("verdict")).toContain('"looking_for": "Sudden Death by Rita Mae Brown"');
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+      expect(JSON.stringify(events)).not.toContain(SECRET);
+    });
+
+    it("does not take a year from the lead that the page doesn't give", async () => {
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK] : [NEWS]), (url) => (url === BOOK ? `"${QUOTE}"` : PAGE_TEXT));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(BOOK) ? { ...READ, page_date: null, cited_source: "Sudden Death", cited_source_date: "1983" } : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      const book = events.flatMap((e) => (e.type === "node_added" && e.node.url === BOOK ? [e.node] : []))[0];
+      expect(book).toMatchObject({ citedSourceDate: null, date: null });
+    });
+
+    it("never follows a citation from a crossed-out reading", async () => {
+      const nebius = fakeNebius({ read: () => ({ ...CITES_BOOK, exact_snippet: "A sentence this page does not have." }) });
+      await run({ nebius });
+      expect(nebius.calls).not.toContain("trace");
+    });
+
+    it("stops after two rounds even when every page cites something new", async () => {
+      let page = 0;
+      const { tavily } = tavilyFor((q) => (q.startsWith("work") ? [`https://old.example.org/${++page}`] : [NEWS]));
+      let traces = 0;
+      const nebius = fakeNebius({
+        read: ({ user }) => ({ ...CITES_BOOK, cited_source: `Work cited on ${user.length}` }),
+        trace: ({ user }) => {
+          traces++;
+          const from = /- (n\d+):/.exec(user)?.[1] ?? "n1";
+          return { leads: [{ ...LEAD, from_node: from, work: `Work ${traces}`, query: `work ${traces}` }] };
+        },
+      });
+      const events = await run({ nebius, tavily });
+      expect(nebius.calls.filter((c) => c === "trace")).toHaveLength(2);
+      expect(events.filter((e) => e.type === "traced").map((e) => e.type === "traced" && e.round)).toEqual([1, 2]);
+      expect(events.at(-1)?.type).toBe("done");
+    });
+
+    it("drops leads that point at nodes it wasn't shown, repeat a work or run too long", async () => {
+      const nebius = fakeNebius({
+        read: () => CITES_BOOK,
+        trace: () => ({
+          leads: [
+            { ...LEAD, from_node: "n9" },
+            { ...LEAD, query: "x".repeat(301) },
+            LEAD,
+            { ...LEAD, work: " sudden  death BY rita mae brown " },
+          ],
+        }),
+      });
+      const events = await run({ nebius });
+      expect(events.find((e) => e.type === "traced")).toMatchObject({ leads: [{ fromNode: "n1", work: LEAD.work }] });
+    });
+
+    it("goes on to judge when tracing fails", async () => {
+      const nebius = fakeNebius({ read: () => CITES_BOOK, trace: () => null });
+      const events = await run({ nebius });
+      expect(types(events).slice(-3)).toEqual(["trace_failed", "verdict", "done"]);
+      expect(nebius.calls.filter((c) => c === "trace")).toHaveLength(1);
+    });
+
+    it("starts no trace once the readers use up the budget", async () => {
+      const nebius = fakeNebius({ read: () => CITES_BOOK });
+      const events = await run({ nebius, maxUsd: 0.0004 });
+      expect(nebius.calls).toEqual(["plan", "read_page"]);
+      expect(types(events).slice(-2)).toEqual(["budget_exceeded", "done"]);
+    });
   });
 
   it("never puts page text in an event", async () => {

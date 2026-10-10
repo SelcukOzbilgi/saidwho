@@ -7,8 +7,8 @@ import type { JudgeOutput } from "../agent/schemas";
 export type Tier = "lightning" | "nano" | "super" | "ultra";
 // The step a run reached. It stays put once the run is done, so a run that
 // ended early shows where.
-export type Phase = "planning" | "searching" | "reading" | "judging";
-export type Agent = "Planner" | "Search" | "Reader" | "Checker" | "Judge" | "Run";
+export type Phase = "planning" | "searching" | "reading" | "tracing" | "judging";
+export type Agent = "Planner" | "Search" | "Reader" | "Checker" | "Genealogist" | "Judge" | "Run";
 export type Tone = "neutral" | "good" | "warn" | "bad";
 
 export type LogEntry = {
@@ -32,6 +32,8 @@ export type RunState = {
   // Pages read at least once; a page read again counts once.
   readUrls: string[];
   nodes: EvidenceNode[];
+  // Works the Genealogist went looking for, in the order it did.
+  leads: { round: number; fromNode: string; work: string; query: string }[];
   // The verdict that stands: the last one, when a second judge ran.
   verdict: { tier: Tier; output: JudgeOutput; unknownIds: string[] } | null;
   // Why no verdict came, when none did.
@@ -55,6 +57,7 @@ export const initialRunState: RunState = {
   pages: null,
   readUrls: [],
   nodes: [],
+  leads: [],
   verdict: null,
   noVerdict: null,
   stopped: null,
@@ -129,21 +132,39 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       const page = event.url ? ` (${hostOf(event.url)})` : "";
       return { ...state, log: log(agent, `Trying ${how}${page}: ${event.reason}`, "warn") };
     }
+    // Searches for a Genealogist lead keep the run in its tracing step.
     case "searched":
       return {
         ...state,
-        phase: "searching",
+        phase: state.phase === "tracing" ? "tracing" : "searching",
         noVerdict: null,
         searches: state.searches + 1,
         tavilyCredits: state.tavilyCredits + (event.credits ?? 0),
         log: log("Search", `${event.results} results for ${event.query}`),
       };
     case "search_failed":
-      return { ...state, phase: "searching", noVerdict: null, log: log("Search", `Search failed (${event.reason}): ${event.query}`, "bad") };
+      return { ...state, phase: state.phase === "tracing" ? "tracing" : "searching", noVerdict: null, log: log("Search", `Search failed (${event.reason}): ${event.query}`, "bad") };
     case "pages_ready": {
       const dropped = event.droppedExcluded ? `, ${event.droppedExcluded} from excluded sites dropped` : "";
+      // A Genealogist round's pages count on top of the ones already found.
+      if (event.round !== undefined) {
+        return {
+          ...state,
+          pages: (state.pages ?? 0) + event.pages,
+          log: log("Genealogist", `${event.pages} new page${event.pages === 1 ? "" : "s"} to read${dropped}`),
+        };
+      }
       return { ...state, phase: "reading", pages: event.pages, log: log("Search", `${event.pages} pages to read${dropped}`) };
     }
+    case "traced": {
+      const leads = event.leads.map((lead) => ({ round: event.round, ...lead }));
+      const text = leads.length
+        ? `Following ${leads.map((lead) => `${lead.work} (cited by ${lead.fromNode})`).join("; ")}`
+        : "Nothing older worth following";
+      return { ...state, ...spent(event), phase: "tracing", leads: [...state.leads, ...leads], log: log("Genealogist", text, "neutral", event) };
+    }
+    case "trace_failed":
+      return { ...state, ...spent(event), phase: "tracing", log: log("Genealogist", `Tracing failed: ${event.reason}`, "bad", event) };
     case "page_read": {
       const text: Record<typeof event.outcome, string> = {
         evidence: `Found the quote on ${event.host}`,
