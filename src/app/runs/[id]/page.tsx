@@ -42,6 +42,10 @@ export default async function RunPage({ params }: PageProps<"/runs/[id]">) {
   const run = await loadRun((await params).id);
   if (!run) notFound();
   const started = run.events.find((e) => e.type === "started");
+  const left = started?.excludeDomains ?? [];
+  // A run that stops or hits its limit still ends with done, so one without it
+  // broke on the server and was saved as far as it got.
+  const broke = !run.events.some((e) => e.type === "done");
   const ranOn = new Date(run.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
@@ -54,8 +58,13 @@ export default async function RunPage({ params }: PageProps<"/runs/[id]">) {
 
       <p className="text-sm text-muted">
         A saved run, made on {ranOn}.
-        {started && ` Left out of the search, so the trail had to be found elsewhere: ${started.excludeDomains.join(", ")}.`}
+        {left.length > 0 && ` Left out of the search, so the trail had to be found elsewhere: ${left.join(", ")}.`}
       </p>
+      {broke && (
+        <p role="status" className="rounded-lg border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
+          The run broke on the server before it finished. What it found until then is below.
+        </p>
+      )}
 
       <CaseReplay events={run.events} />
 
