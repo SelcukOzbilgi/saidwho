@@ -9,7 +9,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
 </p>
 
-<p align="center">There's no public demo yet. It runs locally today, and the <a href="#example-cases">finished cases</a> below show what it does.</p>
+<p align="center"><a href="https://saidwho.vercel.app"><b>Try it at saidwho.vercel.app</b></a></p>
 
 ## Why I'm building this
 
@@ -30,7 +30,7 @@ Sometimes the honest answer is "people disagree" or "nothing old enough turned u
 
 ## Example cases
 
-The home page lists ten finished investigations. Each is a quote from the [test set](eval/), run once and saved as it happened. Each case has its own page, such as `/cases/insanity-same-thing`, where you can replay the run and see the known answer next to what Said Who? concluded.
+The home page lists ten finished investigations. Each is a quote from the [test set](eval/), run once and saved as it happened. Each case has its own page, such as [/cases/insanity-same-thing](https://saidwho.vercel.app/cases/insanity-same-thing), where you can replay the run and see the known answer next to what Said Who? concluded.
 
 Said Who? reaches the same verdict as the known answer in six of the ten, though the earliest source it finds isn't always the one on record. The other four are kept on purpose, and their pages say that the verdict differs.
 
@@ -86,14 +86,14 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] [First full investigation](https://github.com/SelcukOzbilgi/saidwho/releases/tag/v0.1.0), start to finish, from the command line
 - [x] The live timeline and verdict page
 - [x] Ten finished example cases that can be played again
-- [ ] A public demo
+- [x] A [public demo](https://saidwho.vercel.app)
 - [ ] Following the older sources a page names, to look for something earlier still
 
 Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
 
 ## Using the public demo
 
-Once the demo is live, anyone will be able to browse the finished cases for free. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're never saved or written to logs.
+The demo is at [saidwho.vercel.app](https://saidwho.vercel.app). Anyone can browse the finished cases there for free and replay them step by step. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're never saved or written to logs. The free trial option on the form is off for now.
 
 ## Running it locally
 
