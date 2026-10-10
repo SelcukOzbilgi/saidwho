@@ -37,7 +37,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("started"),
     quote: z.string(),
-    popularAttribution: z.string(),
+    // null when the visitor left the name blank.
+    popularAttribution: z.string().nullable(),
     language: z.string(),
     excludeDomains: z.array(z.string()),
   }),
@@ -47,6 +48,9 @@ export const runEventSchema = z.discriminatedUnion("type", [
     variants: z.array(z.string()),
     candidateAuthors: z.array(z.string()),
     queries: z.array(z.string()),
+    // The planner's name for the usual credit, only when the visitor gave none;
+    // null otherwise. Runs saved before this field have no key.
+    foundAttribution: z.string().nullable().optional(),
   }),
   // A failed plan is tried once more, on Super with thinking off, unless the
   // failure would repeat (a rejected key, no credits, a rate limit, a refused

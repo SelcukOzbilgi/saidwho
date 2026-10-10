@@ -26,7 +26,12 @@ type Replies = {
   readDelay?: (user: string) => number;
 };
 
-const PLAN: PlannerOutput = { variants: [], candidate_authors: ["Albert Einstein"], queries: ["origin of the insanity quote"] };
+const PLAN: PlannerOutput = {
+  variants: [],
+  candidate_authors: ["Albert Einstein"],
+  queries: ["origin of the insanity quote"],
+  usual_attribution: null,
+};
 const READ: ReaderOutput = {
   contains_quote: true,
   exact_snippet: QUOTE,
@@ -99,12 +104,14 @@ function fakeTavily(urls: readonly string[] = ["https://news.example.org/1981"])
 
 const INPUT = { quote: QUOTE, popularAttribution: "Albert Einstein", language: "en", excludeDomains: ["quoteinvestigator.com"] };
 
-async function run(options: { nebius?: NebiusClient; tavily?: TavilyClient; maxUsd?: number; signal?: AbortSignal } = {}) {
+async function run(
+  options: { nebius?: NebiusClient; tavily?: TavilyClient; maxUsd?: number; signal?: AbortSignal; name?: string | null } = {},
+) {
   const events: RunEvent[] = [];
   await investigate({
     nebius: options.nebius ?? fakeNebius(),
     tavily: options.tavily ?? fakeTavily(),
-    input: INPUT,
+    input: options.name === undefined ? INPUT : { ...INPUT, popularAttribution: options.name },
     maxUsd: options.maxUsd,
     signal: options.signal,
     onEvent: (event) => events.push(event),
@@ -131,6 +138,30 @@ describe("investigate", () => {
     for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
     const verdict = events.find((e) => e.type === "verdict");
     expect(verdict?.type === "verdict" && verdict.unknownIds).toEqual([]);
+  });
+
+  it("asks the planner for the usual credit when no name was given, and judges against it", async () => {
+    const nebius = fakeNebius({ plan: () => ({ ...PLAN, usual_attribution: "  Albert\nEinstein " }) });
+    const events = await run({ nebius, name: null });
+    expect(events[0]).toMatchObject({ type: "started", popularAttribution: null });
+    expect(nebius.prompts.get("plan")).toContain("Usually credited to: not given");
+    expect(events.find((e) => e.type === "planned")).toMatchObject({ foundAttribution: "Albert Einstein" });
+    expect(nebius.prompts.get("verdict")).toContain("Usually credited to: Albert Einstein\n");
+    for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it("keeps the visitor's name even when the planner offers another", async () => {
+    const nebius = fakeNebius({ plan: () => ({ ...PLAN, usual_attribution: "Mark Twain" }) });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "planned")).toMatchObject({ foundAttribution: null });
+    expect(nebius.prompts.get("verdict")).toContain("Usually credited to: Albert Einstein\n");
+  });
+
+  it("drops an over-long name from the planner and judges with no name", async () => {
+    const nebius = fakeNebius({ plan: () => ({ ...PLAN, usual_attribution: "x".repeat(201) }) });
+    const events = await run({ nebius, name: null });
+    expect(events.find((e) => e.type === "planned")).toMatchObject({ foundAttribution: null });
+    expect(nebius.prompts.get("verdict")).toContain("Usually credited to: no one named\n");
   });
 
   it("never puts page text in an event", async () => {

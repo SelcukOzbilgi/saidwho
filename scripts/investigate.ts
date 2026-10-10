@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   const print = (event: RunEvent): void => {
     switch (event.type) {
       case "started":
-        console.log(`Quote: "${event.quote}" (usually credited to ${event.popularAttribution})`);
+        console.log(`Quote: "${event.quote}" (usually credited to ${event.popularAttribution ?? "no one given"})`);
         console.log(`Excluded: ${event.excludeDomains.join(", ")}\n`);
         break;
       case "plan_failed":
@@ -62,6 +62,7 @@ async function main(): Promise<void> {
         break;
       case "planned":
         console.log(`1) Planner (${event.tier}, ${event.latencyMs}ms): ${event.variants.length} variants, ${event.queries.length} queries`);
+        if (event.foundAttribution) console.log(`   usually credited to ${event.foundAttribution}, says the planner`);
         for (const q of event.queries) console.log(`   - ${q}`);
         break;
       case "searched":
