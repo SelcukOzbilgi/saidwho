@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ChatParams, NebiusClient } from "../lib/server/providers/nebius";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema } from "./events";
-import { MODELS } from "./models";
+import { everyStepOn, MODELS, type ModelPolicy } from "./models";
 import { investigate, LIBRARY_SITES } from "./orchestrator";
 import type { GenealogistOutput, JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
 
@@ -138,7 +138,14 @@ const LEAD = {
 const INPUT = { quote: QUOTE, popularAttribution: "Albert Einstein", language: "en", excludeDomains: ["quoteinvestigator.com"] };
 
 async function run(
-  options: { nebius?: NebiusClient; tavily?: TavilyClient; maxUsd?: number; signal?: AbortSignal; name?: string | null } = {},
+  options: {
+    nebius?: NebiusClient;
+    tavily?: TavilyClient;
+    maxUsd?: number;
+    signal?: AbortSignal;
+    name?: string | null;
+    models?: ModelPolicy;
+  } = {},
 ) {
   const events: RunEvent[] = [];
   await investigate({
@@ -147,6 +154,7 @@ async function run(
     input: options.name === undefined ? INPUT : { ...INPUT, popularAttribution: options.name },
     maxUsd: options.maxUsd,
     signal: options.signal,
+    models: options.models,
     onEvent: (event) => events.push(event),
   });
   return events;
@@ -539,6 +547,24 @@ describe("investigate", () => {
     const events = await run({ nebius, maxUsd: 0.0008 });
     expect(types(events).slice(-3)).toEqual(["verdict", "budget_exceeded", "done"]);
     expect(nebius.calls).toEqual(["plan", "read_page", "verdict"]);
+  });
+
+  it("puts every step on the policy's model, retries included", async () => {
+    let reads = 0;
+    let verdicts = 0;
+    const nebius = fakeNebius({
+      read: () => (reads++ === 0 ? null : CITES_BOOK),
+      verdict: () => (verdicts++ === 0 ? { ...VERDICT, rationale: "See [n9]." } : VERDICT),
+    });
+    const events = await run({ nebius, models: everyStepOn(MODELS.ultra) });
+    expect(nebius.calls).toEqual(["plan", "read_page", "read_page", "trace", "verdict", "verdict"]);
+    expect(new Set(nebius.log.map((c) => c.model))).toEqual(new Set([MODELS.ultra.id]));
+    const escalations = events.flatMap((e) => (e.type === "escalated" ? [[e.step, e.from, e.to]] : []));
+    expect(escalations).toEqual([
+      ["read", "ultra", "ultra"],
+      ["judge", "ultra", "ultra"],
+    ]);
+    for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
   });
 
   it("counts a failed search as a call with unknown cost", async () => {

@@ -3,12 +3,14 @@
 // -> Genealogist (Super picks cited works, Tavily finds them, Readers and Verifier check them, up to two rounds)
 // -> Judge (Super, then Ultra if needed).
 // A step whose check fails is tried once more, on a bigger model or with thinking off.
+// The models named here are the cascade's (CASCADE in models.ts); the eval can
+// put every step on one model instead.
 // Every step is reported through onEvent (see events.ts); nothing is printed or stored here.
 
 import type { NebiusClient } from "../lib/server/providers/nebius";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import type { EvidenceNode, RunEvent } from "./events";
-import { MODELS, type ModelSpec } from "./models";
+import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import {
   cleanDate,
@@ -98,6 +100,8 @@ export type InvestigationOptions = {
   signal?: AbortSignal;
   // Estimated Nebius spend after which no new model call starts.
   maxUsd?: number;
+  // Which model each step uses; the cascade unless the eval says otherwise.
+  models?: ModelPolicy;
 };
 
 // Failures a second attempt can fix. A rejected key, an empty account, a rate
@@ -133,7 +137,7 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
   return out;
 }
 
-export async function investigate({ nebius, tavily, input, onEvent, signal, maxUsd }: InvestigationOptions): Promise<void> {
+export async function investigate({ nebius, tavily, input, onEvent, signal, maxUsd, models = CASCADE }: InvestigationOptions): Promise<void> {
   const { quote, popularAttribution, language } = input;
   const excluded = [...new Set(input.excludeDomains)];
   const started = performance.now();
@@ -176,7 +180,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // a failed plan is tried once more with thinking off. If that fails too, the
   // run still searches for the exact quote rather than ending with nothing.
   const planRequest = {
-    model: MODELS.super,
+    model: models.plan,
     schema: plannerOutputSchema,
     name: "plan",
     maxTokens: 8_000,
@@ -193,12 +197,12 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   };
   let plan = await callStructured(nebius, { ...planRequest, thinking: true });
   if (!plan.ok) {
-    onEvent({ type: "plan_failed", ...spend(MODELS.super, plan), reason: plan.reason });
+    onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
     if (!worthRetrying(plan.cause)) return finish();
     if (mustStop()) return finish();
-    onEvent({ type: "escalated", step: "plan", from: "super", to: "super", thinking: false, reason: plan.reason, url: null });
+    onEvent({ type: "escalated", step: "plan", from: models.plan.tier, to: models.plan.tier, thinking: false, reason: plan.reason, url: null });
     plan = await callStructured(nebius, { ...planRequest, thinking: false });
-    if (!plan.ok) onEvent({ type: "plan_failed", ...spend(MODELS.super, plan), reason: plan.reason });
+    if (!plan.ok) onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
   }
   const variants = plan.ok ? plan.data.variants : [];
   // With no name given, the planner's name for the usual credit stands in for it.
@@ -211,7 +215,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   if (plan.ok) {
     onEvent({
       type: "planned",
-      ...spend(MODELS.super, plan),
+      ...spend(models.plan, plan),
       variants,
       candidateAuthors: plan.data.candidate_authors,
       queries,
@@ -356,11 +360,11 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     // how a "tidied" quote looks. The second reading's node replaces the first;
     // when it has none, the first (crossed-out) node stays. Either way a page
     // gives at most one node.
-    const first = await readWith(MODELS.lightning);
+    const first = await readWith(models.read);
     let node = first.node;
     if (first.retry && !mustStop(false)) {
-      onEvent({ type: "escalated", step: "read", from: "lightning", to: "super", thinking: false, reason: first.retry, url });
-      node = (await readWith(MODELS.super)).node ?? node;
+      onEvent({ type: "escalated", step: "read", from: models.read.tier, to: models.reread.tier, thinking: false, reason: first.retry, url });
+      node = (await readWith(models.reread)).node ?? node;
     }
     if (!node) return;
     nodes.push(node);
@@ -404,7 +408,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       .sort()[0];
     const lines = ranked.map((c) => `- ${c.ids.join(", ")}: ${c.source}${c.date ? ` (${c.date})` : ""}`);
     const trace = await callStructured(nebius, {
-      model: MODELS.super,
+      model: models.trace,
       schema: genealogistOutputSchema,
       name: "trace",
       thinking: false,
@@ -412,7 +416,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       system: GENEALOGIST_PROMPT,
       user: `Saying: "${quote}"\nOldest dated evidence so far: ${oldest ?? "none"}\n\nCitations:\n${lines.join("\n")}`,
     });
-    const traceSpend = spend(MODELS.super, trace);
+    const traceSpend = spend(models.trace, trace);
     if (!trace.ok) {
       onEvent({ type: "trace_failed", ...traceSpend, round, reason: trace.reason });
       break;
@@ -522,11 +526,11 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // Ultra sees the same evidence, and thin evidence is an honest answer. A judge
   // that ran out of tokens thinking tries again with thinking off instead, since
   // Ultra could run out the same way. If the second judge fails, the first verdict stands.
-  const first = await judgeWith(MODELS.super, true);
+  const first = await judgeWith(models.judge, true);
   if (first.retry && !mustStop()) {
-    const model = first.outOfTokens ? MODELS.super : MODELS.ultra;
+    const model = first.outOfTokens ? models.judge : models.rejudge;
     const thinking = !first.outOfTokens;
-    onEvent({ type: "escalated", step: "judge", from: "super", to: model.tier, thinking, reason: first.retry, url: null });
+    onEvent({ type: "escalated", step: "judge", from: models.judge.tier, to: model.tier, thinking, reason: first.retry, url: null });
     await judgeWith(model, thinking);
   }
   finish();
