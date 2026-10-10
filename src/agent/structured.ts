@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { NebiusClient } from "../lib/server/providers/nebius";
 import type { ErrorKind } from "../lib/server/safe-error";
-import { estimateCostUsd, type ModelSpec } from "./models";
+import { estimateCostUsd, type ModelSpec, type TokenUsage } from "./models";
 
 export type StructuredRequest<S extends z.ZodType> = {
   model: ModelSpec;
@@ -21,9 +21,9 @@ export type FailureCause = ErrorKind | "out_of_tokens" | "bad_output";
 
 // usageKnown is false when the provider reported no token usage, or the call
 // failed in a way that may still be billed (a timeout). costUsd then undercounts.
-export type StructuredResult<T> =
-  | { ok: true; data: T; costUsd: number; usageKnown: boolean; latencyMs: number }
-  | { ok: false; cause: FailureCause; reason: string; costUsd: number; usageKnown: boolean; latencyMs: number };
+// tokens are the provider's counts, null when it reported none.
+type Spend = { costUsd: number; usageKnown: boolean; tokens: TokenUsage | null; latencyMs: number };
+export type StructuredResult<T> = ({ ok: true; data: T } | { ok: false; cause: FailureCause; reason: string }) & Spend;
 
 export function toStrictJsonSchema(schema: z.ZodType): Record<string, unknown> {
   const jsonSchema = z.toJSONSchema(schema, { target: "draft-7" }) as Record<string, unknown>;
@@ -54,13 +54,12 @@ export async function callStructured<S extends z.ZodType>(
   });
   if (!result.ok) {
     const reason = `${result.error.kind}: ${result.error.message}`;
-    return { ok: false, cause: result.error.kind, reason, costUsd: 0, usageKnown: false, latencyMs: result.latencyMs };
+    return { ok: false, cause: result.error.kind, reason, costUsd: 0, usageKnown: false, tokens: null, latencyMs: result.latencyMs };
   }
 
   const usage = result.completion.usage;
-  const costUsd = usage
-    ? estimateCostUsd(model, { promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens })
-    : 0;
+  const tokens = usage ? { promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens } : null;
+  const costUsd = tokens ? estimateCostUsd(model, tokens) : 0;
   const choice = result.completion.choices[0];
   const usageKnown = Boolean(usage);
   const fail = (cause: FailureCause, reason: string) => ({
@@ -69,6 +68,7 @@ export async function callStructured<S extends z.ZodType>(
     reason,
     costUsd,
     usageKnown,
+    tokens,
     latencyMs: result.latencyMs,
   });
   if (choice?.finish_reason === "length") return fail("out_of_tokens", "ran out of tokens");
@@ -81,5 +81,5 @@ export async function callStructured<S extends z.ZodType>(
   }
   const parsed = schema.safeParse(json);
   if (!parsed.success) return fail("bad_output", `output does not match schema: ${z.prettifyError(parsed.error)}`);
-  return { ok: true, data: parsed.data, costUsd, usageKnown, latencyMs: result.latencyMs };
+  return { ok: true, data: parsed.data, costUsd, usageKnown, tokens, latencyMs: result.latencyMs };
 }

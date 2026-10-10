@@ -110,10 +110,10 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     }
     return aborted || overBudget;
   };
-  const spend = <T>(model: ModelSpec, result: StructuredResult<T>) => {
-    nebiusUsd += result.costUsd;
-    if (!result.usageKnown) unknownCostCalls++;
-    return { tier: model.tier, costUsd: result.costUsd, usageKnown: result.usageKnown, latencyMs: result.latencyMs };
+  const spend = <T>(model: ModelSpec, { costUsd, usageKnown, tokens, latencyMs }: StructuredResult<T>) => {
+    nebiusUsd += costUsd;
+    if (!usageKnown) unknownCostCalls++;
+    return { tier: model.tier, costUsd, usageKnown, ...(tokens && { tokens }), latencyMs };
   };
   const finish = () =>
     onEvent({
