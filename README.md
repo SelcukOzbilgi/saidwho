@@ -53,7 +53,7 @@ Each run took 18 to 34 seconds and cost half a cent or less in model use, except
 
 Each quote goes through five steps, each with one job:
 
-- **Planner** thinks of other ways the quote has been worded or translated, who might have said it, and what to search for.
+- **Planner** thinks of other ways the quote has been worded or translated, who might have said it, and what to search for. If you left the name blank, it also says who the quote is usually credited to.
 - **Search** runs up to five web searches through Tavily, always starting with the exact quote. Sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia, are left out, so the trail has to be found from scratch.
 - **Readers** go through up to 20 of the pages that come back. For each one they copy the sentence that carries the quote and note who it's credited to, the date, and any older source the page names.
 - **Checker** looks for the copied sentence, or a very close match, in the page's own text. This step is plain code, not AI, so it can't be talked into a sentence the page doesn't have.
