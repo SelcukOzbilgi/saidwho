@@ -13,6 +13,7 @@
     "smoke:nebius": "node --env-file=.env.local --conditions=react-server --import tsx scripts/smoke/nebius.ts",
     "smoke:tavily": "node --env-file=.env.local --conditions=react-server --import tsx scripts/smoke/tavily.ts",
     "investigate": "node --env-file=.env.local --conditions=react-server --import tsx scripts/investigate.ts",
+    "eval": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/eval.ts",
     "prepare": "node scripts/enable-hooks.mjs"
   },
   "dependencies": {
