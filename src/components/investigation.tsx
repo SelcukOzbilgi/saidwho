@@ -77,6 +77,7 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
       for await (const item of readRunStream(response.body)) {
         if (!live()) break;
         if (item.kind === "run_failed") return fail("run_failed");
+        if (item.kind === "saved") continue;
         heard = true;
         if (item.event.type === "done") done = true;
         dispatch({ type: "event", event: item.event });

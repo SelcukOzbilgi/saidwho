@@ -7,6 +7,10 @@ export const toSseChunk = (event: unknown): string => `data: ${JSON.stringify(ev
 // the error itself is logged on the server, with keys removed.
 export const SSE_RUN_FAILED = `event: error\ndata: ${JSON.stringify({ error: "run_failed" })}\n\n`;
 
+// Sent after the run is saved, with the id of its public page (/runs/<id>).
+// It comes only once the save worked, so the page never links to a missing run.
+export const toSavedChunk = (id: string): string => `event: saved\ndata: ${JSON.stringify({ id })}\n\n`;
+
 // A comment line. Keeps proxies from closing a quiet connection while a slow
 // model call runs; SSE parsers ignore it.
 export const SSE_HEARTBEAT = ": keep-alive\n\n";

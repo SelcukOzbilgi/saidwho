@@ -4,6 +4,7 @@ import { env } from "@/lib/server/env";
 import { createInvestigateHandler } from "@/lib/server/investigate-handler";
 import { createNebiusClient } from "@/lib/server/providers/nebius";
 import { createTavilyClient } from "@/lib/server/providers/tavily";
+import { runStoreFromEnv } from "@/lib/server/run-store";
 
 // A run is usually under a minute; the handler ends it well before this (RUN_DEADLINE_MS).
 export const maxDuration = 300;
@@ -17,4 +18,5 @@ export const POST = createInvestigateHandler({
   createNebius: createNebiusClient,
   createTavily: createTavilyClient,
   investigate,
+  store: runStoreFromEnv(env),
 });
