@@ -1,5 +1,5 @@
-// Day 1 smoke test for Tavily: can we find and extract pages from the archives
-// the Genealogist depends on, and does exclude_domains really exclude?
+// Smoke test for Tavily: can it find and extract pages from old sources such as
+// archive.org and Wikisource, and does exclude_domains really exclude?
 // Run: pnpm smoke:tavily   (about 8 credits)
 
 import { parseServerEnv, requireOwnerKeys } from "../../src/lib/server/env-schema";

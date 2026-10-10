@@ -9,7 +9,6 @@ const ownerEnv = (overrides: Record<string, string> = {}) =>
     TAVILY_API_KEY: "owner-tavily",
     LIVE_RUNS_ENABLED: "true",
     TRIAL_RUNS_ENABLED: "true",
-    LANGSMITH_TRACING: "true",
     ...overrides,
   });
 
@@ -25,11 +24,11 @@ describe("resolveRunKeys", () => {
     }
   });
 
-  it("uses trimmed visitor keys and disables tracing for BYOK", () => {
+  it("uses trimmed visitor keys for BYOK", () => {
     const result = resolveRunKeys({ mode: "byok", nebiusApiKey: " v-neb ", tavilyApiKey: "v-tav\n" }, ownerEnv());
     expect(result).toEqual({
       ok: true,
-      keys: { source: "byok", nebiusApiKey: "v-neb", tavilyApiKey: "v-tav", tracingAllowed: false },
+      keys: { source: "byok", nebiusApiKey: "v-neb", tavilyApiKey: "v-tav" },
     });
   });
 
@@ -53,7 +52,9 @@ describe("resolveRunKeys", () => {
 
   it("uses owner keys for an enabled trial run", () => {
     const result = resolveRunKeys({ mode: "trial" }, ownerEnv());
-    expect(result.ok && result.keys.source).toBe("owner");
-    expect(result.ok && result.keys.tracingAllowed).toBe(true);
+    expect(result).toEqual({
+      ok: true,
+      keys: { source: "owner", nebiusApiKey: "owner-nebius", tavilyApiKey: "owner-tavily" },
+    });
   });
 });

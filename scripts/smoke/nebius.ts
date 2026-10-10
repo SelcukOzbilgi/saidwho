@@ -1,4 +1,5 @@
-// Day 1 smoke test for Nebius Token Factory.
+// Smoke test for Nebius Token Factory: checks each model tier's plain reply,
+// thinking on and off, JSON schema output and tool calls.
 // Run: pnpm smoke:nebius
 // Prints model ids, latency, token usage and pass/fail per capability.
 // Never prints keys, headers or raw SDK errors.
