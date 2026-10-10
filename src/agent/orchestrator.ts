@@ -14,6 +14,7 @@ import {
   cleanDate,
   genealogistOutputSchema,
   judgeOutputSchema,
+  MAX_LINEAGE_STEPS,
   plannerOutputSchema,
   readerOutputSchema,
 } from "./schemas";
@@ -517,10 +518,16 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     }
     // A lineage note with braces in it is JSON the model wrote into the string by
     // mistake, and an over-long one isn't a short note: either step is dropped.
-    const lineage = judge.data.lineage.filter((step) => !/[{}]/.test(step.note) && step.note.length <= MAX_FIELD_CHARS);
+    // Past six steps, the first and the last five are kept: where it started, and
+    // the changes that led to the version people share.
+    const kept = judge.data.lineage.filter((step) => !/[{}]/.test(step.note) && step.note.length <= MAX_FIELD_CHARS);
+    const lineage = kept.length > MAX_LINEAGE_STEPS ? [kept[0], ...kept.slice(1 - MAX_LINEAGE_STEPS)] : kept;
     const verdict = { ...judge.data, lineage };
-    // Ids in brackets, alone or grouped: [n2], [n2, n5] and [[n2]] all count.
-    const cited = [...verdict.rationale.matchAll(/\[[^\]]*\]/g)].flatMap((m) => m[0].match(/\bn\d+\b/g) ?? []);
+    // Ids in brackets, alone or grouped: [n2], [n2, n5] and [[n2]] all count,
+    // in the rationale and in every lineage note.
+    const cited = [verdict.rationale, ...lineage.map((step) => step.note)].flatMap((text) =>
+      [...text.matchAll(/\[[^\]]*\]/g)].flatMap((m) => m[0].match(/\bn\d+\b/g) ?? []),
+    );
     const pointers = [verdict.earliest_node, verdict.misattribution_node, ...lineage.map((step) => step.node)].filter(
       (id): id is string => id !== null,
     );

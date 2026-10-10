@@ -1,5 +1,5 @@
 import type { EvidenceNode } from "../agent/events";
-import type { LineageStep } from "../agent/schemas";
+import { type LineageStep, MAX_LINEAGE_STEPS } from "../agent/schemas";
 import { Rationale } from "./verdict-card";
 
 const CHANGE: Record<LineageStep["change"], { label: string; look: string }> = {
@@ -8,8 +8,6 @@ const CHANGE: Record<LineageStep["change"], { label: string; look: string }> = {
   translation: { label: "In another language", look: "bg-warn/15 text-warn" },
   credit: { label: "Credit changes", look: "bg-bad/15 text-bad" },
 };
-
-const MAX_STEPS = 6;
 
 // How the saying got to the form people share, as the judge traced it: where it
 // first appears, then each change in wording, language or credit, in the judge's
@@ -23,7 +21,8 @@ export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes
       const node = confirmed.get(step.node);
       return node ? [{ step, node }] : [];
     })
-    .slice(0, MAX_STEPS);
+    // The orchestrator keeps at most this many; older saved runs could hold more.
+    .slice(0, MAX_LINEAGE_STEPS);
   // One step is just the earliest page, which the verdict already names.
   if (shown.length < 2) return null;
   const ids = new Set(confirmed.keys());

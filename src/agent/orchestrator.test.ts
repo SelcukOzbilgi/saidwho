@@ -522,6 +522,23 @@ describe("investigate", () => {
     expect(verdict?.type === "verdict" && verdict.verdict.lineage).toEqual([lineage[0]]);
   });
 
+  it("checks the ids a lineage note cites, too", async () => {
+    const lineage = [...(VERDICT.lineage ?? []), { node: "n1", change: "credit" as const, note: "Credited to Einstein after [n99]." }];
+    const nebius = fakeNebius({ verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, lineage } : VERDICT) });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "verdict")).toMatchObject({ tier: "super", unknownIds: ["n99"] });
+    expect(events.at(-2)).toMatchObject({ type: "verdict", tier: "ultra" });
+  });
+
+  it("keeps the first lineage step and the last five when there are more than six", async () => {
+    const lineage = Array.from({ length: 8 }, (_, i) => ({ node: "n1", change: "wording" as const, note: `Step ${i + 1}.` }));
+    const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, lineage }) });
+    const events = await run({ nebius });
+    const verdict = events.find((e) => e.type === "verdict");
+    const notes = verdict?.type === "verdict" ? verdict.verdict.lineage?.map((s) => s.note) : [];
+    expect(notes).toEqual(["Step 1.", "Step 4.", "Step 5.", "Step 6.", "Step 7.", "Step 8."]);
+  });
+
   it("finds an unverified id inside a group of citations", async () => {
     const nebius = fakeNebius({
       verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, rationale: "Evidence [n1, n99] and [[n1]] prove this." } : VERDICT),
