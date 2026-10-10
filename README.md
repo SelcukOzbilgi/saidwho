@@ -21,7 +21,7 @@ Ask a chatbot where a quote comes from and you'll get a confident answer, and so
 
 ## What you see
 
-1. You paste a quote and the name it's usually credited to.
+1. You paste a quote, and the name it's usually credited to if you know it.
 2. Each step of the search shows up as it happens.
 3. Each page that carries the quote gets a card showing the sentence copied from it. Cards sit in columns by year, oldest on the left. If the sentence isn't really on the page, the card is crossed out.
 4. At the end you get a short verdict: whether the usual name holds up, the earliest source found, and how sure it is. The verdict links back to the cards it rests on.
@@ -109,7 +109,7 @@ pnpm dev
 
 ### Using it locally
 
-Open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. Your keys are only needed for new runs; the example cases work without them.
+Open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. You can leave the name blank. The Planner then names who it's usually credited to, and the run marks that name as the Planner's. Your keys are only needed for new runs; the example cases work without them.
 
 The free trial option, which runs on the server's own keys, stays off unless all of these are set in `.env.local`:
 

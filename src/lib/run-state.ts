@@ -24,6 +24,8 @@ export type RunState = {
   phase: Phase;
   quote: string | null;
   popularAttribution: string | null;
+  // Who named it: the visitor, or the planner when the visitor left it blank.
+  attributionFrom: "visitor" | "planner" | null;
   plan: { variants: string[]; candidateAuthors: string[]; queries: string[] } | null;
   searches: number;
   pages: number | null;
@@ -47,6 +49,7 @@ export const initialRunState: RunState = {
   phase: "planning",
   quote: null,
   popularAttribution: null,
+  attributionFrom: null,
   plan: null,
   searches: 0,
   pages: null,
@@ -90,22 +93,28 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         ...state,
         quote: event.quote,
         popularAttribution: event.popularAttribution,
+        attributionFrom: event.popularAttribution === null ? null : "visitor",
         log: log("Run", `Started. Sites that already wrote up answers are left out: ${event.excludeDomains.join(", ")}`),
       };
-    case "planned":
+    case "planned": {
+      // A name the visitor gave is never replaced.
+      const found = state.popularAttribution === null && event.foundAttribution ? event.foundAttribution : null;
       return {
         ...state,
         ...spent(event),
         phase: "searching",
         noVerdict: null,
         plan: { variants: event.variants, candidateAuthors: event.candidateAuthors, queries: event.queries },
+        ...(found && { popularAttribution: found, attributionFrom: "planner" as const }),
         log: log(
           "Planner",
-          `Planned ${event.queries.length} searches and ${event.variants.length} other wordings`,
+          `Planned ${event.queries.length} searches and ${event.variants.length} other wordings` +
+            (found ? `. No name was given; it's usually credited to ${found}` : ""),
           "neutral",
           event,
         ),
       };
+    }
     case "plan_failed":
       // When the run ends here, this is why; the run going on clears it.
       return {

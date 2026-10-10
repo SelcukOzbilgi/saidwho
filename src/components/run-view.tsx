@@ -24,7 +24,7 @@ export function RunView({ run, running, note, afterVerdict }: Props) {
       <header>
         <blockquote className="font-serif text-2xl leading-snug italic sm:text-3xl">“{run.quote}”</blockquote>
         <p className="mt-2 text-muted">
-          Usually credited to <span className="text-foreground">{run.popularAttribution}</span>
+          <CreditLine run={run} running={running} />
         </p>
       </header>
 
@@ -51,4 +51,14 @@ export function RunView({ run, running, note, afterVerdict }: Props) {
       </div>
     </div>
   );
+}
+
+// A name from the planner is what the model believes people say, not something
+// a page backed up, so the line says where the name came from.
+function CreditLine({ run, running }: Pick<Props, "run" | "running">) {
+  const name = <span className="text-foreground">{run.popularAttribution}</span>;
+  if (run.attributionFrom === "visitor") return <>Usually credited to {name}</>;
+  if (run.attributionFrom === "planner") return <>No name was given. The planner says it&apos;s usually credited to {name}.</>;
+  if (running && run.phase === "planning") return <>No name was given, so the planner will say who it&apos;s usually credited to.</>;
+  return <>No name was given, and the planner didn&apos;t name anyone.</>;
 }

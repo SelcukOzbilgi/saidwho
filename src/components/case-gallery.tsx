@@ -31,7 +31,7 @@ export function CaseGallery({ cases }: { cases: readonly ExampleCase[] }) {
                   {verdict ? verdictWords(verdict) : "No verdict"}
                 </span>
                 <span className="line-clamp-3 font-serif text-lg leading-snug">“{run.quote}”</span>
-                <span className="text-sm text-muted">Credited to {run.popularAttribution}</span>
+                <span className="text-sm text-muted">Credited to {run.popularAttribution ?? "no one in particular"}</span>
                 <span className="mt-auto pt-2 font-mono text-xs text-muted tabular-nums">
                   {confirmed} source{confirmed === 1 ? "" : "s"} · ${run.nebiusUsd.toFixed(4)} · {run.seconds}s
                 </span>
