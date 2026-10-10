@@ -1,5 +1,5 @@
 #!/bin/sh
-# Block commits that contain secrets. Enabled by `pnpm install` (core.hooksPath).
+# Block commits that contain secrets. Enabled by `pnpm install` (core.hooksPath, see scripts/enable-hooks.mjs).
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-commit: gitleaks is not installed (brew install gitleaks). Refusing to commit." >&2
   exit 1
