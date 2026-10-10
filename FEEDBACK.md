@@ -60,3 +60,18 @@ Setup: a step that fails now gets one more try, unless the failure would repeat 
 
 Costs with second tries: $0.004 for "insanity" (one page read again), $0.003 for "so much owed", and $0.011 for "Gel, gel" while Ultra was still judging low-confidence verdicts.
 
+
+## 2026-10-10: Following citations, cost per tier, and the eval
+
+Setup: the Genealogist now follows the older works that confirmed pages cite, by searching digital libraries through Tavily. Each model call keeps its token counts, so the page can show what the same calls would cost on Ultra. `pnpm eval` runs the test set as the app does, with every step on Ultra, and with every step on Lightning.
+
+### Tavily
+
+- **`include_domains` with `include_domains_mode: "restrict"` finds the cited work itself.** For "Let them eat cake", pages cite Rousseau's Confessions. Searching only archive.org, Wikisource, Project Gutenberg and a few other libraries returned the Gutenberg and archive.org texts of the book, and the Checker found the passage on both. A plain search finds more pages about the saying instead.
+
+### Token Factory
+
+- **`completion_tokens` includes the thinking tokens.** That's what we want for cost, since thinking is billed, but it isn't stated anywhere we found. A line in the docs, or a separate `reasoning_tokens` count in `usage`, would make the split visible.
+- **The mix of models is much cheaper than Ultra for the same work.** On one "insanity" run, the calls cost $0.0036. The same token counts at Ultra's prices come to $0.0295, about eight times as much, and Ultra would likely think longer.
+- **A small model with thinking on isn't cheaper for judging.** With every step on Lightning, the judge spent its whole 8,000-token budget thinking and had to try again with thinking off. That run cost $0.0062 and took 84 s. The app's mix of models cost $0.0058 and took 34 s on the same quote. A way to cap reasoning tokens separately would help here too.
+- **Strict JSON, typographic quotes.** In 1 of 14 judge calls, Super ended a note string with `”}, {"`. It looks as if it took the curly closing quote for the end of the string and went on writing the next object inside it. The output was still valid JSON, so only the content was broken, and the app now drops such notes.
