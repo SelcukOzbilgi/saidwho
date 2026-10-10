@@ -96,6 +96,14 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
             <span className="text-foreground">{node.attributedTo}</span>
           </Row>
         )}
+        {node.foundVia && (
+          <Row label="Found via">
+            <a href={`#node-${node.foundVia.node}`} className="underline decoration-line underline-offset-2 hover:decoration-foreground">
+              {node.foundVia.node}
+            </a>
+            , looking for {node.foundVia.work}
+          </Row>
+        )}
         {node.reader.cited_source && (
           <Row label="Cites">
             {node.reader.cited_source}

@@ -45,6 +45,8 @@ async function main(): Promise<void> {
   const reads = { total: 0, failed: 0, tooLong: 0, again: 0 };
   let searchCredits = 0;
   let judgePrinted = false;
+  // Genealogist rounds happen after the first readers, but print after their summary.
+  const traceLines: string[] = [];
 
   const print = (event: RunEvent): void => {
     switch (event.type) {
@@ -72,7 +74,18 @@ async function main(): Promise<void> {
         console.log(`   search failed (${event.reason}): ${event.query}`);
         break;
       case "pages_ready":
+        if (event.round !== undefined) {
+          traceLines.push(`     ${event.pages} new pages, excluded-site pages dropped: ${event.droppedExcluded}`);
+          break;
+        }
         console.log(`\n2) Search: ${event.pages} unique pages, ${searchCredits} credits, excluded-site pages dropped: ${event.droppedExcluded}`);
+        break;
+      case "traced":
+        traceLines.push(`   round ${event.round} (${event.tier}, ${event.latencyMs}ms): ${event.leads.length ? "following" : "nothing to follow"}`);
+        for (const lead of event.leads) traceLines.push(`   - ${lead.work} (cited by ${lead.fromNode}): ${lead.query}`);
+        break;
+      case "trace_failed":
+        traceLines.push(`   round ${event.round} failed: ${event.reason}`);
         break;
       case "page_read":
         reads.total++;
@@ -89,7 +102,7 @@ async function main(): Promise<void> {
         if (!judgePrinted) {
           judgePrinted = true;
           printNodes();
-          console.log("\n5) Judge");
+          console.log("\n6) Judge");
         }
         if (event.type === "judge_skipped") console.log(`   skipped: ${event.reason}, so no verdict`);
         if (event.type === "judge_failed") console.log(`   ${event.tier} failed: ${event.reason}`);
@@ -137,8 +150,11 @@ async function main(): Promise<void> {
       const mark = n.check.status === "not_found" ? "✗" : "✓";
       const credit = n.attributedTo ?? "no one";
       const cites = n.reader.cited_source ? ` cites: ${n.reader.cited_source.slice(0, 70)}` : "";
-      console.log(`   ${mark} ${n.id.padEnd(4)} ${(n.date ?? "????").padEnd(10)} ${n.host.padEnd(28)} → ${credit}${cites}`);
+      const via = n.foundVia ? ` (via ${n.foundVia.node})` : "";
+      console.log(`   ${mark} ${n.id.padEnd(4)} ${(n.date ?? "????").padEnd(10)} ${n.host.padEnd(28)} → ${credit}${cites}${via}`);
     }
+    console.log(`5) Genealogist${traceLines.length ? "" : ": no confirmed page cited an older work"}`);
+    for (const line of traceLines) console.log(line);
   };
 
   const ranAt = new Date().toISOString();

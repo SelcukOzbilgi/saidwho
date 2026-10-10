@@ -31,6 +31,9 @@ export const evidenceNodeSchema = z.strictObject({
   pageDate: z.string().nullable(),
   citedSourceDate: z.string().nullable(),
   date: z.string().nullable(),
+  // Set when the Genealogist found this page: the node whose citation led here
+  // and the work it was looking for. Runs saved before the Genealogist have no key.
+  foundVia: z.strictObject({ node: z.string(), work: z.string() }).nullable().optional(),
 });
 
 export const runEventSchema = z.discriminatedUnion("type", [
@@ -80,7 +83,23 @@ export const runEventSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("search_failed"), query: z.string(), reason: z.string() }),
   // Pages on an excluded site are dropped here even if the search let them through.
-  z.strictObject({ type: z.literal("pages_ready"), pages: z.number(), droppedExcluded: z.number() }),
+  // round is set for the pages a Genealogist round adds; they count on top of the first batch.
+  z.strictObject({
+    type: z.literal("pages_ready"),
+    pages: z.number(),
+    droppedExcluded: z.number(),
+    round: z.number().optional(),
+  }),
+  // The Genealogist picked earlier works that confirmed pages cite, to look for
+  // them too. An empty list means nothing was worth following and tracing ends.
+  z.strictObject({
+    type: z.literal("traced"),
+    ...spendSchema,
+    round: z.number(),
+    leads: z.array(z.strictObject({ fromNode: z.string(), work: z.string(), query: z.string() })),
+  }),
+  // A failed trace is not tried again: the run already has evidence to judge.
+  z.strictObject({ type: z.literal("trace_failed"), ...spendSchema, round: z.number(), reason: z.string() }),
   // A page read again after an escalated event reports a second page_read; one
   // page still gives at most one node_added, sent once its last reading is done.
   z.strictObject({
