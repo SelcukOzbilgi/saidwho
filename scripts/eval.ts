@@ -29,10 +29,16 @@ import { redactSecrets } from "../src/lib/server/safe-error";
 // A runaway run stops here instead of draining the key.
 const MAX_USD = 0.5;
 
-const SETUPS: Record<string, { label: string; models: ModelPolicy }> = {
-  cascade: { label: "Cascade", models: CASCADE },
-  ultra: { label: "All Ultra", models: everyStepOn(MODELS.ultra) },
-  lightning: { label: "All Lightning", models: everyStepOn(MODELS.lightning) },
+const SETUPS: Record<string, { label: string; about: string; models: ModelPolicy }> = {
+  cascade: {
+    label: "Cascade",
+    about:
+      "the app as it runs. Lightning reads each page, Super plans, follows citations and judges, " +
+      "and a step whose check fails is tried again on a bigger model.",
+    models: CASCADE,
+  },
+  ultra: { label: "All Ultra", about: "every step on Nemotron 3 Ultra.", models: everyStepOn(MODELS.ultra) },
+  lightning: { label: "All Lightning", about: "every step on Nemotron 3.5 Lightning.", models: everyStepOn(MODELS.lightning) },
 };
 
 const RUNS = new URL("../.runs/eval/", import.meta.url);
@@ -67,21 +73,25 @@ function cachedSearch(tavily: TavilyClient, spent: { credits: number }): TavilyC
 function flag(name: string): string[] | null {
   const i = process.argv.indexOf(`--${name}`);
   if (i === -1) return null;
-  return (process.argv[i + 1] ?? "").split(",").filter(Boolean);
+  const values = (process.argv[i + 1] ?? "").split(",").filter(Boolean);
+  if (values.length === 0) throw new Error(`--${name} needs a comma-separated list`);
+  return values;
 }
 
 function writeResults(cases: readonly EvalCase[], setups: readonly string[]): void {
   const ranAt: string[] = [];
-  const policies = setups.map((setup) => {
-    const scores: RunScore[] = [];
-    for (const c of cases) {
-      const log = readLog(setup, c.id);
-      if (!log) continue;
-      ranAt.push(log.ranAt.slice(0, 10));
-      scores.push(scoreRun(c, log.events));
-    }
-    return { label: SETUPS[setup].label, scores };
-  }).filter((p) => p.scores.length > 0);
+  const ran = setups
+    .map((setup) => {
+      const scores: RunScore[] = [];
+      for (const c of cases) {
+        const log = readLog(setup, c.id);
+        if (!log) continue;
+        ranAt.push(log.ranAt.slice(0, 10));
+        scores.push(scoreRun(c, log.events));
+      }
+      return { ...SETUPS[setup], scores };
+    })
+    .filter((p) => p.scores.length > 0);
   const days = [...new Set(ranAt)].sort();
   const when = days.length === 0 ? "" : days.length === 1 ? ` on ${days[0]}` : ` from ${days[0]} to ${days.at(-1)}`;
   const intro = [
@@ -89,16 +99,14 @@ function writeResults(cases: readonly EvalCase[], setups: readonly string[]): vo
     "",
     `Written by \`pnpm eval\` from runs made${when}. Each quote in [quotes.jsonl](quotes.jsonl) was run with the sites that already wrote up its answer left out: Quote Investigator, Wikiquote, Wikipedia and the pages the answer comes from.`,
     "",
-    "- Cascade: the app as it runs. Lightning reads each page, Super plans, follows citations and judges, and a step whose check fails is tried again on a bigger model.",
-    "- All Ultra: every step on Nemotron 3 Ultra.",
-    "- All Lightning: every step on Nemotron 3.5 Lightning.",
+    ...ran.map((p) => `- ${p.label}: ${p.about}`),
     "",
     "Setups that searched for the same query got the same pages, from a shared cache. The Tavily credits are what each setup's searches cost when they were made.",
     "",
     "A ✓ after a verdict means it matches the known answer, and after a year that it's within 2 years of the known earliest date. A year marked (older) is earlier than the known date. That is either a find or a misread date, so those are checked by hand.",
     "",
   ];
-  writeFileSync(new URL("../eval/results.md", import.meta.url), `${intro.join("\n")}\n${renderResults(cases, policies)}`);
+  writeFileSync(new URL("../eval/results.md", import.meta.url), `${intro.join("\n")}\n${renderResults(cases, ran)}`);
   console.log("Results: eval/results.md");
 }
 
