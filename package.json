@@ -13,7 +13,7 @@
     "smoke:nebius": "node --env-file=.env.local --conditions=react-server --import tsx scripts/smoke/nebius.ts",
     "smoke:tavily": "node --env-file=.env.local --conditions=react-server --import tsx scripts/smoke/tavily.ts",
     "investigate": "node --env-file=.env.local --conditions=react-server --import tsx scripts/investigate.ts",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git rev-parse --git-dir > /dev/null 2>&1 || exit 0; git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@tavily/core": "~0.7.13",
