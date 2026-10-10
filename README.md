@@ -93,7 +93,7 @@ Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/
 
 ## Using the public demo
 
-The demo is at [saidwho.vercel.app](https://saidwho.vercel.app). Anyone can browse the finished cases there for free and replay them step by step. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're never saved or written to logs. The free trial option on the form is off for now.
+The demo is at [saidwho.vercel.app](https://saidwho.vercel.app). Anyone can browse the finished cases there for free and replay them step by step. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're never saved or written to logs. The run itself is saved: the quote, the snippets it found and its verdict. When it ends, the page shows a link to it that anyone can open. The free trial option on the form is off for now.
 
 ## Running it locally
 
@@ -120,6 +120,8 @@ The free trial option, which runs on the server's own keys, stays off unless all
 | `DAILY_BUDGET_USD` | At least `0.20`, which is what one trial run sets aside before it starts |
 
 A run started from the page stops making new model calls once its estimated Nebius spend reaches $0.50 with your keys, or $0.10 on the trial.
+
+To save runs and give each one a public link at `/runs/<id>`, create a Supabase project, run [`supabase/migrations/`](supabase/migrations/) on it, and set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (the project's secret key) in `.env.local`. Without them, runs aren't saved and the app works the same otherwise.
 
 ### Running an investigation from the command line
 
@@ -153,6 +155,7 @@ src/components/   the form, timeline, verdict card and case replay
 src/cases/        the ten finished example cases
 src/lib/          run state, streaming, and server code (keys, budget, providers)
 eval/             the test set of 20 quotes with known origins
+supabase/         the table saved runs go in
 scripts/          the command-line investigation and the smoke tests
 ```
 
