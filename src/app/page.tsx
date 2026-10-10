@@ -5,6 +5,7 @@ import { CaseGallery } from "../components/case-gallery";
 import { Investigation } from "../components/investigation";
 import { SiteFooter } from "../components/site-footer";
 import { env } from "../lib/server/env";
+import { TRIAL_RESERVE_USD } from "../lib/server/investigate-handler";
 
 export default async function Home() {
   // Read the switches per request, so turning trial runs off needs no rebuild.
@@ -13,7 +14,8 @@ export default async function Home() {
     env.LIVE_RUNS_ENABLED &&
     env.TRIAL_RUNS_ENABLED &&
     Boolean(env.NEBIUS_API_KEY && env.TAVILY_API_KEY) &&
-    env.DAILY_BUDGET_USD > 0;
+    // A trial run sets aside its worst case before it starts; a smaller budget can't fit even one.
+    env.DAILY_BUDGET_USD >= TRIAL_RESERVE_USD;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-10 sm:px-6 sm:py-14">

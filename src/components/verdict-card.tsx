@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import type { JudgeOutput } from "../agent/schemas";
 import { type RunState, verdictWords } from "../lib/run-state";
 import { TierChip } from "./tier-chip";
@@ -77,15 +79,21 @@ export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttr
 }
 
 // The judge cites evidence as n3, [n3] or (n3, n5); each id becomes a link to
-// its card. It also writes titles in markdown emphasis, shown here as italics.
-function Rationale({ text, confirmed }: { text: string; confirmed: ReadonlySet<string> }) {
+// its card. It also writes titles in markdown emphasis, shown here as italics,
+// and sometimes puts the ids themselves in bold.
+export function Rationale({ text, confirmed }: { text: string; confirmed: ReadonlySet<string> }) {
   const plain = text.replace(/\[(n\d+(?:\s*,\s*n\d+)*)\]/g, "$1");
-  return plain.split(/(\bn\d+\b|\*\*[^*\n]+\*\*|\*[^*\n]+\*|\b_[^_\n]+_\b)/g).map((part, i) => {
-    if (/^n\d+$/.test(part)) return <Cite key={i} id={part} confirmed={confirmed} />;
-    if (/^\*\*.+\*\*$/.test(part)) return <strong key={i}>{part.slice(2, -2)}</strong>;
-    if (/^([*_]).+\1$/.test(part)) return <em key={i}>{part.slice(1, -1)}</em>;
-    return part;
+  return plain.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|\b_[^_\n]+_\b)/g).map((part, i) => {
+    if (/^\*\*.+\*\*$/.test(part)) return <strong key={i}>{cited(part.slice(2, -2), confirmed)}</strong>;
+    if (/^([*_]).+\1$/.test(part)) return <em key={i}>{cited(part.slice(1, -1), confirmed)}</em>;
+    return <Fragment key={i}>{cited(part, confirmed)}</Fragment>;
   });
+}
+
+function cited(text: string, confirmed: ReadonlySet<string>) {
+  return text
+    .split(/(\bn\d+\b)/g)
+    .map((part, i) => (/^n\d+$/.test(part) ? <Cite key={i} id={part} confirmed={confirmed} /> : part));
 }
 
 function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> }) {
