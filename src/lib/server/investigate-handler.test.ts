@@ -231,6 +231,8 @@ describe("POST /api/investigate", () => {
     expect(saved[0].events.map((e) => e.type)).toEqual(["started", "done"]);
     expect(isRunId(saved[0].id)).toBe(true);
     expect(all.at(-1)).toEqual({ event: "saved", data: { id: saved[0].id }, comment: false });
+    // The id comes first too, so a page whose visitor stops the run can still find it.
+    expect(all[0]).toEqual({ event: "run", data: { id: saved[0].id }, comment: false });
     expect(JSON.stringify(saved)).not.toContain(NEBIUS_KEY);
     expect(JSON.stringify(saved)).not.toContain(TAVILY_KEY);
   });
@@ -247,6 +249,7 @@ describe("POST /api/investigate", () => {
     const { handler } = setup({ store: null });
     const all = frames(await (await handler(post(byok))).text());
     expect(all.map((f) => f.event)).not.toContain("saved");
+    expect(all.map((f) => f.event)).not.toContain("run");
   });
 
   it("logs a failed save with keys removed and sends no id", async () => {

@@ -26,6 +26,23 @@ const PROBLEMS: Record<string, string> = {
 };
 
 type Status = "idle" | "running" | "finished" | "stopped" | "failed";
+
+// A stopped run is saved once the calls it had running finish, which can take
+// up to a minute and a half (NEBIUS_TIMEOUT_MS). Its stream is closed by then, so
+// the page checks every few seconds whether the run's page exists, and links to
+// it once it does.
+const SAVE_CHECKS = 30;
+const SAVE_CHECK_MS = 3_000;
+
+async function waitForSave(id: string, current: () => boolean, onSaved: (id: string) => void): Promise<void> {
+  for (let i = 0; i < SAVE_CHECKS; i++) {
+    await new Promise((resolve) => setTimeout(resolve, SAVE_CHECK_MS));
+    if (!current()) return;
+    const res = await fetch(`/runs/${id}`, { method: "HEAD", cache: "no-store" }).catch(() => null);
+    if (!current()) return;
+    if (res?.ok) return onSaved(id);
+  }
+}
 type Action = { type: "reset" } | { type: "event"; event: RunEvent };
 
 const reducer = (state: RunState, action: Action): RunState =>
@@ -38,9 +55,16 @@ export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; sa
   // The id of the run's public page, once the server has saved it.
   const [savedId, setSavedId] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
 
   // Leaving the page ends the run, which stops the spend on the server too.
-  useEffect(() => () => controller.current?.abort(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      controller.current?.abort();
+    };
+  }, []);
 
   async function start(request: QuoteRequest) {
     controller.current?.abort();
@@ -53,8 +77,12 @@ export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; sa
 
     // Only the latest run may touch the screen; a stopped one goes quiet.
     const live = () => controller.current === abort && !abort.signal.aborted;
+    // The id the server will save this run under, when it saves runs.
+    let runId: string | null = null;
     const stopped = () => {
-      if (controller.current === abort) setStatus("stopped");
+      if (controller.current !== abort) return;
+      setStatus("stopped");
+      if (runId) void waitForSave(runId, () => mounted.current && controller.current === abort, setSavedId);
     };
     const fail = (code: string) => {
       setProblem(code);
@@ -83,6 +111,10 @@ export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; sa
         // A run that broke is still saved, and its id comes after, so reading goes on.
         if (item.kind === "run_failed") {
           broke = true;
+          continue;
+        }
+        if (item.kind === "run") {
+          runId = item.id;
           continue;
         }
         if (item.kind === "saved") {

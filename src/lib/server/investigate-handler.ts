@@ -11,7 +11,7 @@ import type { TavilyClient } from "./providers/tavily";
 import { resolveRunKeys } from "./run-keys";
 import { newRunId, type RunStore } from "./run-store";
 import { redactSecrets } from "./safe-error";
-import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toSavedChunk, toSseChunk } from "./sse";
+import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toRunIdChunk, toSavedChunk, toSseChunk } from "./sse";
 
 // POST /api/investigate: checks the request, picks whose keys pay, and streams
 // the orchestrator's events back as server-sent events. When the run ends, it is
@@ -115,6 +115,8 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     let done: DoneEvent | null = null;
     // Every event, kept for saving. A stopped or broken run is saved too, as far as it got.
     const events: RunEvent[] = [];
+    // The id the run is saved under, when runs are saved.
+    const runId = deps.store ? newRunId() : null;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
 
     const stream = new ReadableStream<Uint8Array>({
@@ -128,6 +130,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             closed = true;
           }
         };
+        if (runId) send(toRunIdChunk(runId));
         heartbeat = setInterval(() => send(SSE_HEARTBEAT), HEARTBEAT_MS);
 
         deps
@@ -160,11 +163,10 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
             // Saved before the stream closes: work left for after the response ends
             // may never run on a serverless platform.
-            if (deps.store && events.length > 0) {
-              const id = newRunId();
+            if (deps.store && runId && events.length > 0) {
               try {
-                await deps.store.save({ id, keys: keys.source === "owner" ? "trial" : "own", events });
-                send(toSavedChunk(id));
+                await deps.store.save({ id: runId, keys: keys.source === "owner" ? "trial" : "own", events });
+                send(toSavedChunk(runId));
               } catch (err: unknown) {
                 const message = err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown";
                 logError(`investigate: could not save the run: ${message.slice(0, 300)}`);
