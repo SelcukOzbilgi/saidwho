@@ -89,8 +89,10 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
   ];
   const spent = (spend: Spend) => ({
     nebiusUsd: state.nebiusUsd + spend.costUsd,
-    // A call with known usage but no counts comes from an older log, and a
-    // partial sum would be the wrong number, so the comparison is dropped.
+    // A call with unknown usage adds nothing to either sum, so both still cover
+    // the same calls, and the cost line says how many were left out. A call with
+    // known usage but no counts comes from an older log: there the Nebius sum has
+    // it and the Ultra one can't, so the comparison is dropped.
     ultraUsd:
       state.ultraUsd === null || (spend.usageKnown && !spend.tokens)
         ? null
