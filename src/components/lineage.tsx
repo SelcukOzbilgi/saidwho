@@ -23,8 +23,9 @@ export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes
     })
     // The orchestrator keeps at most this many; older saved runs could hold more.
     .slice(0, MAX_LINEAGE_STEPS);
-  // One step is just the earliest page, which the verdict already names.
-  if (shown.length < 2) return null;
+  // One step is just the earliest page, which the verdict already names, and a
+  // list whose first step was left out has lost where it started.
+  if (shown.length < 2 || shown[0].step.change !== "first") return null;
   const ids = new Set(confirmed.keys());
 
   return (

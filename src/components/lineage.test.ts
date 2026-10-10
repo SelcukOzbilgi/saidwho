@@ -42,6 +42,14 @@ describe("Lineage", () => {
     expect(html).not.toContain("Wording changes");
   });
 
+  it("shows nothing when the step where it first appears is missing", () => {
+    // Two steps on confirmed pages, but neither is where it first appears.
+    expect(render([{ ...STEPS[0], change: "wording" }, STEPS[2]])).toBe("");
+    // The first step is on a crossed-out page, so what's left starts mid-way.
+    const fromCrossedOut: LineageStep[] = [{ ...STEPS[0], node: "n3" }, { ...STEPS[2], node: "n1" }, STEPS[2]];
+    expect(render(fromCrossedOut)).toBe("");
+  });
+
   it("shows nothing when only one step is left", () => {
     expect(render(STEPS.slice(0, 2))).toBe("");
     expect(render([])).toBe("");

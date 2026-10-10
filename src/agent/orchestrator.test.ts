@@ -508,6 +508,9 @@ describe("investigate", () => {
       ["super", ["n7"]],
       ["ultra", []],
     ]);
+    // Super's verdict would stand if Ultra failed, so the step on n7 isn't in it.
+    const first = events.find((e) => e.type === "verdict");
+    expect(first?.type === "verdict" && first.verdict.lineage?.map((s) => s.node)).toEqual(["n1"]);
   });
 
   it("drops a lineage step whose note is broken or too long", async () => {
@@ -526,7 +529,9 @@ describe("investigate", () => {
     const lineage = [...(VERDICT.lineage ?? []), { node: "n1", change: "credit" as const, note: "Credited to Einstein after [n99]." }];
     const nebius = fakeNebius({ verdict: ({ model }) => (model === MODELS.super.id ? { ...VERDICT, lineage } : VERDICT) });
     const events = await run({ nebius });
-    expect(events.find((e) => e.type === "verdict")).toMatchObject({ tier: "super", unknownIds: ["n99"] });
+    const first = events.find((e) => e.type === "verdict");
+    expect(first).toMatchObject({ tier: "super", unknownIds: ["n99"] });
+    expect(first?.type === "verdict" && first.verdict.lineage?.map((s) => s.note)).toEqual([VERDICT.lineage?.[0].note]);
     expect(events.at(-2)).toMatchObject({ type: "verdict", tier: "ultra" });
   });
 

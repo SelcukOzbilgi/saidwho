@@ -14,6 +14,7 @@ import {
   cleanDate,
   genealogistOutputSchema,
   judgeOutputSchema,
+  type LineageStep,
   MAX_LINEAGE_STEPS,
   plannerOutputSchema,
   readerOutputSchema,
@@ -516,22 +517,23 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       onEvent({ type: "judge_failed", ...judgeSpend, reason: judge.reason });
       return { retry: worthRetrying(judge.cause) ? judge.reason : null, outOfTokens: judge.cause === "out_of_tokens" };
     }
+    // Ids in brackets, alone or grouped: [n2], [n2, n5] and [[n2]] all count.
+    const citedIn = (text: string) => [...text.matchAll(/\[[^\]]*\]/g)].flatMap((m) => m[0].match(/\bn\d+\b/g) ?? []);
     // A lineage note with braces in it is JSON the model wrote into the string by
     // mistake, and an over-long one isn't a short note: either step is dropped.
+    const wellFormed = judge.data.lineage.filter((step) => !/[{}]/.test(step.note) && step.note.length <= MAX_FIELD_CHARS);
+    const stepIds = (step: LineageStep) => [step.node, ...citedIn(step.note)];
+    const pointers = [judge.data.earliest_node, judge.data.misattribution_node].filter((id): id is string => id !== null);
+    const unknownIds = [
+      ...new Set([...citedIn(judge.data.rationale), ...pointers, ...wellFormed.flatMap(stepIds)].filter((id) => !known.has(id))),
+    ];
+    // A step that rests on an unverified page is left out of the verdict, since
+    // this verdict stands if a second judge fails; its ids still count above.
     // Past six steps, the first and the last five are kept: where it started, and
     // the changes that led to the version people share.
-    const kept = judge.data.lineage.filter((step) => !/[{}]/.test(step.note) && step.note.length <= MAX_FIELD_CHARS);
-    const lineage = kept.length > MAX_LINEAGE_STEPS ? [kept[0], ...kept.slice(1 - MAX_LINEAGE_STEPS)] : kept;
+    const supported = wellFormed.filter((step) => stepIds(step).every((id) => known.has(id)));
+    const lineage = supported.length > MAX_LINEAGE_STEPS ? [supported[0], ...supported.slice(1 - MAX_LINEAGE_STEPS)] : supported;
     const verdict = { ...judge.data, lineage };
-    // Ids in brackets, alone or grouped: [n2], [n2, n5] and [[n2]] all count,
-    // in the rationale and in every lineage note.
-    const cited = [verdict.rationale, ...lineage.map((step) => step.note)].flatMap((text) =>
-      [...text.matchAll(/\[[^\]]*\]/g)].flatMap((m) => m[0].match(/\bn\d+\b/g) ?? []),
-    );
-    const pointers = [verdict.earliest_node, verdict.misattribution_node, ...lineage.map((step) => step.node)].filter(
-      (id): id is string => id !== null,
-    );
-    const unknownIds = [...new Set([...cited, ...pointers].filter((id) => !known.has(id)))];
     onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds });
     if (unknownIds.length > 0) return { retry: `the verdict points at ${unknownIds.join(", ")}, not verified evidence`, outOfTokens: false };
     return { retry: null, outOfTokens: false };
