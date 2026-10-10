@@ -38,13 +38,15 @@ const LANGUAGES = [
 
 type Props = {
   trialOpen: boolean;
+  // Whether the server saves runs, so the form says so before one starts.
+  savesRuns: boolean;
   running: boolean;
   onStart: (request: QuoteRequest) => void;
   onStop: () => void;
 };
 
 // Keys stay in this component's state: never in the URL, storage or a log.
-export function QuoteForm({ trialOpen, running, onStart, onStop }: Props) {
+export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Props) {
   const id = useId();
   const [quote, setQuote] = useState("");
   const [popularAttribution, setPopularAttribution] = useState("");
@@ -198,6 +200,11 @@ export function QuoteForm({ trialOpen, running, onStart, onStop }: Props) {
         )}
         <p className="text-xs text-muted">A run takes up to about three minutes.</p>
       </div>
+      {savesRuns && (
+        <p className="-mt-2 text-xs text-muted">
+          Every run is saved and gets a public link: the quote, what the run found and its verdict. Keys are never saved.
+        </p>
+      )}
     </form>
   );
 }

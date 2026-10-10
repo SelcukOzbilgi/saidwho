@@ -31,10 +31,12 @@ type Action = { type: "reset" } | { type: "event"; event: RunEvent };
 const reducer = (state: RunState, action: Action): RunState =>
   action.type === "reset" ? initialRunState : reduceRun(state, action.event);
 
-export function Investigation({ trialOpen }: { trialOpen: boolean }) {
+export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; savesRuns: boolean }) {
   const [run, dispatch] = useReducer(reducer, initialRunState);
   const [status, setStatus] = useState<Status>("idle");
   const [problem, setProblem] = useState<string | null>(null);
+  // The id of the run's public page, once the server has saved it.
+  const [savedId, setSavedId] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
 
   // Leaving the page ends the run, which stops the spend on the server too.
@@ -46,6 +48,7 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
     controller.current = abort;
     dispatch({ type: "reset" });
     setProblem(null);
+    setSavedId(null);
     setStatus("running");
 
     // Only the latest run may touch the screen; a stopped one goes quiet.
@@ -77,6 +80,10 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
       for await (const item of readRunStream(response.body)) {
         if (!live()) break;
         if (item.kind === "run_failed") return fail("run_failed");
+        if (item.kind === "saved") {
+          setSavedId(item.id);
+          continue;
+        }
         heard = true;
         if (item.event.type === "done") done = true;
         dispatch({ type: "event", event: item.event });
@@ -96,7 +103,13 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
   return (
     <div className="flex flex-col gap-10">
       <div className="rounded-2xl border border-line bg-card/60 p-5 shadow-sm sm:p-6">
-        <QuoteForm trialOpen={trialOpen} running={running} onStart={start} onStop={() => controller.current?.abort()} />
+        <QuoteForm
+          trialOpen={trialOpen}
+          savesRuns={savesRuns}
+          running={running}
+          onStart={start}
+          onStop={() => controller.current?.abort()}
+        />
       </div>
 
       {problem && (
@@ -110,12 +123,34 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
           run={run}
           running={running}
           note={
-            status === "stopped" && (
-              <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>
-            )
+            <>
+              {status === "stopped" && <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>}
+              {savedId && <SavedLink id={savedId} />}
+            </>
           }
         />
       )}
     </div>
+  );
+}
+
+// The saved run's public page, to open or share.
+function SavedLink({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/runs/${id}`;
+  return (
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <span className="text-muted">Saved. Anyone with this link can see the run:</span>
+      <a href={`/runs/${id}`} className="font-mono text-xs underline underline-offset-4 hover:text-accent">
+        {url}
+      </a>
+      <button
+        type="button"
+        onClick={() => navigator.clipboard.writeText(url).then(() => setCopied(true), () => {})}
+        className="rounded-md border border-line px-2 py-0.5 text-xs hover:border-foreground"
+      >
+        {copied ? "Copied" : "Copy link"}
+      </button>
+    </p>
   );
 }
