@@ -45,6 +45,16 @@ export const genealogistOutputSchema = z.strictObject({
   ),
 });
 
+// One step in how the saying got to the form people share: where it first
+// appears, then each place its wording, language or credit changed.
+const lineageStepSchema = z.strictObject({
+  // A node id such as "n3"; must point at verified evidence.
+  node: z.string(),
+  change: z.enum(["first", "wording", "translation", "credit"]),
+  // One short sentence on what changed at this node.
+  note: z.string(),
+});
+
 export const judgeOutputSchema = z.strictObject({
   verdict: verdictSchema,
   // Node ids such as "n3"; must point at verified evidence.
@@ -54,12 +64,19 @@ export const judgeOutputSchema = z.strictObject({
   misattribution_node: z.string().nullable(),
   confidence: z.enum(["low", "medium", "high"]),
   rationale: z.string(),
+  // Oldest first.
+  lineage: z.array(lineageStepSchema),
 });
+
+// A verdict as events carry it. Runs saved before the judge traced the lineage
+// have none, so the field is optional here, though the model must always give it.
+export const savedJudgeOutputSchema = judgeOutputSchema.extend({ lineage: z.array(lineageStepSchema).optional() });
 
 export type PlannerOutput = z.infer<typeof plannerOutputSchema>;
 export type ReaderOutput = z.infer<typeof readerOutputSchema>;
 export type GenealogistOutput = z.infer<typeof genealogistOutputSchema>;
-export type JudgeOutput = z.infer<typeof judgeOutputSchema>;
+export type JudgeOutput = z.infer<typeof savedJudgeOutputSchema>;
+export type LineageStep = z.infer<typeof lineageStepSchema>;
 
 // Models write dates loosely ("circa 1981", "October 11, 1981"). Keep a clean
 // YYYY, YYYY-MM or YYYY-MM-DD when given a real one, otherwise fall back to the

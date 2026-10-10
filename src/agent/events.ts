@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { judgeOutputSchema, readerOutputSchema } from "./schemas";
+import { readerOutputSchema, savedJudgeOutputSchema } from "./schemas";
 
 // Everything an investigation does is reported as a stream of events. The same
 // events drive the console script, the live page and replays of past runs, so they
@@ -117,7 +117,7 @@ export const runEventSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("verdict"),
     ...spendSchema,
-    verdict: judgeOutputSchema,
+    verdict: savedJudgeOutputSchema,
     // Ids the verdict cites that are not verified nodes. Non-empty means unsupported.
     unknownIds: z.array(z.string()),
   }),
