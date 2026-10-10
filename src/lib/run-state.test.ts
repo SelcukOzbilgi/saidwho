@@ -75,7 +75,7 @@ describe("reduceRun", () => {
       { type: "pages_ready", pages: 2, droppedExcluded: 1, round: 1 },
       { type: "node_added", node: { ...node("n4", "1782"), foundVia: { node: "n2", work: "Confessions" } } },
     ]);
-    expect(state).toMatchObject({ phase: "tracing", pages: 5, searches: 1, nebiusUsd: 0.001 });
+    expect(state).toMatchObject({ phase: "tracing", pages: 5, searches: 0, tavilyCredits: 1, nebiusUsd: 0.001 });
     expect(state.leads).toEqual([{ round: 1, fromNode: "n2", work: "Confessions", query: "Rousseau Confessions" }]);
     expect(state.log.map((entry) => entry.text)).toContain("Following Confessions (cited by n2)");
     expect(state.log.map((entry) => entry.text)).toContain("2 new pages to read, 1 from excluded sites dropped");

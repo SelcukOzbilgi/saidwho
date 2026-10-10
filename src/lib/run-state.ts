@@ -132,13 +132,14 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       const page = event.url ? ` (${hostOf(event.url)})` : "";
       return { ...state, log: log(agent, `Trying ${how}${page}: ${event.reason}`, "warn") };
     }
-    // Searches for a Genealogist lead keep the run in its tracing step.
+    // Searches for a Genealogist lead keep the run in its tracing step, and
+    // aren't counted with the first searches.
     case "searched":
       return {
         ...state,
         phase: state.phase === "tracing" ? "tracing" : "searching",
         noVerdict: null,
-        searches: state.searches + 1,
+        searches: state.phase === "tracing" ? state.searches : state.searches + 1,
         tavilyCredits: state.tavilyCredits + (event.credits ?? 0),
         log: log("Search", `${event.results} results for ${event.query}`),
       };
