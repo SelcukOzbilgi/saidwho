@@ -45,6 +45,9 @@ export const genealogistOutputSchema = z.strictObject({
   ),
 });
 
+// The most lineage steps a verdict keeps, and the page shows.
+export const MAX_LINEAGE_STEPS = 6;
+
 // One step in how the saying got to the form people share: where it first
 // appears, then each place its wording, language or credit changed.
 const lineageStepSchema = z.strictObject({
