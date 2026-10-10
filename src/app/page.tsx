@@ -6,6 +6,7 @@ import { Investigation } from "../components/investigation";
 import { SiteFooter } from "../components/site-footer";
 import { env } from "../lib/server/env";
 import { TRIAL_RESERVE_USD } from "../lib/server/investigate-handler";
+import { runStoreFromEnv } from "../lib/server/run-store";
 
 export default async function Home() {
   // Read the switches per request, so turning trial runs off needs no rebuild.
@@ -28,7 +29,7 @@ export default async function Home() {
         </p>
       </header>
 
-      <Investigation trialOpen={trialOpen} />
+      <Investigation trialOpen={trialOpen} savesRuns={runStoreFromEnv(env) !== null} />
 
       <CaseGallery cases={CASES} />
 
