@@ -21,13 +21,14 @@ import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toSseChunk } from "./sse";
 // gets less.
 export const BYOK_MAX_USD = 0.5;
 export const TRIAL_MAX_USD = 0.1;
-// What a trial run reserves from the daily budget before it starts: its Nebius
-// limit, five searches at one credit each ($0.04), and the most one call can add
-// after starting just under the limit. Only one can: the next check stops the run.
-// The largest is an Ultra second judge: up to 8,000 output tokens ($0.024) on a
-// prompt of at most about 30,000 characters (20 nodes with four fields of up to
-// 300 characters each, plus the quote), which is under 15,000 tokens ($0.015)
-// even at two characters a token. That comes to $0.18; the rest is margin.
+// What a trial run sets aside from the daily budget before it starts:
+// - its Nebius limit ($0.10),
+// - five searches at one credit each ($0.04),
+// - one last call that starts just under the limit (the next check stops the run).
+//   The costliest is an Ultra second judge: up to 8,000 output tokens ($0.024) on
+//   a prompt under 15,000 tokens ($0.015). The prompt holds at most 20 nodes with
+//   four fields of up to 300 characters each, plus the quote.
+// That comes to about $0.18; $0.20 leaves some margin.
 export const TRIAL_RESERVE_USD = 0.2;
 const HEARTBEAT_MS = 15_000;
 // The route may run for 300 s (maxDuration). A run starts no new paid call after
