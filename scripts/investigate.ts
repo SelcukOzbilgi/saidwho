@@ -1,6 +1,6 @@
 // Runs one eval case through the orchestrator and prints its events.
 // Sites that already wrote up the answer are excluded, so the trail has to be found.
-// Run: pnpm investigate insanity-same-thing   (a few cents of Nebius, ~5-10 Tavily credits)
+// Run: pnpm investigate insanity-same-thing   (usually under a cent of Nebius, about 5 Tavily credits)
 // The run's events (snippets only, no page text) go to .runs/, in the form src/cases/ keeps finished cases in.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";

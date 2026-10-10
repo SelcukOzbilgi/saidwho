@@ -9,5 +9,7 @@ Please don't open a public issue for security problems. Open this project's [Sec
 - Secret keys stay on the server. Visitors never see them, and they're never published in this project's code.
 - If the AI or search service returns an error, any key in it is removed before the error is shown or saved.
 - The AI models will never see a key. Keys are added to requests by code, and nothing a model writes will ever be run as code.
-- When you bring your own keys (this arrives with the public demo), they'll be used for your run only. They won't be stored, written to logs, or swapped for anyone else's key.
+- When you bring your own keys, they go to this app's server with your request and are used for that one run only. They're never stored, written to logs, or swapped for anyone else's key, and a run on your keys never falls back to mine.
+- The free trial runs on my keys only when I switch it on, and stops for the day once a set budget is spent.
+- The site sends a Content Security Policy and other security headers, so the browser only ever talks to this site. Calls to Nebius and Tavily happen on the server.
 - Commits are checked for leaked secrets on my machine before they're saved, and again on GitHub for every pull request and every change to the main branch.
