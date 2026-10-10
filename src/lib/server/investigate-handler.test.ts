@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { type RunEvent, runEventSchema } from "../../agent/events";
 import type { InvestigationOptions } from "../../agent/orchestrator";
+import { isRunId } from "../run-id";
 import { createDailyLedger } from "./daily-budget";
 import { parseServerEnv } from "./env-schema";
 import {
@@ -13,6 +14,7 @@ import {
 } from "./investigate-handler";
 import type { NebiusClient } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
+import type { RunStore } from "./run-store";
 
 const NEBIUS_KEY = "fake-visitor-nebius-key";
 const TAVILY_KEY = "fake-visitor-tavily-key";
@@ -217,6 +219,64 @@ describe("POST /api/investigate", () => {
     expect(text).not.toContain(NEBIUS_KEY);
     expect(logError).toHaveBeenCalledOnce();
     expect(logError.mock.calls[0][0]).not.toContain(NEBIUS_KEY);
+  });
+
+  it("saves the run once it ends and sends its id last", async () => {
+    const saved: Parameters<RunStore["save"]>[0][] = [];
+    const store: RunStore = { save: async (run) => void saved.push(run), load: async () => null };
+    const { handler } = setup({ store });
+    const all = frames(await (await handler(post(byok))).text());
+    expect(saved).toHaveLength(1);
+    expect(saved[0].keys).toBe("own");
+    expect(saved[0].events.map((e) => e.type)).toEqual(["started", "done"]);
+    expect(isRunId(saved[0].id)).toBe(true);
+    expect(all.at(-1)).toEqual({ event: "saved", data: { id: saved[0].id }, comment: false });
+    expect(JSON.stringify(saved)).not.toContain(NEBIUS_KEY);
+    expect(JSON.stringify(saved)).not.toContain(TAVILY_KEY);
+  });
+
+  it("marks a run on the trial keys as a trial when saving it", async () => {
+    const saved: string[] = [];
+    const store: RunStore = { save: async (run) => void saved.push(run.keys), load: async () => null };
+    const { handler } = setup({ store, envVars: ownerEnv, ledger: createDailyLedger(1) });
+    await (await handler(post(trial))).text();
+    expect(saved).toEqual(["trial"]);
+  });
+
+  it("sends no id when saving isn't set up", async () => {
+    const { handler } = setup({ store: null });
+    const all = frames(await (await handler(post(byok))).text());
+    expect(all.map((f) => f.event)).not.toContain("saved");
+  });
+
+  it("logs a failed save with keys removed and sends no id", async () => {
+    const store: RunStore = {
+      save: async () => {
+        throw new Error(`insert refused for ${TAVILY_KEY}`);
+      },
+      load: async () => null,
+    };
+    const { handler, logError } = setup({ store });
+    const text = await (await handler(post(byok))).text();
+    expect(frames(text).map((f) => f.event)).not.toContain("saved");
+    expect(frames(text).at(-1)?.data).toMatchObject({ type: "done" });
+    expect(logError).toHaveBeenCalledOnce();
+    expect(logError.mock.calls[0][0]).toContain("could not save the run");
+    expect(logError.mock.calls[0][0]).not.toContain(TAVILY_KEY);
+  });
+
+  it("saves a run that broke, as far as it got", async () => {
+    const saved: string[][] = [];
+    const store: RunStore = { save: async (run) => void saved.push(run.events.map((e) => e.type)), load: async () => null };
+    const { handler } = setup({
+      store,
+      run: async ({ onEvent }) => {
+        onEvent({ type: "started", quote: "q", popularAttribution: "Rumi", language: "en", excludeDomains: [] });
+        throw new Error("boom");
+      },
+    });
+    await (await handler(post(byok))).text();
+    expect(saved).toEqual([["started"]]);
   });
 
   it("reports server setup problems as a 500 without the error text", async () => {

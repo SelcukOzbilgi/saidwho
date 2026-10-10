@@ -9,12 +9,14 @@ import { parseInvestigateRequest } from "./investigate-request";
 import type { NebiusClient, NebiusClientOptions } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
 import { resolveRunKeys } from "./run-keys";
+import { newRunId, type RunStore } from "./run-store";
 import { redactSecrets } from "./safe-error";
-import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toSseChunk } from "./sse";
+import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toSavedChunk, toSseChunk } from "./sse";
 
 // POST /api/investigate: checks the request, picks whose keys pay, and streams
-// the orchestrator's events back as server-sent events. Every dependency is
-// passed in, so tests run the whole handler with fake providers.
+// the orchestrator's events back as server-sent events. When the run ends, it is
+// saved and the stream gets its id. Every dependency is passed in, so tests run
+// the whole handler with fake providers.
 
 // Estimated Nebius spend after which a run starts no new model call. A visitor's
 // own key gets the same limit as the command-line script; the owner's trial key
@@ -46,6 +48,8 @@ export type InvestigateDeps = {
   createNebius: (options: NebiusClientOptions) => NebiusClient;
   createTavily: (options: { apiKey: string }) => TavilyClient;
   investigate: (options: InvestigationOptions) => Promise<void>;
+  // Where finished runs are saved; null when saving isn't set up.
+  store?: RunStore | null;
   logError?: (message: string) => void;
   runDeadlineMs?: number;
 };
@@ -109,6 +113,8 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     const encoder = new TextEncoder();
     let closed = false;
     let done: DoneEvent | null = null;
+    // Every event, kept for saving. A stopped or broken run is saved too, as far as it got.
+    const events: RunEvent[] = [];
     let heartbeat: ReturnType<typeof setInterval> | undefined;
 
     const stream = new ReadableStream<Uint8Array>({
@@ -133,6 +139,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             signal: abort.signal,
             onEvent: (event) => {
               if (event.type === "done") done = event;
+              events.push(event);
               send(toSseChunk(event));
             },
           })
@@ -141,7 +148,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             logError(`investigate: run failed: ${message.slice(0, 300)}`);
             send(SSE_RUN_FAILED);
           })
-          .finally(() => {
+          .finally(async () => {
             clearInterval(heartbeat);
             clearTimeout(deadline);
             request.signal.removeEventListener("abort", stop);
@@ -151,6 +158,18 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             const counted = finished ? finished.nebiusUsd + finished.tavilyCredits * TAVILY_USD_PER_CREDIT : 0;
             const allKnown = finished !== null && finished.unknownCostCalls === 0;
             reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
+            // Saved before the stream closes: work left for after the response ends
+            // may never run on a serverless platform.
+            if (deps.store && events.length > 0) {
+              const id = newRunId();
+              try {
+                await deps.store.save({ id, keys: keys.source === "owner" ? "trial" : "own", events });
+                send(toSavedChunk(id));
+              } catch (err: unknown) {
+                const message = err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown";
+                logError(`investigate: could not save the run: ${message.slice(0, 300)}`);
+              }
+            }
             if (!closed) {
               closed = true;
               controller.close();

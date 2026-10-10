@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { RunEvent } from "../agent/events";
-import { SSE_HEARTBEAT, SSE_RUN_FAILED, toSseChunk } from "./server/sse";
+import { SSE_HEARTBEAT, SSE_RUN_FAILED, toSavedChunk, toSseChunk } from "./server/sse";
 import { readRunStream, type StreamItem } from "./run-stream";
 
 const streamOf = (chunks: string[]): ReadableStream<Uint8Array> => {
@@ -43,6 +43,19 @@ describe("readRunStream", () => {
     expect(await collect([toSseChunk(ABORTED), SSE_RUN_FAILED])).toEqual([
       { kind: "event", event: ABORTED },
       { kind: "run_failed" },
+    ]);
+  });
+
+  it("passes on the saved run's id, and only a well-formed one", async () => {
+    const items = await collect([
+      toSseChunk(DONE),
+      toSavedChunk("abcDEF123_-"),
+      'event: saved\ndata: {"id":"eq.x&or=(a)"}\n\n',
+      "event: saved\ndata: {}\n\n",
+    ]);
+    expect(items).toEqual([
+      { kind: "event", event: DONE },
+      { kind: "saved", id: "abcDEF123_-" },
     ]);
   });
 
