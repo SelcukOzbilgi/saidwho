@@ -317,13 +317,17 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // A page the Genealogist found carries the lead that found it.
   type Lead = { fromNode: string; work: string; year: string | null; wording: string | null };
   type Entry = { url: string; page: { title: string; text: string }; id: string; lead: Lead | null };
-  // Pages found for a lead that hold no form of the saying, by lead.
+  // The saying's known wordings, plus the one a lead says the work has.
+  const wordingsFor = (lead: Lead | null) => [quote, ...variants, ...(lead?.wording ? [lead.wording] : [])];
+  const holdsSaying = (text: string, lead: Lead | null) =>
+    wordingsFor(lead).some((phrase) => checkSnippet(phrase, text).status !== "not_found");
+  // Pages found for a lead that were read with no quote, by lead.
   const misses = new Map<Lead, { site: string; title: string }[]>();
 
   const readPage = async ({ url, page, id, lead }: Entry): Promise<void> => {
     if (mustStop(false)) return;
     const host = hostOf(url);
-    const phrases = [quote, ...variants, ...(lead?.wording ? [lead.wording] : [])];
+    const phrases = wordingsFor(lead);
     const passage = selectPassages(page.text, phrases, READER_CHARS);
     // The lead says which work this page might be. The work's own date goes in
     // page_date, so cited_source stays free for an older work the book itself
@@ -411,12 +415,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       node = (await readWith(MODELS.super)).node ?? node;
     }
     if (!node) {
-      // A page found for a cited work with no form of the saying counts against
-      // the citation, a little. The reader saw only part of a long page, so the
-      // whole text is checked for every known wording first.
-      if (lead && noQuote && phrases.every((phrase) => checkSnippet(phrase, page.text).status === "not_found")) {
-        misses.set(lead, [...(misses.get(lead) ?? []), { site: host, title: page.title.slice(0, MAX_FIELD_CHARS) }]);
-      }
+      // A page found for a cited work and read with no quote may count against
+      // the citation, a little. Whether it does is settled per lead, below.
+      if (lead && noQuote) misses.set(lead, [...(misses.get(lead) ?? []), { site: host, title: page.title.slice(0, MAX_FIELD_CHARS) }]);
       return;
     }
     nodes.push(node);
@@ -495,12 +496,18 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     if (leads.length === 0) break;
 
     const found: Entry[] = [];
+    const takenFor = new Map<Lead, number>();
+    // Leads whose search returned a text with a known wording in it.
+    const borneOut = new Set<Lead>();
     let dropped = 0;
     for (const lead of leads) {
       if (mustStop()) return finish();
       const results = await search(lead.query, LIBRARY_SITES);
       // Only a search that worked and returned no text at all counts.
       if (results && !results.some((r) => r.rawContent)) checked.push({ lead, pages: [] });
+      // The reader sees part of a long page, and only the first few results, so
+      // code checks every text the search returned, pages read before included.
+      if (results?.some((r) => r.rawContent && !isExcluded(r.url) && holdsSaying(r.rawContent, lead))) borneOut.add(lead);
       let taken = 0;
       for (const r of results ?? []) {
         if (taken === PAGES_PER_LEAD) break;
@@ -513,17 +520,21 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         found.push({ url: r.url, page: { title: r.title, text: r.rawContent }, id: `n${nextId++}`, lead });
         taken++;
       }
+      takenFor.set(lead, taken);
     }
     onEvent({ type: "pages_ready", pages: found.length, droppedExcluded: dropped, round });
     if (found.length === 0) break;
     const before = nodes.length;
     await mapLimit(found, READER_CONCURRENCY, readPage);
     fresh = nodes.slice(before);
-    // A lead counts as not borne out only when none of its pages gave a node,
-    // crossed out or not, and at least one was read with no form of the saying.
+    // A lead counts as not borne out only when no text its search returned has
+    // a known wording, and every page read for it came back with no quote. A
+    // page that gave a node, even a crossed-out one, or that couldn't be read,
+    // rules it out.
     for (const lead of leads) {
-      const pages = misses.get(lead);
-      if (pages && !fresh.some((n) => n.foundVia?.node === lead.fromNode && n.foundVia.work === lead.work)) checked.push({ lead, pages });
+      const pages = misses.get(lead) ?? [];
+      const taken = takenFor.get(lead) ?? 0;
+      if (taken > 0 && pages.length === taken && !borneOut.has(lead)) checked.push({ lead, pages });
     }
   }
 
