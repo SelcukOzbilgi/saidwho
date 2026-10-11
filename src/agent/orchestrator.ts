@@ -101,7 +101,7 @@ const JUDGE_PROMPT =
   "note: one short sentence on what changed there, for example who it is credited to from then on. " +
   "Leave a step out rather than guess, and give an empty list when nothing is dated. " +
   "Cited works, when given, are works the nodes cite that were looked for in digital libraries without the saying turning up; " +
-  "checked says what was found. No copy found says nothing about what the work holds. A copy without the saying may not be the work itself " +
+  "checked says what was found. No page text says nothing about what the work holds. A page without the saying may not be the work itself " +
   "(see the page titles) or only part of it, and the work may word the saying differently or in another language. " +
   "Treat either as weak evidence, never as proof that the work lacks the saying. This run made the check, not the page that cites the work, " +
   "so don't present it as that page's finding. When one bears on the verdict, put its checked sentence in the rationale as it is " +
@@ -437,8 +437,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // in lead order and then result order.
   const readUrls = new Set(entries.map((e) => e.url));
   const followed = new Set<string>();
-  // Leads that didn't turn up with the saying, for the judge: no copy of the
-  // work found, or pages found that don't have it.
+  // Leads that didn't turn up with the saying, for the judge: no page text
+  // found for the work, or pages found that don't have it.
   const checked: { lead: Lead; pages: { site: string; title: string }[] }[] = [];
   let nextId = entries.length + 1;
   let fresh = [...nodes];
@@ -499,7 +499,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     for (const lead of leads) {
       if (mustStop()) return finish();
       const results = await search(lead.query, LIBRARY_SITES);
-      // Only a search that worked and found no text at all means no copy turned up.
+      // Only a search that worked and returned no text at all counts.
       if (results && !results.some((r) => r.rawContent)) checked.push({ lead, pages: [] });
       let taken = 0;
       for (const r of results ?? []) {
@@ -554,8 +554,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       cited_by: lead.fromNode,
       work: lead.work,
       checked: pages.length
-        ? `Copies of ${lead.work} found on ${sites} don't have the saying in any wording this run knows.`
-        : `No copy of ${lead.work} turned up in the digital libraries searched.`,
+        ? `Pages found for ${lead.work} on ${sites} don't have the saying in any wording this run knows.`
+        : `The digital-library search for ${lead.work} returned no page text.`,
       ...(pages.length > 0 && { pages }),
     };
   });

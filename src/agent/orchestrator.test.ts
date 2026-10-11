@@ -326,7 +326,7 @@ describe("investigate", () => {
         {
           cited_by: "n1",
           work: LEAD.work,
-          checked: `Copies of ${LEAD.work} found on archive.org don't have the saying in any wording this run knows.`,
+          checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.`,
           pages: [{ site: "archive.org", title: `Page at ${BOOK}` }],
         },
       ]);
@@ -335,12 +335,12 @@ describe("investigate", () => {
       expect(JSON.stringify(events)).not.toContain(SECRET);
     });
 
-    it("tells the judge when no copy of a cited work turned up", async () => {
+    it("tells the judge when the search for a cited work returned no page text", async () => {
       const { tavily } = tavilyFor((q) => (q === LEAD.query ? [] : [NEWS]));
       const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
       await run({ nebius, tavily });
       expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
-        { cited_by: "n1", work: LEAD.work, checked: `No copy of ${LEAD.work} turned up in the digital libraries searched.` },
+        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no page text.` },
       ]);
     });
 
