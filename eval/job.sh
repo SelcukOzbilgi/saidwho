@@ -11,6 +11,15 @@ cd "$(dirname "$0")/.."
 corepack enable
 pnpm install --frozen-lockfile
 
+# A job started again, say after a timeout, picks up the runs the last one
+# copied out, so the quotes already run aren't paid for twice.
+if [ -d /output/eval ]; then
+  mkdir -p .runs/eval
+  for setup in cascade ultra lightning; do
+    if [ -d "/output/eval/$setup" ]; then cp -r "/output/eval/$setup" .runs/eval/; fi
+  done
+fi
+
 # The runs that finished are paid for, so they are copied out however the job
 # ends: done, failed or stopped.
 copy_out() {

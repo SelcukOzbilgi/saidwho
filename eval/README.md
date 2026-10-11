@@ -11,7 +11,7 @@ Each line records:
 
 Most answers come from [Quote Investigator](https://quoteinvestigator.com/). The rest come from original records, like the British parliamentary record for a Churchill speech, or from encyclopedias and academic papers. I checked each date and wording against the page itself. During test runs, Said Who? isn't allowed to search sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia, or the sites each answer comes from. It has to find the trail on its own.
 
-`pnpm eval` runs all twenty and scores each run: whether the verdict matches, and whether the earliest date it found is within two years of the known one. It runs them the way the app does, then with every step on Nemotron 3 Ultra and with every step on Nemotron 3.5 Lightning, so the results show what the mix of models costs and whether it loses anything. The scores are written to `results.md`.
+`pnpm eval` runs all twenty and scores each run: whether the verdict matches, and whether the earliest date it found is within two years of the known one. It runs them the way the app does, then with every step on Nemotron 3 Ultra and with every step on Nemotron 3.5 Lightning, so the results show what the mix of models costs and whether it loses anything. The scores are written to `results.md`. A run that a provider spoiled, with a rejected key, no credits left or an outage that left it with no verdict, isn't scored. It runs again the next time, and the eval stops at an error every later run would hit.
 
 Not every quote is misattributed. Six of the twenty really were said by the person they're credited to. A tool that calls every famous quote fake would fail those.
 
@@ -41,6 +41,6 @@ nebius ai job create \
   --volume 's3://saidwho-eval:/output:rw:default'
 ```
 
-5. Follow it with `nebius ai job logs <job ID> --follow`. The scores are printed at the end, and with the bucket mounted, each run's events are in `eval/` there. The runs that finished are copied there even when the job fails or hits its timeout.
+5. Follow it with `nebius ai job logs <job ID> --follow`. The scores are printed at the end, and with the bucket mounted, each run's events are in `eval/` there. The runs that finished are copied there even when the job fails or hits its timeout, and a job started again with the same bucket picks up where the last one stopped. To start over, for example after the code changed, empty `eval/` in the bucket first.
 
 Leave out `--volume` to get only the scores in the log. Set `--env EVAL_ARGS="--setup cascade"` to run only the app's way.
