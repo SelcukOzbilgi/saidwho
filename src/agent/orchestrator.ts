@@ -320,8 +320,11 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   type Entry = { url: string; page: { title: string; text: string }; id: string; lead: Lead | null };
   // The saying's known wordings, plus the one a lead says the work has.
   const wordingsFor = (lead: Lead | null) => [quote, ...variants, ...(lead?.wording ? [lead.wording] : [])];
-  const holdsSaying = (text: string, lead: Lead | null) =>
-    wordingsFor(lead).some((phrase) => checkSnippet(phrase, text).status !== "not_found");
+  // Every text the run got for each page, from any search, so a later search
+  // that returns less of a page doesn't hide what an earlier one had.
+  const textsOf = new Map<string, string[]>();
+  const keepText = (url: string, text: string) => textsOf.set(url, [...(textsOf.get(url) ?? []), text]);
+  for (const [url, page] of pages) keepText(url, page.text);
   // Pages found for a lead that were read with no quote, by lead, with their
   // place in search order so readers finishing in any order give the same list.
   const misses = new Map<Lead, { order: number; site: string; title: string }[]>();
@@ -446,11 +449,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // in lead order and then result order.
   const readUrls = new Set(entries.map((e) => e.url));
   const followed = new Set<string>();
-  // Every lead whose search worked, in the order followed, with what it returned:
-  // whether any result had text, the results with text the run may use, and
-  // whether one of those has a known wording. The reader sees part of a long
-  // page, and only the first few results, so code checks every text.
-  const searched: { lead: Lead; noText: boolean; urls: string[]; holds: boolean }[] = [];
+  // Every lead whose search worked, in the order followed, with whether any
+  // result had text and every result the run may use, text or not.
+  const searched: { lead: Lead; noText: boolean; urls: string[] }[] = [];
   let nextId = entries.length + 1;
   let fresh = [...nodes];
   for (let round = 1; round <= TRACE_ROUNDS; round++) {
@@ -511,13 +512,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       if (mustStop()) return finish();
       const results = await search(lead.query, LIBRARY_SITES);
       if (results) {
-        const usable = results.flatMap((r) => (r.rawContent && !isExcluded(r.url) ? [{ url: r.url, text: r.rawContent }] : []));
-        searched.push({
-          lead,
-          noText: !results.some((r) => r.rawContent),
-          urls: usable.map((r) => r.url),
-          holds: usable.some((r) => holdsSaying(r.text, lead)),
-        });
+        const usable = results.filter((r) => !isExcluded(r.url));
+        for (const r of usable) if (r.rawContent) keepText(r.url, r.rawContent);
+        searched.push({ lead, noText: !results.some((r) => r.rawContent), urls: usable.map((r) => r.url) });
       }
       let taken = 0;
       for (const r of results ?? []) {
@@ -541,16 +538,24 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
 
   // Leads that didn't turn up with the saying, for the judge, settled once every
   // reader is done. No page text: the search worked and returned no text at all.
-  // Pages without the saying: no text the search returned has a known wording,
-  // and every page it returned that got read, for this lead, another one or
-  // before, came back with no quote. A page that gave a node, even a crossed-out
-  // one, maybe in a wording this run doesn't know, or that couldn't be read,
-  // rules the lead out.
-  const checked = searched.flatMap(({ lead, noText, urls, holds }) => {
+  // Pages without the saying: the lead has pages read with no quote, every page
+  // its search returned that got read, for any lead or before, came back with no
+  // quote, and no text the run got for any of those pages has a wording the run
+  // knows by the end. A page that gave a node, even a crossed-out one, or that
+  // couldn't be read, rules the lead out. The reader sees part of a long page,
+  // and only the first few results, so code checks every text, against the
+  // known wordings, every lead's wording and every snippet the Checker confirmed.
+  const knownWordings = [
+    ...wordingsFor(null),
+    ...searched.flatMap(({ lead }) => (lead.wording ? [lead.wording] : [])),
+    ...nodes.flatMap((n) => (n.check.status !== "not_found" && n.reader.exact_snippet ? [n.reader.exact_snippet] : [])),
+  ];
+  const holdsSaying = (text: string) => knownWordings.some((phrase) => checkSnippet(phrase, text).status !== "not_found");
+  const checked = searched.flatMap(({ lead, noText, urls }) => {
     if (noText) return [{ lead, pages: [] }];
     const pages = (misses.get(lead) ?? []).sort((a, b) => a.order - b.order).map(({ site, title }) => ({ site, title }));
-    const clean = urls.every((url) => !readUrls.has(url) || noQuoteUrls.has(url));
-    return pages.length > 0 && clean && !holds ? [{ lead, pages }] : [];
+    if (pages.length === 0 || urls.some((url) => readUrls.has(url) && !noQuoteUrls.has(url))) return [];
+    return urls.some((url) => (textsOf.get(url) ?? []).some(holdsSaying)) ? [] : [{ lead, pages }];
   });
 
   // 6) Judge, on verified evidence only. With none there is nothing to judge.
