@@ -28,6 +28,23 @@ export const readerOutputSchema = z.strictObject({
   cited_source_date: z.string().nullable(),
 });
 
+// Earlier works the pages cite, picked by the Genealogist to look for next.
+export const genealogistOutputSchema = z.strictObject({
+  leads: z.array(
+    z.strictObject({
+      // The node whose citation this follows.
+      from_node: z.string(),
+      // The work as a library would list it: title and author.
+      work: z.string(),
+      year: z.string().nullable(),
+      // A plain web search query that should find the work's text.
+      query: z.string(),
+      // The saying's wording in that work, when the citation gives it.
+      wording: z.string().nullable(),
+    }),
+  ),
+});
+
 export const judgeOutputSchema = z.strictObject({
   verdict: verdictSchema,
   // Node ids such as "n3"; must point at verified evidence.
@@ -41,6 +58,7 @@ export const judgeOutputSchema = z.strictObject({
 
 export type PlannerOutput = z.infer<typeof plannerOutputSchema>;
 export type ReaderOutput = z.infer<typeof readerOutputSchema>;
+export type GenealogistOutput = z.infer<typeof genealogistOutputSchema>;
 export type JudgeOutput = z.infer<typeof judgeOutputSchema>;
 
 // Models write dates loosely ("circa 1981", "October 11, 1981"). Keep a clean
