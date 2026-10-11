@@ -5,6 +5,8 @@
 // A run's events go to .runs/eval/<setup>/<id>.json, in the form src/cases/ keeps
 // finished cases in. A quote that already has a log there is not run again, so a
 // stopped eval picks up where it left off; delete a log to run that quote again.
+// A run that hit the spending cap is kept too, and marked in the results, since
+// running it again would most likely spend the same and stop at the same place.
 // --report only rebuilds eval/results.md from the logs already there.
 //
 // Searches are cached in .runs/eval/search-cache/, page text included, which is
@@ -13,7 +15,7 @@
 // searches cost when they were made, which is what a live run would spend.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
 import { type RunEvent, runEventSchema } from "../src/agent/events";
 import { CASCADE, everyStepOn, MODELS, type ModelPolicy } from "../src/agent/models";
@@ -45,6 +47,14 @@ const RUNS = new URL("../.runs/eval/", import.meta.url);
 const CACHE = new URL("search-cache/", RUNS);
 const logUrl = (setup: string, caseId: string) => new URL(`${setup}/${caseId}.json`, RUNS);
 
+// A file that exists is taken as finished, so it is written next to its place
+// and moved there whole. A write cut off halfway leaves only a .tmp file.
+function writeWhole(url: URL, text: string): void {
+  const tmp = new URL(`${url.href}.tmp`);
+  writeFileSync(tmp, text);
+  renameSync(tmp, url);
+}
+
 function readLog(setup: string, caseId: string): { ranAt: string; events: RunEvent[] } | null {
   const url = logUrl(setup, caseId);
   if (!existsSync(url)) return null;
@@ -63,7 +73,7 @@ function cachedSearch(tavily: TavilyClient, spent: { credits: number }): TavilyC
       const result = await tavily.search(query, options);
       if (result.ok) {
         spent.credits += result.data.usage?.credits ?? 0;
-        writeFileSync(url, JSON.stringify(result));
+        writeWhole(url, JSON.stringify(result));
       }
       return result;
     },
@@ -159,14 +169,14 @@ async function main(): Promise<void> {
         console.log(`${setup.padEnd(10)} ${c.id.padEnd(24)} crashed: ${why}`);
         continue;
       }
-      writeFileSync(logUrl(setup, c.id), `${JSON.stringify({ caseId: c.id, ranAt, events }, null, 2)}\n`);
+      writeWhole(logUrl(setup, c.id), `${JSON.stringify({ caseId: c.id, ranAt, events }, null, 2)}\n`);
       const score = scoreRun(c, events);
       nebiusUsd += score.nebiusUsd;
       const verdict = score.verdict ? `${score.verdict} ${score.verdictRight ? "✓" : "✗"}` : "no verdict ✗";
       const date = `${score.earliestDate ?? "no date"}${score.earliest === "match" ? " ✓" : score.earliest === "older" ? " (older)" : ""}`;
       console.log(
         `${setup.padEnd(10)} ${c.id.padEnd(24)} ${verdict.padEnd(20)} ${date.padEnd(18)} ` +
-          `$${score.nebiusUsd.toFixed(4)}  ${score.tavilyCredits} credits  ${score.seconds}s`,
+          `$${score.nebiusUsd.toFixed(4)}  ${score.tavilyCredits} credits  ${score.seconds}s${score.capped ? "  stopped at the cap" : ""}`,
       );
     }
   }
