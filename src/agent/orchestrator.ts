@@ -103,8 +103,9 @@ const JUDGE_PROMPT =
   "Cited works, when given, are works the nodes cite that were looked for in digital libraries without the saying turning up; " +
   "checked says what was found. No copy found says nothing about what the work holds. A copy without the saying may not be the work itself " +
   "(see the page titles) or only part of it, and the work may word the saying differently or in another language. " +
-  "Treat either as weak evidence, never as proof that the work lacks the saying, and never credit it to the node that cites the work. " +
-  "When one bears on the verdict, put its checked sentence in the rationale as it is, after the id of the node that cites the work.";
+  "Treat either as weak evidence, never as proof that the work lacks the saying. This run made the check, not the page that cites the work, " +
+  "so don't present it as that page's finding. When one bears on the verdict, put its checked sentence in the rationale as it is " +
+  "and mark it with the id of the node that cites the work, since cited works have no ids of their own.";
 
 export type InvestigationInput = {
   quote: string;

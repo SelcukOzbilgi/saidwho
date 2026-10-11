@@ -356,6 +356,23 @@ describe("investigate", () => {
       expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
     });
 
+    it("says nothing about a cited work when one of its pages gave a reading, even a crossed-out one", async () => {
+      const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [BOOK, OTHER] : [NEWS]),
+        (url) => (url === BOOK || url === OTHER ? BOOK_WITHOUT : PAGE_TEXT),
+      );
+      const nebius = fakeNebius({
+        // The archive.org copy gets a snippet that isn't on it, from both readers.
+        read: ({ user }) =>
+          user.includes(BOOK) ? { ...READ, exact_snippet: "A sentence the book does not have at all." } : user.includes(OTHER) ? NO_QUOTE : CITES_BOOK,
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === BOOK)).toMatchObject({ node: { check: { status: "not_found" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
     it("says nothing about a cited work when its search fails", async () => {
       const { tavily } = tavilyFor(() => [NEWS]);
       const failing: TavilyClient = {
