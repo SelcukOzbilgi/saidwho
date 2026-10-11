@@ -48,9 +48,11 @@ const CACHE = new URL("search-cache/", RUNS);
 const logUrl = (setup: string, caseId: string) => new URL(`${setup}/${caseId}.json`, RUNS);
 
 // A file that exists is taken as finished, so it is written next to its place
-// and moved there whole. A write cut off halfway leaves only a .tmp file.
+// and moved there whole. A write cut off halfway leaves only a .tmp file. The
+// process id keeps two evals run at once from sharing one; within a process the
+// write and the move are synchronous, so nothing comes between them.
 function writeWhole(url: URL, text: string): void {
-  const tmp = new URL(`${url.href}.tmp`);
+  const tmp = new URL(`${url.href}.${process.pid}.tmp`);
   writeFileSync(tmp, text);
   renameSync(tmp, url);
 }
