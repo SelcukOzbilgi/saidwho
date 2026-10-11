@@ -423,6 +423,27 @@ describe("investigate", () => {
       expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
     });
 
+    it("says nothing about a cited work when another lead reads one of its results and gets a reading", async () => {
+      // Two pages cite two works, and both library searches return the same fourth page.
+      const SECOND = "https://news.example.org/1990";
+      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "The Unwritten Book", query: "unwritten book" };
+      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const copies = [1, 2, 3].map((n) => `https://archive.org/details/sudden-death-${n}`);
+      const shared = "https://www.gutenberg.org/ebooks/shared";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [...copies, shared] : q === OTHER_LEAD.query ? [shared] : [NEWS, SECOND]),
+        (url) => (url === shared ? `A book. She said "${VARIANT}."` : url === NEWS || url === SECOND ? PAGE_TEXT : BOOK_WITHOUT),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(shared) ? { ...READ, exact_snippet: VARIANT } : user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        // Both newspapers cite the same book, so they share a line.
+        trace: ({ user }) => (user.includes("- n1, n2:") ? { leads: [LEAD, OTHER_LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === shared)).toMatchObject({ node: { check: { status: "exact" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
     it("lists a cited work's pages in search order, however the readers finish", async () => {
       const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
       const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK, OTHER] : [NEWS]), (url) => (url === NEWS ? PAGE_TEXT : BOOK_WITHOUT));
