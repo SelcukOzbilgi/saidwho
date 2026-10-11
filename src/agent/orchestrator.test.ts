@@ -250,6 +250,8 @@ describe("investigate", () => {
       expect(bookRead?.user).toContain("Lead: this page turned up in a search for Sudden Death by Rita Mae Brown (1983)");
       expect(bookRead?.user).toContain("put the date this page gives for the work in page_date");
       expect(nebius.prompts.get("verdict")).toContain('"looking_for": "Sudden Death by Rita Mae Brown"');
+      // The work turned up with the saying, so it isn't listed as one that didn't.
+      expect(nebius.prompts.get("verdict")).not.toContain("Cited works");
       for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
       expect(JSON.stringify(events)).not.toContain(SECRET);
     });
@@ -303,6 +305,67 @@ describe("investigate", () => {
       });
       const events = await run({ nebius });
       expect(events.find((e) => e.type === "traced")).toMatchObject({ leads: [{ fromNode: "n1", work: LEAD.work }] });
+    });
+
+    // The book as a library has it, without the saying.
+    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} Chapter one. ${SECRET}`;
+    const NO_QUOTE: ReaderOutput = { ...READ, contains_quote: false, exact_snippet: null, page_date: null };
+    const citedWorks = (prompt = "") => {
+      const at = prompt.indexOf("Cited works:\n");
+      return at === -1 ? null : JSON.parse(prompt.slice(at + "Cited works:\n".length));
+    };
+
+    it("tells the judge when the pages found for a cited work don't have the saying", async () => {
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK] : [NEWS]), (url) => (url === BOOK ? BOOK_WITHOUT : PAGE_TEXT));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(BOOK) ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
+        {
+          cited_by: "n1",
+          work: LEAD.work,
+          checked: `Copies of ${LEAD.work} found on archive.org don't have the saying in any wording this run knows.`,
+          pages: [{ site: "archive.org", title: `Page at ${BOOK}` }],
+        },
+      ]);
+      expect(events.find((e) => e.type === "page_read" && e.url === BOOK)).toMatchObject({ outcome: "no_quote", lookingFor: LEAD.work });
+      expect(events.find((e) => e.type === "page_read" && e.url === NEWS)).not.toHaveProperty("lookingFor");
+      expect(JSON.stringify(events)).not.toContain(SECRET);
+    });
+
+    it("tells the judge when no copy of a cited work turned up", async () => {
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [] : [NEWS]));
+      const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
+      await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
+        { cited_by: "n1", work: LEAD.work, checked: `No copy of ${LEAD.work} turned up in the digital libraries searched.` },
+      ]);
+    });
+
+    it("doesn't count a page against the citation when its full text has the saying the reader missed", async () => {
+      // The book has the quote far past what the reader is shown.
+      const longBook = `Sudden Death. ${"Filler words about tennis. ".repeat(2_000)} She said \"${QUOTE}.\"`;
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK] : [NEWS]), (url) => (url === BOOK ? longBook : PAGE_TEXT));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(BOOK) ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when its search fails", async () => {
+      const { tavily } = tavilyFor(() => [NEWS]);
+      const failing: TavilyClient = {
+        ...tavily,
+        search: async (query, options) =>
+          query === LEAD.query ? ({ ok: false, error: { provider: "tavily", kind: "upstream", message: "boom" }, latencyMs: 5 } as never) : tavily.search(query, options),
+      };
+      const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
+      await run({ nebius, tavily: failing });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
     });
 
     it("goes on to judge when tracing fails", async () => {
