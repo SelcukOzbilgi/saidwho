@@ -7,10 +7,10 @@
 // stopped eval picks up where it left off; delete a log to run that quote again.
 // A run that hit the spending cap is kept too, and marked in the results, since
 // running it again would most likely spend the same and stop at the same place.
-// A run a provider spoiled (a rejected key, no credits, or an outage that left it
-// with no verdict) isn't scored: its events go to <id>.failed.json for a look, and
-// it runs again next time. The eval stops at an error every later run would hit,
-// or after three spoiled runs in a row.
+// A run a provider spoiled (a rejected key, no credits, a refused request, or an
+// outage it didn't make up for) isn't scored: its events go to <id>.failed.json for
+// a look, and it runs again next time. The eval stops at an error every later run
+// would hit, or after three spoiled runs in a row.
 // --report only rebuilds eval/results.md from the logs already there.
 //
 // Searches are cached in .runs/eval/search-cache/, page text included, which is
@@ -180,6 +180,9 @@ async function main(): Promise<void> {
         continue;
       }
       const log = `${JSON.stringify({ caseId: c.id, ranAt, events }, null, 2)}\n`;
+      const score = scoreRun(c, events);
+      // Every attempt is paid for, scored or not.
+      nebiusUsd += score.nebiusUsd;
       if (!worthScoring(events)) {
         failed++;
         spoiledInARow++;
@@ -195,8 +198,6 @@ async function main(): Promise<void> {
       spoiledInARow = 0;
       writeWhole(logUrl(setup, c.id), log);
       rmSync(failedLogUrl(setup, c.id), { force: true });
-      const score = scoreRun(c, events);
-      nebiusUsd += score.nebiusUsd;
       const verdict = score.verdict ? `${score.verdict} ${score.verdictRight ? "✓" : "✗"}` : "no verdict ✗";
       const date = `${score.earliestDate ?? "no date"}${score.earliest === "match" ? " ✓" : score.earliest === "older" ? " (older)" : ""}`;
       console.log(

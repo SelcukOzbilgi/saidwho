@@ -68,19 +68,24 @@ export function scoreRun(evalCase: EvalCase, events: readonly RunEvent[]): RunSc
 
 // Provider errors that say nothing about the models and could go away on
 // another try. Running out of tokens or giving bad output is the model's doing,
-// and a rejected request would fail the same way again, so those are scored.
+// so those are scored.
 const PASSING_TROUBLE = new Set(["rate_limit", "timeout", "upstream", "network", "unknown"]);
-// Errors every later run would hit too: a rejected key, no credits, a missing model.
-const LASTING_TROUBLE = new Set(["auth", "quota", "not_found"]);
+// Errors every later run would hit too: a rejected key, no credits, a missing
+// model, or a request the provider refuses, which is most likely the harness's.
+const LASTING_TROUBLE = new Set(["auth", "quota", "not_found", "bad_request"]);
 
-export type ProviderTrouble = { kinds: string[]; lasting: boolean };
+// unrecovered: some call that failed was never made good, so the run's evidence
+// or verdict may be short of what the setup would have found.
+export type ProviderTrouble = { kinds: string[]; lasting: boolean; unrecovered: boolean };
 
-// The provider errors a run hit, by kind. A run that hit a lasting one, or a
-// passing one and gave no verdict, shows the provider's state rather than the
-// setup's, so the eval doesn't score it.
+// The provider errors a run hit, by kind, and whether the run made up for them.
+// A plan, a page read or a verdict that failed counts as made up for when a later
+// try of the same thing worked. The app doesn't try a failed search or a failed
+// citation trace again, so those never are.
 export function providerTrouble(events: readonly RunEvent[]): ProviderTrouble {
   const kinds = new Set<string>();
-  for (const e of events) {
+  let unrecovered = false;
+  events.forEach((e, i) => {
     const failed =
       e.type === "search_failed" ||
       e.type === "plan_failed" ||
@@ -89,14 +94,27 @@ export function providerTrouble(events: readonly RunEvent[]): ProviderTrouble {
       (e.type === "page_read" && e.outcome === "failed");
     // Model calls give "kind: message"; searches give the kind alone.
     const kind = failed && e.reason ? e.reason.split(":")[0] : null;
-    if (kind && (PASSING_TROUBLE.has(kind) || LASTING_TROUBLE.has(kind))) kinds.add(kind);
-  }
-  return { kinds: [...kinds], lasting: [...kinds].some((kind) => LASTING_TROUBLE.has(kind)) };
+    if (!kind || !(PASSING_TROUBLE.has(kind) || LASTING_TROUBLE.has(kind))) return;
+    kinds.add(kind);
+    const later = events.slice(i + 1);
+    const madeGood =
+      e.type === "plan_failed"
+        ? later.some((l) => l.type === "planned")
+        : e.type === "judge_failed"
+          ? later.some((l) => l.type === "verdict")
+          : e.type === "page_read"
+            ? later.some((l) => l.type === "page_read" && l.url === e.url && l.outcome !== "failed")
+            : false;
+    if (!madeGood) unrecovered = true;
+  });
+  return { kinds: [...kinds], lasting: [...kinds].some((kind) => LASTING_TROUBLE.has(kind)), unrecovered };
 }
 
+// A run that hit a lasting error, or one it didn't make up for, shows the
+// provider's state rather than the setup's, so the eval doesn't score it.
 export function worthScoring(events: readonly RunEvent[]): boolean {
   const trouble = providerTrouble(events);
-  return !trouble.lasting && (trouble.kinds.length === 0 || events.some((e) => e.type === "verdict"));
+  return !trouble.lasting && !trouble.unrecovered;
 }
 
 export type Summary = {

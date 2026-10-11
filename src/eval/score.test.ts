@@ -89,31 +89,45 @@ describe("providerTrouble", () => {
       read("timeout: The provider did not respond in time."),
       { type: "search_failed", query: "q", reason: "upstream" },
     ];
-    expect(providerTrouble(events)).toEqual({ kinds: ["rate_limit", "timeout", "upstream"], lasting: false });
+    expect(providerTrouble(events)).toEqual({ kinds: ["rate_limit", "timeout", "upstream"], lasting: false, unrecovered: true });
   });
 
   it("tells errors every later run would hit from passing ones", () => {
     expect(providerTrouble([{ type: "search_failed", query: "q", reason: "quota" }]).lasting).toBe(true);
     expect(providerTrouble([{ type: "judge_failed", ...spend, reason: "auth: The API key was rejected." }]).lasting).toBe(true);
+    expect(providerTrouble([{ type: "plan_failed", ...spend, reason: "bad_request: The provider rejected the request." }]).lasting).toBe(true);
   });
 
-  it("leaves the model's own failures and rejected requests to the score", () => {
+  it("leaves the model's own failures to the score", () => {
+    const events: RunEvent[] = [{ type: "judge_failed", ...spend, reason: "ran out of tokens" }, read("output does not match schema: x")];
+    expect(providerTrouble(events)).toEqual({ kinds: [], lasting: false, unrecovered: false });
+  });
+
+  it("counts a failed plan, read or verdict as made up for when a later try worked", () => {
+    const planned: RunEvent = { type: "planned", ...spend, variants: [], candidateAuthors: [], queries: ["q"] };
+    const readOk: RunEvent = { type: "page_read", ...spend, url: "https://a.example", host: "a.example", outcome: "no_quote", reason: null };
     const events: RunEvent[] = [
-      { type: "judge_failed", ...spend, reason: "ran out of tokens" },
-      read("output does not match schema: x"),
-      { type: "plan_failed", ...spend, reason: "bad_request: The provider rejected the request." },
+      { type: "plan_failed", ...spend, reason: "timeout: The provider did not respond in time." },
+      planned,
+      read("upstream: The provider had an internal error."),
+      readOk,
+      { type: "judge_failed", ...spend, reason: "network: Could not reach the provider." },
+      verdict({}),
     ];
-    expect(providerTrouble(events)).toEqual({ kinds: [], lasting: false });
+    expect(providerTrouble(events)).toMatchObject({ kinds: ["timeout", "upstream", "network"], unrecovered: false });
+    // A verdict that a failed second judge should have checked doesn't make up for it.
+    expect(providerTrouble([verdict({}), { type: "judge_failed", ...spend, reason: "timeout: x" }]).unrecovered).toBe(true);
   });
 });
 
 describe("worthScoring", () => {
   const limited: RunEvent = { type: "plan_failed", ...spend, reason: "rate_limit: Too many requests; slow down." };
 
-  it("skips a run a passing provider error left without a verdict, and keeps one it didn't", () => {
+  it("skips a run with a provider error it didn't make up for, even one with a verdict", () => {
     expect(worthScoring([limited, done])).toBe(false);
-    expect(worthScoring([limited, verdict({}), done])).toBe(true);
+    expect(worthScoring([{ type: "search_failed", query: "q", reason: "rate_limit" }, verdict({}), done])).toBe(false);
     expect(worthScoring([{ type: "judge_skipped", reason: "no verified evidence" }, done])).toBe(true);
+    expect(worthScoring([verdict({}), done])).toBe(true);
   });
 
   it("skips any run with a lasting provider error", () => {
