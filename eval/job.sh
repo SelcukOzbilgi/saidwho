@@ -10,16 +10,28 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 corepack enable
 pnpm install --frozen-lockfile
-# EVAL_ARGS passes options on, such as "--setup cascade".
-# shellcheck disable=SC2086
-pnpm eval ${EVAL_ARGS:-}
-cat eval/results.md
 
-if [ -d /output ]; then
+# The runs that finished are paid for, so they are copied out however the job
+# ends: done, failed or stopped.
+copy_out() {
+  if [ ! -d /output ]; then return 0; fi
   mkdir -p /output/eval
-  cp eval/results.md /output/eval/
+  if [ -f eval/results.md ]; then cp eval/results.md /output/eval/; fi
   for setup in cascade ultra lightning; do
     if [ -d ".runs/eval/$setup" ]; then cp -r ".runs/eval/$setup" /output/eval/; fi
   done
   echo "Copied the runs and scores to /output/eval"
-fi
+}
+trap copy_out EXIT
+# In the job this shell is process 1, which ignores a stop signal it has no
+# handler for, so a timeout would end it without the copy above.
+trap 'exit 143' TERM
+
+status=0
+# EVAL_ARGS passes options on, such as "--setup cascade". The eval runs in the
+# background so the TERM handler runs while it waits.
+# shellcheck disable=SC2086
+pnpm eval ${EVAL_ARGS:-} &
+wait $! || status=$?
+if [ -f eval/results.md ]; then cat eval/results.md; fi
+exit "$status"

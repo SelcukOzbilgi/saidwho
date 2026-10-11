@@ -41,6 +41,6 @@ nebius ai job create \
   --volume 's3://saidwho-eval:/output:rw:default'
 ```
 
-5. Follow it with `nebius ai job logs <job ID> --follow`. The scores are printed at the end, and with the bucket mounted, each run's events are in `eval/` there.
+5. Follow it with `nebius ai job logs <job ID> --follow`. The scores are printed at the end, and with the bucket mounted, each run's events are in `eval/` there. The runs that finished are copied there even when the job fails or hits its timeout.
 
 Leave out `--volume` to get only the scores in the log. Set `--env EVAL_ARGS="--setup cascade"` to run only the app's way.
