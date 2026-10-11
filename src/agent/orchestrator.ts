@@ -590,6 +590,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       ...(pages.length > 0 && { pages }),
     };
   });
+  if (citedWorks.length > 0) {
+    onEvent({ type: "cited_works", works: citedWorks.map(({ cited_by, work, checked }) => ({ citedBy: cited_by, work, checked })) });
+  }
   const judgeRequest = {
     schema: judgeOutputSchema,
     name: "verdict",

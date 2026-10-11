@@ -81,6 +81,14 @@ describe("reduceRun", () => {
     expect(state.log.map((entry) => entry.text)).toContain("Following Confessions (cited by n2)");
     expect(state.log.map((entry) => entry.text)).toContain("2 new pages to read, 1 from excluded sites dropped");
     expect(state.log.map((entry) => entry.text)).toContain("No quote on c.org (looking for Confessions)");
+    const told = reduceRun(state, {
+      type: "cited_works",
+      works: [{ citedBy: "n2", work: "Confessions", checked: "Pages found for Confessions on c.org don't have the saying in any wording this run knows." }],
+    });
+    expect(told.log.at(-1)).toMatchObject({
+      agent: "Genealogist",
+      text: "Told the Judge: Pages found for Confessions on c.org don't have the saying in any wording this run knows.",
+    });
     const failed = reduceRun(state, { type: "trace_failed", ...spend, tier: "super", round: 2, reason: "invalid JSON" });
     expect(failed.log.at(-1)).toMatchObject({ agent: "Genealogist", tone: "bad" });
     expect(reduceRun(failed, { type: "verdict", ...spend, verdict: verdict("misattributed"), unknownIds: [] }).phase).toBe("judging");

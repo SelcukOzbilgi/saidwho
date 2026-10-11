@@ -117,6 +117,13 @@ export const runEventSchema = z.discriminatedUnion("type", [
     lookingFor: z.string().optional(),
   }),
   z.strictObject({ type: z.literal("node_added"), node: evidenceNodeSchema }),
+  // Cited works the Genealogist looked for that didn't turn up with the saying,
+  // as the Judge is told about them, sent just before judging. Only when there
+  // are some; runs saved before it have none.
+  z.strictObject({
+    type: z.literal("cited_works"),
+    works: z.array(z.strictObject({ citedBy: z.string(), work: z.string(), checked: z.string() })),
+  }),
   z.strictObject({ type: z.literal("judge_skipped"), reason: z.string() }),
   // A run can carry two verdicts when Ultra judges again after Super (see
   // escalated); the last one stands.

@@ -330,6 +330,11 @@ describe("investigate", () => {
           pages: [{ site: "archive.org", title: `Page at ${BOOK}` }],
         },
       ]);
+      expect(events.find((e) => e.type === "cited_works")).toEqual({
+        type: "cited_works",
+        works: [{ citedBy: "n1", work: LEAD.work, checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.` }],
+      });
+      expect(types(events).slice(-3)).toEqual(["cited_works", "verdict", "done"]);
       expect(events.find((e) => e.type === "page_read" && e.url === BOOK)).toMatchObject({ outcome: "no_quote", lookingFor: LEAD.work });
       expect(events.find((e) => e.type === "page_read" && e.url === NEWS)).not.toHaveProperty("lookingFor");
       expect(JSON.stringify(events)).not.toContain(SECRET);
@@ -352,8 +357,9 @@ describe("investigate", () => {
         read: ({ user }) => (user.includes(BOOK) ? NO_QUOTE : CITES_BOOK),
         trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
       });
-      await run({ nebius, tavily });
+      const events = await run({ nebius, tavily });
       expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+      expect(types(events)).not.toContain("cited_works");
     });
 
     it("says nothing about a cited work when one of its pages gave a reading, even a crossed-out one", async () => {

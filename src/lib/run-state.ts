@@ -202,6 +202,8 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         log: log("Checker", text, node.check.status === "not_found" ? "bad" : "good"),
       };
     }
+    case "cited_works":
+      return { ...state, log: log("Genealogist", `Told the Judge: ${event.works.map((w) => w.checked).join(" ")}`) };
     case "judge_skipped":
       return { ...state, phase: "judging", noVerdict: event.reason, log: log("Judge", `No verdict: ${event.reason}`, "warn") };
     case "verdict": {
