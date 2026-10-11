@@ -112,6 +112,9 @@ export const runEventSchema = z.discriminatedUnion("type", [
     host: z.string(),
     outcome: z.enum(["evidence", "no_quote", "too_long", "failed"]),
     reason: z.string().nullable(),
+    // The cited work the page turned up for, on pages the Genealogist found.
+    // Runs saved before it was kept have no key.
+    lookingFor: z.string().optional(),
   }),
   z.strictObject({ type: z.literal("node_added"), node: evidenceNodeSchema }),
   z.strictObject({ type: z.literal("judge_skipped"), reason: z.string() }),
