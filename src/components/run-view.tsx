@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { RunState } from "../lib/run-state";
+import { Lineage } from "./lineage";
 import { Progress } from "./progress";
 import { RunLog } from "./run-log";
 import { Timeline } from "./timeline";
@@ -34,6 +35,7 @@ export function RunView({ run, running, note, afterVerdict }: Props) {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
           <VerdictCard {...run} />
+          {verdict?.lineage && <Lineage steps={verdict.lineage} nodes={run.nodes} />}
           {afterVerdict}
           <Timeline
             nodes={run.nodes}
