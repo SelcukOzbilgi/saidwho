@@ -118,6 +118,13 @@ describe("providerTrouble", () => {
     // A verdict that a failed second judge should have checked doesn't make up for it.
     expect(providerTrouble([verdict({}), { type: "judge_failed", ...spend, reason: "timeout: x" }]).unrecovered).toBe(true);
   });
+
+  it("doesn't count a failed trace, or a read of another page, as made up for", () => {
+    const traced: RunEvent[] = [{ type: "trace_failed", ...spend, round: 1, reason: "upstream: x" }, verdict({})];
+    expect(providerTrouble(traced).unrecovered).toBe(true);
+    const otherPage: RunEvent = { type: "page_read", ...spend, url: "https://b.example", host: "b.example", outcome: "evidence", reason: null };
+    expect(providerTrouble([read("timeout: x"), otherPage, verdict({})]).unrecovered).toBe(true);
+  });
 });
 
 describe("worthScoring", () => {
@@ -130,8 +137,11 @@ describe("worthScoring", () => {
     expect(worthScoring([verdict({}), done])).toBe(true);
   });
 
-  it("skips any run with a lasting provider error", () => {
+  it("skips any run with a lasting provider error, even one a later try made up for", () => {
     expect(worthScoring([{ type: "search_failed", query: "q", reason: "quota" }, verdict({}), done])).toBe(false);
+    const planned: RunEvent = { type: "planned", ...spend, variants: [], candidateAuthors: [], queries: ["q"] };
+    const refused: RunEvent = { type: "plan_failed", ...spend, reason: "bad_request: The provider rejected the request." };
+    expect(worthScoring([refused, planned, verdict({}), done])).toBe(false);
   });
 });
 
