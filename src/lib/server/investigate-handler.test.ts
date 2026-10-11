@@ -20,6 +20,8 @@ const NEBIUS_KEY = "fake-visitor-nebius-key";
 const TAVILY_KEY = "fake-visitor-tavily-key";
 
 const DONE: RunEvent = { type: "done", nebiusUsd: 0.004, tavilyCredits: 5, unknownCostCalls: 0, seconds: 1 };
+const STARTED: RunEvent = { type: "started", quote: "q", popularAttribution: "Rumi", language: "en", excludeDomains: [] };
+const SEARCHED: RunEvent = { type: "searched", query: "q", results: 3, credits: 1, latencyMs: 5 };
 
 const body = (keys: unknown) => ({ quote: "Gel, gel, ne olursan ol yine gel", popularAttribution: "Rumi", keys });
 const byok = body({ mode: "byok", nebiusApiKey: NEBIUS_KEY, tavilyApiKey: TAVILY_KEY });
@@ -36,7 +38,8 @@ const post = (json: unknown, signal?: AbortSignal) =>
 type Run = (options: InvestigationOptions) => Promise<void>;
 
 const emitDone: Run = async ({ onEvent }) => {
-  onEvent({ type: "started", quote: "q", popularAttribution: "Rumi", language: "en", excludeDomains: [] });
+  onEvent(STARTED);
+  onEvent(SEARCHED);
   onEvent(DONE);
 };
 
@@ -91,7 +94,7 @@ describe("POST /api/investigate", () => {
     expect(res.headers.get("x-accel-buffering")).toBe("no");
 
     const events = frames(await res.text()).map((f) => runEventSchema.parse(f.data));
-    expect(events.map((e) => e.type)).toEqual(["started", "done"]);
+    expect(events.map((e) => e.type)).toEqual(["started", "searched", "done"]);
     expect(calls[0].input).toMatchObject({ language: "en", excludeDomains: ["quoteinvestigator.com"] });
   });
 
@@ -228,7 +231,7 @@ describe("POST /api/investigate", () => {
     const all = frames(await (await handler(post(byok))).text());
     expect(saved).toHaveLength(1);
     expect(saved[0].keys).toBe("own");
-    expect(saved[0].events.map((e) => e.type)).toEqual(["started", "done"]);
+    expect(saved[0].events.map((e) => e.type)).toEqual(["started", "searched", "done"]);
     expect(isRunId(saved[0].id)).toBe(true);
     expect(all.at(-1)).toEqual({ event: "saved", data: { id: saved[0].id }, comment: false });
     // The id comes first too, so a page whose visitor stops the run can still find it.
@@ -274,12 +277,29 @@ describe("POST /api/investigate", () => {
     const { handler } = setup({
       store,
       run: async ({ onEvent }) => {
-        onEvent({ type: "started", quote: "q", popularAttribution: "Rumi", language: "en", excludeDomains: [] });
+        onEvent(STARTED);
+        onEvent(SEARCHED);
         throw new Error("boom");
       },
     });
     await (await handler(post(byok))).text();
-    expect(saved).toEqual([["started"]]);
+    expect(saved).toEqual([["started", "searched"]]);
+  });
+
+  it("doesn't save a run that ended before it planned or searched, as one with a made-up key does", async () => {
+    const saved: unknown[] = [];
+    const store: RunStore = { save: async (run) => void saved.push(run), load: async () => null };
+    const { handler } = setup({
+      store,
+      run: async ({ onEvent }) => {
+        onEvent(STARTED);
+        onEvent({ type: "plan_failed", tier: "super", costUsd: 0, usageKnown: false, latencyMs: 5, reason: "auth: The API key was rejected." });
+        onEvent(DONE);
+      },
+    });
+    const all = frames(await (await handler(post(byok))).text());
+    expect(saved).toEqual([]);
+    expect(all.map((f) => f.event)).not.toContain("saved");
   });
 
   it("reports server setup problems as a 500 without the error text", async () => {

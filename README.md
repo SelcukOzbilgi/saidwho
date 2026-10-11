@@ -120,7 +120,7 @@ Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/
 
 ## Using the public demo
 
-The demo is at [saidwho.vercel.app](https://saidwho.vercel.app). Anyone can browse the finished cases there for free and replay them step by step. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're never saved or written to logs. The run itself is saved: the quote, the snippets it found and its verdict. When it ends, the page shows a link to it that anyone can open. The free trial option on the form is off for now.
+The demo is at [saidwho.vercel.app](https://saidwho.vercel.app). Anyone can browse the finished cases there for free and replay them step by step. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're never saved or written to logs. The run itself is saved: the quote, the snippets it found and its verdict. When it ends, the page shows a link to it that anyone can open. A run that ends before it plans or searches anything, as one with a rejected key does, isn't saved. The free trial option on the form is off for now.
 
 ## Running it locally
 

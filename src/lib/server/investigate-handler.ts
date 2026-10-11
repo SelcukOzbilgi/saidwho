@@ -164,8 +164,12 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             const allKnown = finished !== null && finished.unknownCostCalls === 0;
             reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
             // Saved before the stream closes: work left for after the response ends
-            // may never run on a serverless platform.
-            if (deps.store && runId && events.length > 0) {
+            // may never run on a serverless platform. A run that ended before it
+            // planned or searched anything, as one with a rejected key does, has
+            // nothing to link to, and saving it would let anyone fill the table
+            // with made-up keys.
+            const gotGoing = events.some((e) => e.type === "planned" || e.type === "searched");
+            if (deps.store && runId && gotGoing) {
               try {
                 await deps.store.save({ id: runId, keys: keys.source === "owner" ? "trial" : "own", events });
                 send(toSavedChunk(runId));
