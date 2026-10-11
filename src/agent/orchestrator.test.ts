@@ -407,6 +407,37 @@ describe("investigate", () => {
       expect(citedWorks(capped.prompts.get("verdict"))).toBeNull();
     });
 
+    it("says nothing about a cited work when its search returns a page read before that gave a reading", async () => {
+      // The newspaper has a wording the run doesn't know, and the Checker confirms it.
+      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [NEWS, BOOK] : [NEWS]),
+        (url) => (url === BOOK ? BOOK_WITHOUT : `Knoxville News-Sentinel, 1981. She said "${VARIANT}."`),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : { ...CITES_BOOK, exact_snippet: VARIANT }),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === NEWS)).toMatchObject({ node: { check: { status: "exact" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("lists a cited work's pages in search order, however the readers finish", async () => {
+      const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK, OTHER] : [NEWS]), (url) => (url === NEWS ? PAGE_TEXT : BOOK_WITHOUT));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+        // The archive.org reader finishes last.
+        readDelay: (user) => (user.includes(BOOK) ? 30 : 0),
+      });
+      await run({ nebius, tavily });
+      const [entry] = citedWorks(nebius.prompts.get("verdict"));
+      expect(entry.pages.map((p: { site: string }) => p.site)).toEqual(["archive.org", "gutenberg.org"]);
+      expect(entry.checked).toContain("on archive.org and gutenberg.org");
+    });
+
     it("says nothing about a cited work when its search fails", async () => {
       const { tavily } = tavilyFor(() => [NEWS]);
       const failing: TavilyClient = {

@@ -101,9 +101,10 @@ const JUDGE_PROMPT =
   "note: one short sentence on what changed there, for example who it is credited to from then on. " +
   "Leave a step out rather than guess, and give an empty list when nothing is dated. " +
   "Cited works, when given, are works the nodes cite that were looked for in digital libraries without the saying turning up; " +
-  "checked says what was found. No page text says nothing about what the work holds. A page without the saying may not be the work itself " +
+  "checked says what was found. When the search returned no page text, that says nothing about what the work holds, only that the libraries searched gave this run no text of it. " +
+  "A page without the saying may not be the work itself " +
   "(see the page titles) or only part of it, and the work may word the saying differently or in another language. " +
-  "Treat either as weak evidence, never as proof that the work lacks the saying. This run made the check, not the page that cites the work, " +
+  "Treat either as weak evidence against the citation, never as proof that the work lacks the saying. This run made the check, not the page that cites the work, " +
   "so don't present it as that page's finding. When one bears on the verdict, put its checked sentence in the rationale as it is " +
   "and mark it with the id of the node that cites the work, since cited works have no ids of their own.";
 
@@ -313,7 +314,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // ids follow search order (n3 is the third page), not which reader finished first,
   // so the same search results always give the judge the same evidence in the same order.
   const nodes: EvidenceNode[] = [];
-  const pageOrder = (n: EvidenceNode) => Number(n.id.slice(1));
+  const pageOrder = (n: { id: string }) => Number(n.id.slice(1));
   // A page the Genealogist found carries the lead that found it.
   type Lead = { fromNode: string; work: string; year: string | null; wording: string | null };
   type Entry = { url: string; page: { title: string; text: string }; id: string; lead: Lead | null };
@@ -321,8 +322,11 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   const wordingsFor = (lead: Lead | null) => [quote, ...variants, ...(lead?.wording ? [lead.wording] : [])];
   const holdsSaying = (text: string, lead: Lead | null) =>
     wordingsFor(lead).some((phrase) => checkSnippet(phrase, text).status !== "not_found");
-  // Pages found for a lead that were read with no quote, by lead.
-  const misses = new Map<Lead, { site: string; title: string }[]>();
+  // Pages found for a lead that were read with no quote, by lead, with their
+  // place in search order so readers finishing in any order give the same list.
+  const misses = new Map<Lead, { order: number; site: string; title: string }[]>();
+  // Every page, a lead's or not, whose reading found no quote.
+  const noQuoteUrls = new Set<string>();
 
   const readPage = async ({ url, page, id, lead }: Entry): Promise<void> => {
     if (mustStop(false)) return;
@@ -417,7 +421,11 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     if (!node) {
       // A page found for a cited work and read with no quote may count against
       // the citation, a little. Whether it does is settled per lead, below.
-      if (lead && noQuote) misses.set(lead, [...(misses.get(lead) ?? []), { site: host, title: page.title.slice(0, MAX_FIELD_CHARS) }]);
+      if (noQuote) noQuoteUrls.add(url);
+      if (lead && noQuote) {
+        const miss = { order: pageOrder({ id }), site: host, title: page.title.slice(0, MAX_FIELD_CHARS) };
+        misses.set(lead, [...(misses.get(lead) ?? []), miss]);
+      }
       return;
     }
     nodes.push(node);
@@ -499,6 +507,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     const takenFor = new Map<Lead, number>();
     // Leads whose search returned a text with a known wording in it.
     const borneOut = new Set<Lead>();
+    // Pages a lead's search returned that were already read, or taken by an
+    // earlier lead. How their reading went is known only after the readers.
+    const seenFor = new Map<Lead, string[]>();
     let dropped = 0;
     for (const lead of leads) {
       if (mustStop()) return finish();
@@ -508,6 +519,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       // The reader sees part of a long page, and only the first few results, so
       // code checks every text the search returned, pages read before included.
       if (results?.some((r) => r.rawContent && !isExcluded(r.url) && holdsSaying(r.rawContent, lead))) borneOut.add(lead);
+      seenFor.set(lead, (results ?? []).filter((r) => r.rawContent && !isExcluded(r.url) && readUrls.has(r.url)).map((r) => r.url));
       let taken = 0;
       for (const r of results ?? []) {
         if (taken === PAGES_PER_LEAD) break;
@@ -528,13 +540,15 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     await mapLimit(found, READER_CONCURRENCY, readPage);
     fresh = nodes.slice(before);
     // A lead counts as not borne out only when no text its search returned has
-    // a known wording, and every page read for it came back with no quote. A
-    // page that gave a node, even a crossed-out one, or that couldn't be read,
-    // rules it out.
+    // a known wording, and every page it returned that got read came back with
+    // no quote, for this lead or before. A page that gave a node, even a
+    // crossed-out one, possibly with a wording this run doesn't know, or that
+    // couldn't be read, rules it out.
     for (const lead of leads) {
-      const pages = misses.get(lead) ?? [];
+      const pages = (misses.get(lead) ?? []).sort((a, b) => a.order - b.order).map(({ site, title }) => ({ site, title }));
       const taken = takenFor.get(lead) ?? 0;
-      if (taken > 0 && pages.length === taken && !borneOut.has(lead)) checked.push({ lead, pages });
+      const seenClean = (seenFor.get(lead) ?? []).every((url) => noQuoteUrls.has(url));
+      if (taken > 0 && pages.length === taken && seenClean && !borneOut.has(lead)) checked.push({ lead, pages });
     }
   }
 
