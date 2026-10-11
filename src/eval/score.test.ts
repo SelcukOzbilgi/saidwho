@@ -53,6 +53,12 @@ describe("scoreRun", () => {
     expect(scoreRun(INSANITY, [verdict({ earliest_date: null }), done]).earliest).toBe("missing");
   });
 
+  it("reads a loosely written date by its year, and one with no year as missing", () => {
+    expect(scoreRun(INSANITY, [verdict({ earliest_date: "circa 1981" }), done])).toMatchObject({ earliestDate: "1981", earliest: "match" });
+    expect(scoreRun(INSANITY, [verdict({ earliest_date: "October 11, 1981" }), done]).earliest).toBe("match");
+    expect(scoreRun(INSANITY, [verdict({ earliest_date: "unknown" }), done])).toMatchObject({ earliestDate: null, earliest: "missing" });
+  });
+
   it("counts a run with no verdict as wrong, with no date", () => {
     const events: RunEvent[] = [{ type: "judge_skipped", reason: "no verified evidence" }, done];
     expect(scoreRun(INSANITY, events)).toMatchObject({ verdict: null, verdictRight: false, earliest: "missing" });
@@ -61,6 +67,12 @@ describe("scoreRun", () => {
   it("leaves the date unscored when the case has no known one", () => {
     const score = scoreRun(GEL, [verdict({ verdict: "contested", earliest_date: "1300" }), done]);
     expect(score).toMatchObject({ verdictRight: true, earliest: null });
+  });
+
+  it("marks a run that stopped at the spending cap", () => {
+    const capped: RunEvent = { type: "budget_exceeded", spentUsd: 0.51, maxUsd: 0.5 };
+    expect(scoreRun(INSANITY, [capped, done])).toMatchObject({ verdict: null, verdictRight: false, capped: true });
+    expect(scoreRun(INSANITY, [verdict({}), done]).capped).toBe(false);
   });
 
   it("reports no spend for a run that never finished", () => {
@@ -81,6 +93,7 @@ describe("summarize", () => {
       dated: 2,
       earliest: { match: 1, older: 1, later: 0, missing: 0 },
       unsupported: 1,
+      capped: 0,
       nebiusUsd: 0.012,
       tavilyCredits: 21,
       unknownCostCalls: 3,

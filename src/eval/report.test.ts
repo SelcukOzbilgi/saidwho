@@ -23,6 +23,7 @@ const SCORE: RunScore = {
   earliestDate: "1981",
   earliest: "match",
   unsupported: false,
+  capped: false,
   nebiusUsd: 0.004,
   tavilyCredits: 6,
   unknownCostCalls: 0,
@@ -37,7 +38,7 @@ describe("renderResults", () => {
       scores: [
         SCORE,
         { ...SCORE, caseId: "two", verdict: "correct", verdictRight: false, earliestDate: "1960", earliest: "older" },
-        { ...SCORE, caseId: "three", verdict: null, verdictRight: false, earliestDate: null, earliest: null },
+        { ...SCORE, caseId: "three", verdict: null, verdictRight: false, earliestDate: null, earliest: null, capped: true },
       ],
     },
     { label: "All Ultra", scores: [{ ...SCORE, nebiusUsd: 0.05, seconds: 90 }] },
@@ -50,11 +51,12 @@ describe("renderResults", () => {
     expect(line("| Earlier than")).toBe("| Earlier than the known date (checked by hand) | 1 | 0 |");
     expect(line("| Nebius cost per quote")).toBe("| Nebius cost per quote | $0.0040 | $0.0500 |");
     expect(line("| Time per quote")).toBe("| Time per quote | 40s | 90s |");
+    expect(line("| Stopped at the spending cap")).toBe("| Stopped at the spending cap | 1 | 0 |");
   });
 
   it("gives each quote its known answer and what each setup said", () => {
     expect(line("| one")).toBe("| one | misattributed, 1981 | misattributed ✓, 1981 ✓ | misattributed ✓, 1981 ✓ |");
     expect(line("| two")).toBe("| two | misattributed, 1974 | correct ✗, 1960 (older) | not run |");
-    expect(line("| three")).toBe("| three | misattributed, no date | no verdict ✗ | not run |");
+    expect(line("| three")).toBe("| three | misattributed, no date | no verdict ✗ (stopped at the cap) | not run |");
   });
 });

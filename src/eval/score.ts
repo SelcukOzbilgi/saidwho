@@ -1,4 +1,5 @@
 import type { RunEvent } from "../agent/events";
+import { cleanDate } from "../agent/schemas";
 import type { EvalCase, Verdict } from "./cases";
 
 // Scores one finished run against the known answer in eval/quotes.jsonl.
@@ -18,12 +19,16 @@ export type RunScore = {
   // The verdict that stands (the last one), or null when the run gave none.
   verdict: Verdict | null;
   verdictRight: boolean;
-  // When the verdict says the saying first appeared, as it gave it.
+  // When the verdict says the saying first appeared. The judge writes dates
+  // loosely ("circa 1981"), so this is cleaned to YYYY, YYYY-MM or YYYY-MM-DD,
+  // and is null when it holds no year.
   earliestDate: string | null;
   // null when the case has no known date to compare with.
   earliest: EarliestScore | null;
   // The standing verdict cites evidence that was never verified.
   unsupported: boolean;
+  // The run hit the spending cap, so it stopped before it was done.
+  capped: boolean;
   nebiusUsd: number;
   tavilyCredits: number;
   unknownCostCalls: number;
@@ -37,7 +42,7 @@ export function scoreRun(evalCase: EvalCase, events: readonly RunEvent[]): RunSc
   const last = verdicts.at(-1);
   const done = events.findLast((e) => e.type === "done");
   const knownDate = evalCase.earliest.date;
-  const runDate = last?.verdict.earliest_date ?? null;
+  const runDate = cleanDate(last?.verdict.earliest_date ?? null);
 
   let earliest: EarliestScore | null = null;
   if (knownDate !== null) {
@@ -53,6 +58,7 @@ export function scoreRun(evalCase: EvalCase, events: readonly RunEvent[]): RunSc
     earliestDate: runDate,
     earliest,
     unsupported: (last?.unknownIds.length ?? 0) > 0,
+    capped: events.some((e) => e.type === "budget_exceeded"),
     nebiusUsd: done?.type === "done" ? done.nebiusUsd : 0,
     tavilyCredits: done?.type === "done" ? done.tavilyCredits : 0,
     unknownCostCalls: done?.type === "done" ? done.unknownCostCalls : 0,
@@ -67,6 +73,7 @@ export type Summary = {
   dated: number;
   earliest: Record<EarliestScore, number>;
   unsupported: number;
+  capped: number;
   nebiusUsd: number;
   tavilyCredits: number;
   unknownCostCalls: number;
@@ -83,6 +90,7 @@ export function summarize(scores: readonly RunScore[]): Summary {
     dated: scores.filter((s) => s.earliest !== null).length,
     earliest,
     unsupported: scores.filter((s) => s.unsupported).length,
+    capped: scores.filter((s) => s.capped).length,
     nebiusUsd: sum((s) => s.nebiusUsd),
     tavilyCredits: sum((s) => s.tavilyCredits),
     unknownCostCalls: sum((s) => s.unknownCostCalls),

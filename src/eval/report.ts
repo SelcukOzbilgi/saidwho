@@ -11,7 +11,8 @@ const row = (cells: readonly string[]): string => `| ${cells.join(" | ")} |`;
 
 function cell(score: RunScore | undefined): string {
   if (!score) return "not run";
-  if (score.verdict === null) return "no verdict ✗";
+  const capped = score.capped ? " (stopped at the cap)" : "";
+  if (score.verdict === null) return `no verdict ✗${capped}`;
   const date =
     score.earliest === "match"
       ? `${yearOf(score.earliestDate)} ✓`
@@ -20,7 +21,7 @@ function cell(score: RunScore | undefined): string {
         : score.earliest === "later"
           ? `${yearOf(score.earliestDate)} ✗`
           : yearOf(score.earliestDate);
-  return `${score.verdict} ${score.verdictRight ? "✓" : "✗"}, ${date}`;
+  return `${score.verdict} ${score.verdictRight ? "✓" : "✗"}, ${date}${capped}`;
 }
 
 export function renderResults(cases: readonly EvalCase[], policies: readonly PolicyRuns[]): string {
@@ -36,6 +37,7 @@ export function renderResults(cases: readonly EvalCase[], policies: readonly Pol
     row(["Later than the known date", ...per((s) => String(s.earliest.later))]),
     row(["No date given", ...per((s) => String(s.earliest.missing))]),
     row(["Verdict citing unverified evidence", ...per((s) => String(s.unsupported))]),
+    row(["Stopped at the spending cap", ...per((s) => String(s.capped))]),
     row(["Nebius cost, all quotes", ...per((s) => usd(s.nebiusUsd, 4))]),
     row(["Nebius cost per quote", ...per((s) => (s.runs ? usd(s.nebiusUsd / s.runs, 4) : "-"))]),
     row(["Tavily credits", ...per((s) => String(s.tavilyCredits))]),
