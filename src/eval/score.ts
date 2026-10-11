@@ -66,6 +66,39 @@ export function scoreRun(evalCase: EvalCase, events: readonly RunEvent[]): RunSc
   };
 }
 
+// Provider errors that say nothing about the models and could go away on
+// another try. Running out of tokens or giving bad output is the model's doing,
+// and a rejected request would fail the same way again, so those are scored.
+const PASSING_TROUBLE = new Set(["rate_limit", "timeout", "upstream", "network", "unknown"]);
+// Errors every later run would hit too: a rejected key, no credits, a missing model.
+const LASTING_TROUBLE = new Set(["auth", "quota", "not_found"]);
+
+export type ProviderTrouble = { kinds: string[]; lasting: boolean };
+
+// The provider errors a run hit, by kind. A run that hit a lasting one, or a
+// passing one and gave no verdict, shows the provider's state rather than the
+// setup's, so the eval doesn't score it.
+export function providerTrouble(events: readonly RunEvent[]): ProviderTrouble {
+  const kinds = new Set<string>();
+  for (const e of events) {
+    const failed =
+      e.type === "search_failed" ||
+      e.type === "plan_failed" ||
+      e.type === "trace_failed" ||
+      e.type === "judge_failed" ||
+      (e.type === "page_read" && e.outcome === "failed");
+    // Model calls give "kind: message"; searches give the kind alone.
+    const kind = failed && e.reason ? e.reason.split(":")[0] : null;
+    if (kind && (PASSING_TROUBLE.has(kind) || LASTING_TROUBLE.has(kind))) kinds.add(kind);
+  }
+  return { kinds: [...kinds], lasting: [...kinds].some((kind) => LASTING_TROUBLE.has(kind)) };
+}
+
+export function worthScoring(events: readonly RunEvent[]): boolean {
+  const trouble = providerTrouble(events);
+  return !trouble.lasting && (trouble.kinds.length === 0 || events.some((e) => e.type === "verdict"));
+}
+
 export type Summary = {
   runs: number;
   verdictsRight: number;

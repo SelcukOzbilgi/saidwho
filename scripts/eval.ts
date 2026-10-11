@@ -7,6 +7,10 @@
 // stopped eval picks up where it left off; delete a log to run that quote again.
 // A run that hit the spending cap is kept too, and marked in the results, since
 // running it again would most likely spend the same and stop at the same place.
+// A run a provider spoiled (a rejected key, no credits, or an outage that left it
+// with no verdict) isn't scored: its events go to <id>.failed.json for a look, and
+// it runs again next time. The eval stops at an error every later run would hit,
+// or after three spoiled runs in a row.
 // --report only rebuilds eval/results.md from the logs already there.
 //
 // Searches are cached in .runs/eval/search-cache/, page text included, which is
@@ -15,14 +19,14 @@
 // searches cost when they were made, which is what a live run would spend.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 
 import { type RunEvent, runEventSchema } from "../src/agent/events";
 import { CASCADE, everyStepOn, MODELS, type ModelPolicy } from "../src/agent/models";
 import { ANSWER_SITES, hostOf, investigate } from "../src/agent/orchestrator";
 import { type EvalCase, parseEvalCases } from "../src/eval/cases";
 import { renderResults } from "../src/eval/report";
-import { type RunScore, scoreRun } from "../src/eval/score";
+import { providerTrouble, type RunScore, scoreRun, worthScoring } from "../src/eval/score";
 import { parseServerEnv, requireOwnerKeys } from "../src/lib/server/env-schema";
 import { createNebiusClient } from "../src/lib/server/providers/nebius";
 import { createTavilyClient, type TavilyClient } from "../src/lib/server/providers/tavily";
@@ -46,6 +50,9 @@ const SETUPS: Record<string, { label: string; about: string; models: ModelPolicy
 const RUNS = new URL("../.runs/eval/", import.meta.url);
 const CACHE = new URL("search-cache/", RUNS);
 const logUrl = (setup: string, caseId: string) => new URL(`${setup}/${caseId}.json`, RUNS);
+const failedLogUrl = (setup: string, caseId: string) => new URL(`${setup}/${caseId}.failed.json`, RUNS);
+// Spoiled runs in a row before the eval stops, so an outage doesn't use up the run.
+const MAX_SPOILED_IN_A_ROW = 3;
 
 // A file that exists is taken as finished, so it is written next to its place
 // and moved there whole. A write cut off halfway leaves only a .tmp file. The
@@ -144,8 +151,9 @@ async function main(): Promise<void> {
 
   let nebiusUsd = 0;
   let failed = 0;
+  let spoiledInARow = 0;
   // Quote by quote, every setup in turn, so the setups search on the same day.
-  for (const c of cases) {
+  runs: for (const c of cases) {
     for (const setup of setups) {
       if (readLog(setup, c.id)) continue;
       const events: RunEvent[] = [];
@@ -171,7 +179,22 @@ async function main(): Promise<void> {
         console.log(`${setup.padEnd(10)} ${c.id.padEnd(24)} crashed: ${why}`);
         continue;
       }
-      writeWhole(logUrl(setup, c.id), `${JSON.stringify({ caseId: c.id, ranAt, events }, null, 2)}\n`);
+      const log = `${JSON.stringify({ caseId: c.id, ranAt, events }, null, 2)}\n`;
+      if (!worthScoring(events)) {
+        failed++;
+        spoiledInARow++;
+        writeWhole(failedLogUrl(setup, c.id), log);
+        const trouble = providerTrouble(events);
+        console.log(`${setup.padEnd(10)} ${c.id.padEnd(24)} not scored, the provider failed (${trouble.kinds.join(", ")}); it runs again next time`);
+        if (trouble.lasting || spoiledInARow === MAX_SPOILED_IN_A_ROW) {
+          console.log(trouble.lasting ? "Stopping: every later run would hit the same error." : `Stopping after ${MAX_SPOILED_IN_A_ROW} spoiled runs in a row.`);
+          break runs;
+        }
+        continue;
+      }
+      spoiledInARow = 0;
+      writeWhole(logUrl(setup, c.id), log);
+      rmSync(failedLogUrl(setup, c.id), { force: true });
       const score = scoreRun(c, events);
       nebiusUsd += score.nebiusUsd;
       const verdict = score.verdict ? `${score.verdict} ${score.verdictRight ? "✓" : "✗"}` : "no verdict ✗";

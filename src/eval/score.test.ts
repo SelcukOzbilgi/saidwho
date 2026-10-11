@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { RunEvent } from "../agent/events";
 import type { JudgeOutput } from "../agent/schemas";
 import { type EvalCase, parseEvalCases } from "./cases";
-import { scoreRun, summarize } from "./score";
+import { providerTrouble, scoreRun, summarize, worthScoring } from "./score";
 
 const file = fileURLToPath(new URL("../../eval/quotes.jsonl", import.meta.url));
 const cases = parseEvalCases(readFileSync(file, "utf8"));
@@ -77,6 +77,47 @@ describe("scoreRun", () => {
 
   it("reports no spend for a run that never finished", () => {
     expect(scoreRun(INSANITY, [verdict({})])).toMatchObject({ nebiusUsd: 0, tavilyCredits: 0, seconds: 0 });
+  });
+});
+
+describe("providerTrouble", () => {
+  const read = (reason: string): RunEvent => ({ type: "page_read", ...spend, url: "https://a.example", host: "a.example", outcome: "failed", reason });
+
+  it("finds provider errors in failed model calls, reads and searches", () => {
+    const events: RunEvent[] = [
+      { type: "plan_failed", ...spend, reason: "rate_limit: Too many requests; slow down." },
+      read("timeout: The provider did not respond in time."),
+      { type: "search_failed", query: "q", reason: "upstream" },
+    ];
+    expect(providerTrouble(events)).toEqual({ kinds: ["rate_limit", "timeout", "upstream"], lasting: false });
+  });
+
+  it("tells errors every later run would hit from passing ones", () => {
+    expect(providerTrouble([{ type: "search_failed", query: "q", reason: "quota" }]).lasting).toBe(true);
+    expect(providerTrouble([{ type: "judge_failed", ...spend, reason: "auth: The API key was rejected." }]).lasting).toBe(true);
+  });
+
+  it("leaves the model's own failures and rejected requests to the score", () => {
+    const events: RunEvent[] = [
+      { type: "judge_failed", ...spend, reason: "ran out of tokens" },
+      read("output does not match schema: x"),
+      { type: "plan_failed", ...spend, reason: "bad_request: The provider rejected the request." },
+    ];
+    expect(providerTrouble(events)).toEqual({ kinds: [], lasting: false });
+  });
+});
+
+describe("worthScoring", () => {
+  const limited: RunEvent = { type: "plan_failed", ...spend, reason: "rate_limit: Too many requests; slow down." };
+
+  it("skips a run a passing provider error left without a verdict, and keeps one it didn't", () => {
+    expect(worthScoring([limited, done])).toBe(false);
+    expect(worthScoring([limited, verdict({}), done])).toBe(true);
+    expect(worthScoring([{ type: "judge_skipped", reason: "no verified evidence" }, done])).toBe(true);
+  });
+
+  it("skips any run with a lasting provider error", () => {
+    expect(worthScoring([{ type: "search_failed", query: "q", reason: "quota" }, verdict({}), done])).toBe(false);
   });
 });
 
