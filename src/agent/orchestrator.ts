@@ -620,7 +620,6 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   const judgeRequest = {
     schema: judgeOutputSchema,
     name: "verdict",
-    maxTokens: 8_000,
     system: JUDGE_PROMPT,
     user:
       `Saying: "${quote}"\nUsually credited to: ${credit ?? "no one named"}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}` +
@@ -631,7 +630,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // Judges on one model and reports the result. Returns why a second judge
   // should try, or null when the verdict stands.
   const judgeWith = async (model: ModelSpec, thinking: boolean): Promise<{ retry: string | null; outOfTokens: boolean }> => {
-    const judge = await callStructured(nebius, { ...judgeRequest, model, thinking });
+    const judge = await callStructured(nebius, { ...judgeRequest, model, thinking, maxTokens: model.judgeMaxTokens });
     const judgeSpend = spend(model, judge);
     if (!judge.ok) {
       onEvent({ type: "judge_failed", ...judgeSpend, reason: judge.reason });

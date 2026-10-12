@@ -25,12 +25,12 @@ export const TRIAL_MAX_USD = 0.1;
 // - its Nebius limit ($0.10),
 // - five searches at one credit each ($0.04),
 // - calls already running when the limit is reached: up to five readers, or one
-//   judge. The costliest is an Ultra second judge: up to 8,000 output tokens
-//   ($0.024) on a prompt of roughly 15,000 tokens at most ($0.015), since it holds
-//   at most 20 nodes with four fields of up to 300 characters each, plus the quote.
-// That comes to about $0.18. Five readers cost far less than one Ultra judge, and
-// $0.20 leaves some margin.
-export const TRIAL_RESERVE_USD = 0.2;
+//   judge. The costliest is an Ultra judge: up to 16,000 output tokens ($0.048)
+//   on a prompt of roughly 15,000 tokens at most ($0.015), since it holds at most
+//   20 nodes with four fields of up to 300 characters each, plus the quote.
+// That comes to about $0.21. Five readers cost far less than one Ultra judge, and
+// $0.25 leaves some margin.
+export const TRIAL_RESERVE_USD = 0.25;
 const HEARTBEAT_MS = 15_000;
 // The route may run for 300 s (maxDuration). A run starts no new paid call after
 // RUN_DEADLINE_MS, and a call already running gives up after NEBIUS_TIMEOUT_MS,

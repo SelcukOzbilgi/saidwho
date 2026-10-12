@@ -10,14 +10,17 @@ export type ModelSpec = {
   readonly id: string;
   readonly inputUsdPerM: number;
   readonly outputUsdPerM: number;
+  // Completion tokens a verdict may use, thinking included. Lightning and Ultra
+  // think longer than Super before they answer, so they get more room.
+  readonly judgeMaxTokens: number;
 };
 
 export const MODELS: Readonly<Record<Tier, ModelSpec>> = {
-  lightning: { tier: "lightning", id: "nvidia/Nemotron-3_5-Lightning", inputUsdPerM: 0.06, outputUsdPerM: 0.24 },
+  lightning: { tier: "lightning", id: "nvidia/Nemotron-3_5-Lightning", inputUsdPerM: 0.06, outputUsdPerM: 0.24, judgeMaxTokens: 16_000 },
   // Only the smoke test calls Nano; no investigation step uses it.
-  nano: { tier: "nano", id: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", inputUsdPerM: 0.06, outputUsdPerM: 0.24 },
-  super: { tier: "super", id: "nvidia/nemotron-3-super-120b-a12b", inputUsdPerM: 0.3, outputUsdPerM: 0.9 },
-  ultra: { tier: "ultra", id: "nvidia/Nemotron-3-Ultra-550b-a55b", inputUsdPerM: 1, outputUsdPerM: 3 },
+  nano: { tier: "nano", id: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", inputUsdPerM: 0.06, outputUsdPerM: 0.24, judgeMaxTokens: 16_000 },
+  super: { tier: "super", id: "nvidia/nemotron-3-super-120b-a12b", inputUsdPerM: 0.3, outputUsdPerM: 0.9, judgeMaxTokens: 8_000 },
+  ultra: { tier: "ultra", id: "nvidia/Nemotron-3-Ultra-550b-a55b", inputUsdPerM: 1, outputUsdPerM: 3, judgeMaxTokens: 16_000 },
 };
 
 // Which model each step uses. The app always runs the cascade; the eval also

@@ -120,7 +120,7 @@ The free trial option, which runs on the server's own keys, stays off unless all
 |---|---|
 | `NEBIUS_API_KEY`, `TAVILY_API_KEY` | The server's own keys |
 | `LIVE_RUNS_ENABLED`, `TRIAL_RUNS_ENABLED` | Both must be `true` |
-| `DAILY_BUDGET_USD` | At least `0.20`, which is what one trial run sets aside before it starts |
+| `DAILY_BUDGET_USD` | At least `0.25`, which is what one trial run sets aside before it starts |
 
 A run started from the page stops making new model calls once its estimated Nebius spend reaches $0.50 with your keys, or $0.10 on the trial.
 
