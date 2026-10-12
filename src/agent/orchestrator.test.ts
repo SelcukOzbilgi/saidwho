@@ -124,6 +124,19 @@ function tavilyFor(urlsFor: (query: string) => readonly string[], textOf: (url: 
   return { tavily, queries, options };
 }
 
+// A search fake with results, and the text of each if it has one, by query.
+function tavilyByQuery(resultsFor: (query: string) => { url: string; text?: string }[]): TavilyClient {
+  return {
+    extract: async () => {
+      throw new Error("not used");
+    },
+    search: async (query: string) => {
+      const results = resultsFor(query).map(({ url, text }) => ({ url, title: `Page at ${url}`, rawContent: text }));
+      return { ok: true, latencyMs: 5, data: { results, usage: { credits: 1 } } } as never;
+    },
+  };
+}
+
 const NEWS = "https://news.example.org/1981";
 const BOOK = "https://archive.org/details/sudden-death";
 const BOOK_TEXT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} She said "${QUOTE}." ${SECRET}`;
@@ -250,6 +263,8 @@ describe("investigate", () => {
       expect(bookRead?.user).toContain("Lead: this page turned up in a search for Sudden Death by Rita Mae Brown (1983)");
       expect(bookRead?.user).toContain("put the date this page gives for the work in page_date");
       expect(nebius.prompts.get("verdict")).toContain('"looking_for": "Sudden Death by Rita Mae Brown"');
+      // The work turned up with the saying, so it isn't listed as one that didn't.
+      expect(nebius.prompts.get("verdict")).not.toContain("Cited works");
       for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
       expect(JSON.stringify(events)).not.toContain(SECRET);
     });
@@ -303,6 +318,286 @@ describe("investigate", () => {
       });
       const events = await run({ nebius });
       expect(events.find((e) => e.type === "traced")).toMatchObject({ leads: [{ fromNode: "n1", work: LEAD.work }] });
+    });
+
+    // The book as a library has it, without the saying.
+    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} Chapter one. ${SECRET}`;
+    const NO_QUOTE: ReaderOutput = { ...READ, contains_quote: false, exact_snippet: null, page_date: null };
+    const citedWorks = (prompt = "") => {
+      const at = prompt.indexOf("Cited works:\n");
+      return at === -1 ? null : JSON.parse(prompt.slice(at + "Cited works:\n".length));
+    };
+
+    it("tells the judge when the pages found for a cited work don't have the saying", async () => {
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK] : [NEWS]), (url) => (url === BOOK ? BOOK_WITHOUT : PAGE_TEXT));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(BOOK) ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
+        {
+          cited_by: "n1",
+          work: LEAD.work,
+          checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.`,
+          pages: [{ site: "archive.org", title: `Page at ${BOOK}` }],
+        },
+      ]);
+      expect(events.find((e) => e.type === "cited_works")).toEqual({
+        type: "cited_works",
+        works: [{ citedBy: "n1", work: LEAD.work, checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.` }],
+      });
+      expect(types(events).slice(-3)).toEqual(["cited_works", "verdict", "done"]);
+      expect(events.find((e) => e.type === "page_read" && e.url === BOOK)).toMatchObject({ outcome: "no_quote", lookingFor: LEAD.work });
+      expect(events.find((e) => e.type === "page_read" && e.url === NEWS)).not.toHaveProperty("lookingFor");
+      expect(JSON.stringify(events)).not.toContain(SECRET);
+    });
+
+    it("tells the judge when the search for a cited work returned no page text", async () => {
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [] : [NEWS]));
+      const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
+      await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
+        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no page text.` },
+      ]);
+    });
+
+    it("doesn't count a page against the citation when its full text has the saying the reader missed", async () => {
+      // The book has the quote far past what the reader is shown.
+      const longBook = `Sudden Death. ${"Filler words about tennis. ".repeat(2_000)} She said \"${QUOTE}.\"`;
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK] : [NEWS]), (url) => (url === BOOK ? longBook : PAGE_TEXT));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(BOOK) ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+      expect(types(events)).not.toContain("cited_works");
+    });
+
+    it("says nothing about a cited work when one of its pages gave a reading, even a crossed-out one", async () => {
+      const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [BOOK, OTHER] : [NEWS]),
+        (url) => (url === BOOK || url === OTHER ? BOOK_WITHOUT : PAGE_TEXT),
+      );
+      const nebius = fakeNebius({
+        // The archive.org copy gets a snippet that isn't on it, from both readers.
+        read: ({ user }) =>
+          user.includes(BOOK) ? { ...READ, exact_snippet: "A sentence the book does not have at all." } : user.includes(OTHER) ? NO_QUOTE : CITES_BOOK,
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === BOOK)).toMatchObject({ node: { check: { status: "not_found" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when another of its pages has the saying, or couldn't be read", async () => {
+      const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
+      const leadPages = (q: string) => (q === LEAD.query ? [BOOK, OTHER] : [NEWS]);
+      const trace = ({ user }: { user: string }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] });
+      // The Gutenberg copy has the quote, and its reader misses it.
+      const holds = tavilyFor(leadPages, (url) => (url === BOOK ? BOOK_WITHOUT : url === OTHER ? BOOK_TEXT : PAGE_TEXT));
+      const missed = fakeNebius({ read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK), trace });
+      await run({ nebius: missed, tavily: holds.tavily });
+      expect(citedWorks(missed.prompts.get("verdict"))).toBeNull();
+      // Neither reader gets an answer for the Gutenberg copy.
+      const unread = tavilyFor(leadPages, (url) => (url === NEWS ? PAGE_TEXT : BOOK_WITHOUT));
+      const failed = fakeNebius({ read: ({ user }) => (user.includes(OTHER) ? null : user.includes(BOOK) ? NO_QUOTE : CITES_BOOK), trace });
+      await run({ nebius: failed, tavily: unread.tavily });
+      expect(citedWorks(failed.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when a result the readers skip has the saying", async () => {
+      const trace = ({ user }: { user: string }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] });
+      const read = ({ user }: { user: string }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK);
+      // The library search returns the page read in the first round, which has the quote.
+      const again = tavilyFor((q) => (q === LEAD.query ? [NEWS, BOOK] : [NEWS]), (url) => (url === BOOK ? BOOK_WITHOUT : PAGE_TEXT));
+      const seen = fakeNebius({ read, trace });
+      await run({ nebius: seen, tavily: again.tavily });
+      expect(seen.log.filter((c) => c.name === "read_page" && c.user.includes("Lead:"))).toHaveLength(1);
+      expect(citedWorks(seen.prompts.get("verdict"))).toBeNull();
+      // Only the first three results are read, and the fourth has the quote.
+      const copies = [1, 2, 3, 4].map((n) => `https://archive.org/details/sudden-death-${n}`);
+      const many = tavilyFor((q) => (q === LEAD.query ? copies : [NEWS]), (url) => (url === copies[3] ? BOOK_TEXT : url === NEWS ? PAGE_TEXT : BOOK_WITHOUT));
+      const capped = fakeNebius({ read, trace });
+      await run({ nebius: capped, tavily: many.tavily });
+      expect(capped.log.filter((c) => c.name === "read_page" && c.user.includes("Lead:"))).toHaveLength(3);
+      expect(citedWorks(capped.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when its search returns a page read before that gave a reading", async () => {
+      // The newspaper has a wording the run doesn't know, and the Checker confirms it.
+      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [NEWS, BOOK] : [NEWS]),
+        (url) => (url === BOOK ? BOOK_WITHOUT : `Knoxville News-Sentinel, 1981. She said "${VARIANT}."`),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : { ...CITES_BOOK, exact_snippet: VARIANT }),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === NEWS)).toMatchObject({ node: { check: { status: "exact" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when another lead reads one of its results and gets a reading", async () => {
+      // Two pages cite two works, and both library searches return the same fourth page.
+      const SECOND = "https://news.example.org/1990";
+      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "The Unwritten Book", query: "unwritten book" };
+      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const copies = [1, 2, 3].map((n) => `https://archive.org/details/sudden-death-${n}`);
+      const shared = "https://www.gutenberg.org/ebooks/shared";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [...copies, shared] : q === OTHER_LEAD.query ? [shared] : [NEWS, SECOND]),
+        (url) => (url === shared ? `A book. She said "${VARIANT}."` : url === NEWS || url === SECOND ? PAGE_TEXT : BOOK_WITHOUT),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(shared) ? { ...READ, exact_snippet: VARIANT } : user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        // Both newspapers cite the same book, so they share a line.
+        trace: ({ user }) => (user.includes("- n1, n2:") ? { leads: [LEAD, OTHER_LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === shared)).toMatchObject({ node: { check: { status: "exact" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when an earlier search got more of one of its pages, with the saying", async () => {
+      const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
+      // The first search gets the whole book, which has the quote; the library
+      // search gets only its first part. Both readers of the book miss the quote.
+      const tavily = tavilyByQuery((q) =>
+        q === LEAD.query
+          ? [
+              { url: BOOK, text: "Sudden Death, a novel by Rita Mae Brown. Chapter one." },
+              { url: OTHER, text: BOOK_WITHOUT },
+            ]
+          : [
+              { url: NEWS, text: PAGE_TEXT },
+              { url: BOOK, text: BOOK_TEXT },
+            ],
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(NEWS) ? CITES_BOOK : NO_QUOTE),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "page_read" && e.url === OTHER)).toMatchObject({ outcome: "no_quote" });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when a result nobody read has a wording another page confirmed", async () => {
+      const SECOND = "https://news.example.org/1990";
+      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "The Unwritten Book", query: "unwritten book" };
+      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const copies = [1, 2, 3, 4].map((n) => `https://archive.org/details/sudden-death-${n}`);
+      const elsewhere = "https://www.gutenberg.org/ebooks/elsewhere";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? copies : q === OTHER_LEAD.query ? [elsewhere] : [NEWS, SECOND]),
+        // The fourth copy has the variant, and the readers only get the first three.
+        (url) => (url === copies[3] || url === elsewhere ? `A book. She said "${VARIANT}."` : url === NEWS || url === SECOND ? PAGE_TEXT : BOOK_WITHOUT),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(elsewhere) ? { ...READ, exact_snippet: VARIANT } : user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1, n2:") ? { leads: [LEAD, OTHER_LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.some((e) => e.type === "page_read" && e.url === copies[3])).toBe(false);
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("keeps every text the first searches got for a page, not just the first", async () => {
+      const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
+      // The exact-quote search gets part of the book, the planner's search all of it.
+      const tavily = tavilyByQuery((q) =>
+        q === LEAD.query
+          ? [{ url: BOOK, text: BOOK_WITHOUT }, { url: OTHER, text: BOOK_WITHOUT }]
+          : q.startsWith('"')
+            ? [{ url: NEWS, text: PAGE_TEXT }, { url: BOOK, text: BOOK_WITHOUT }]
+            : [{ url: BOOK, text: BOOK_TEXT }],
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(NEWS) ? CITES_BOOK : NO_QUOTE),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work whose search returned no text when the run read one of its pages with the saying", async () => {
+      const tavily = tavilyByQuery((q) => (q === LEAD.query ? [{ url: BOOK }] : [{ url: NEWS, text: PAGE_TEXT }, { url: BOOK, text: BOOK_TEXT }]));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(NEWS) ? CITES_BOOK : READ),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === BOOK)).toMatchObject({ node: { check: { status: "exact" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("checks the wording a lead gives even when that lead's search fails", async () => {
+      const SECOND = "https://news.example.org/1990";
+      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "The Unwritten Book", query: "unwritten book", wording: VARIANT };
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [BOOK] : [NEWS, SECOND]),
+        (url) => (url === BOOK ? `Sudden Death. She said "${VARIANT}."` : PAGE_TEXT),
+      );
+      const failing: TavilyClient = {
+        ...tavily,
+        search: async (query, options) =>
+          query === OTHER_LEAD.query ? ({ ok: false, error: { provider: "tavily", kind: "upstream", message: "boom" }, latencyMs: 5 } as never) : tavily.search(query, options),
+      };
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1, n2:") ? { leads: [LEAD, OTHER_LEAD] } : { leads: [] }),
+      });
+      await run({ nebius, tavily: failing });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("doesn't let a short confirmed snippet keep a cited work off the list", async () => {
+      const SECOND = "https://news.example.org/1990";
+      // A reader quotes only part of the saying, and the book has those words in another sentence.
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [BOOK] : [NEWS, SECOND]),
+        (url) => (url === BOOK ? `${BOOK_WITHOUT} They did the same thing every day.` : PAGE_TEXT),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : user.includes(SECOND) ? { ...READ, exact_snippet: "the same thing" } : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "node_added" && e.node.url === SECOND)).toMatchObject({ node: { check: { status: "exact" } } });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toHaveLength(1);
+    });
+
+    it("lists a cited work's pages in search order, however the readers finish", async () => {
+      const OTHER = "https://www.gutenberg.org/ebooks/sudden-death";
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK, OTHER] : [NEWS]), (url) => (url === NEWS ? PAGE_TEXT : BOOK_WITHOUT));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+        // The archive.org reader finishes last.
+        readDelay: (user) => (user.includes(BOOK) ? 30 : 0),
+      });
+      await run({ nebius, tavily });
+      const [entry] = citedWorks(nebius.prompts.get("verdict"));
+      expect(entry.pages.map((p: { site: string }) => p.site)).toEqual(["archive.org", "gutenberg.org"]);
+      expect(entry.checked).toContain("on archive.org and gutenberg.org");
+    });
+
+    it("says nothing about a cited work when its search fails", async () => {
+      const { tavily } = tavilyFor(() => [NEWS]);
+      const failing: TavilyClient = {
+        ...tavily,
+        search: async (query, options) =>
+          query === LEAD.query ? ({ ok: false, error: { provider: "tavily", kind: "upstream", message: "boom" }, latencyMs: 5 } as never) : tavily.search(query, options),
+      };
+      const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
+      await run({ nebius, tavily: failing });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
     });
 
     it("goes on to judge when tracing fails", async () => {

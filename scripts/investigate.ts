@@ -88,6 +88,9 @@ async function main(): Promise<void> {
       case "trace_failed":
         traceLines.push(`   round ${event.round} failed: ${event.reason}`);
         break;
+      case "cited_works":
+        for (const work of event.works) traceLines.push(`   told the judge (cited by ${work.citedBy}): ${work.checked}`);
+        break;
       case "page_read":
         reads.total++;
         if (event.outcome === "failed") reads.failed++;

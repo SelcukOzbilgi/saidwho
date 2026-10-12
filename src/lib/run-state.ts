@@ -182,7 +182,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
     case "page_read": {
       const text: Record<typeof event.outcome, string> = {
         evidence: `Found the quote on ${event.host}`,
-        no_quote: `No quote on ${event.host}`,
+        no_quote: `No quote on ${event.host}${event.lookingFor ? ` (looking for ${event.lookingFor})` : ""}`,
         too_long: `Page too long to read: ${event.host}`,
         failed: `Could not read ${event.host}${event.reason ? `: ${event.reason}` : ""}`,
       };
@@ -202,6 +202,8 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         log: log("Checker", text, node.check.status === "not_found" ? "bad" : "good"),
       };
     }
+    case "cited_works":
+      return { ...state, log: log("Genealogist", `Told the Judge: ${event.works.map((w) => w.checked).join(" ")}`) };
     case "judge_skipped":
       return { ...state, phase: "judging", noVerdict: event.reason, log: log("Judge", `No verdict: ${event.reason}`, "warn") };
     case "verdict": {

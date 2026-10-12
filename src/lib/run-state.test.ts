@@ -73,12 +73,22 @@ describe("reduceRun", () => {
       { type: "traced", ...spend, tier: "super", round: 1, leads: [{ fromNode: "n2", work: "Confessions", query: "Rousseau Confessions" }] },
       { type: "searched", query: "Rousseau Confessions", results: 5, credits: 1, latencyMs: 9 },
       { type: "pages_ready", pages: 2, droppedExcluded: 1, round: 1 },
+      { type: "page_read", ...spend, url: "https://c.org/", host: "c.org", outcome: "no_quote", reason: null, lookingFor: "Confessions" },
       { type: "node_added", node: { ...node("n4", "1782"), foundVia: { node: "n2", work: "Confessions" } } },
     ]);
-    expect(state).toMatchObject({ phase: "tracing", pages: 5, searches: 0, tavilyCredits: 1, nebiusUsd: 0.001 });
+    expect(state).toMatchObject({ phase: "tracing", pages: 5, searches: 0, tavilyCredits: 1, nebiusUsd: 0.002 });
     expect(state.leads).toEqual([{ round: 1, fromNode: "n2", work: "Confessions", query: "Rousseau Confessions" }]);
     expect(state.log.map((entry) => entry.text)).toContain("Following Confessions (cited by n2)");
     expect(state.log.map((entry) => entry.text)).toContain("2 new pages to read, 1 from excluded sites dropped");
+    expect(state.log.map((entry) => entry.text)).toContain("No quote on c.org (looking for Confessions)");
+    const told = reduceRun(state, {
+      type: "cited_works",
+      works: [{ citedBy: "n2", work: "Confessions", checked: "Pages found for Confessions on c.org don't have the saying in any wording this run knows." }],
+    });
+    expect(told.log.at(-1)).toMatchObject({
+      agent: "Genealogist",
+      text: "Told the Judge: Pages found for Confessions on c.org don't have the saying in any wording this run knows.",
+    });
     const failed = reduceRun(state, { type: "trace_failed", ...spend, tier: "super", round: 2, reason: "invalid JSON" });
     expect(failed.log.at(-1)).toMatchObject({ agent: "Genealogist", tone: "bad" });
     expect(reduceRun(failed, { type: "verdict", ...spend, verdict: verdict("misattributed"), unknownIds: [] }).phase).toBe("judging");

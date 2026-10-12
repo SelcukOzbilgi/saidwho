@@ -41,6 +41,8 @@ const READER_CONCURRENCY = 5;
 const TRACE_ROUNDS = 2;
 const LEADS_PER_ROUND = 3;
 const PAGES_PER_LEAD = 3;
+// The fewest words a confirmed snippet needs to count as a wording of the saying.
+const MIN_WORDING_WORDS = 4;
 // Digital libraries and archives that hold old works in full. A lead is looked
 // for only there, so the search finds the cited work itself rather than more
 // pages about the saying. A work no library has stays unfound.
@@ -99,7 +101,14 @@ const JUDGE_PROMPT =
   "Start with the node where it first appears (change: first), then add a step only where the evidence shows a change: " +
   "its wording changed (wording), it appeared in another language (translation), or it was credited to someone else (credit). " +
   "note: one short sentence on what changed there, for example who it is credited to from then on. " +
-  "Leave a step out rather than guess, and give an empty list when nothing is dated.";
+  "Leave a step out rather than guess, and give an empty list when nothing is dated. " +
+  "Cited works, when given, are works the nodes cite that were looked for in digital libraries without the saying turning up; " +
+  "checked says what was found. When the search returned no page text, that says nothing about what the work holds, only that the libraries searched gave this run no text of it. " +
+  "A page without the saying may not be the work itself " +
+  "(see the page titles) or only part of it, and the work may word the saying differently or in another language. " +
+  "Treat either as weak evidence against the citation, never as proof that the work lacks the saying. This run made the check, not the page that cites the work, " +
+  "so don't present it as that page's finding. When one bears on the verdict, put its checked sentence in the rationale as it is " +
+  "and mark it with the id of the node that cites the work, since cited works have no ids of their own.";
 
 export type InvestigationInput = {
   quote: string;
@@ -280,13 +289,22 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
 
   // 2) Search
   const pages = new Map<string, { title: string; text: string }>();
+  // Every text the run got for each page, from any search, so one search that
+  // returns less of a page doesn't hide what another had.
+  const textsOf = new Map<string, string[]>();
+  const keepText = (url: string, text: string) => {
+    const kept = textsOf.get(url) ?? [];
+    if (!kept.includes(text)) textsOf.set(url, [...kept, text]);
+  };
   for (const query of queries) {
     if (mustStop()) return finish();
     const results = await search(query);
     // Only full page text counts. `content` is Tavily's short summary, and a snippet
     // checked against a summary was never checked against the page.
     for (const r of results ?? []) {
-      if (r.rawContent && !pages.has(r.url)) pages.set(r.url, { title: r.title, text: r.rawContent });
+      if (!r.rawContent) continue;
+      keepText(r.url, r.rawContent);
+      if (!pages.has(r.url)) pages.set(r.url, { title: r.title, text: r.rawContent });
     }
   }
   // exclude_domains is trusted but enforced here too: an answer site must never reach a reader.
@@ -307,15 +325,22 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // ids follow search order (n3 is the third page), not which reader finished first,
   // so the same search results always give the judge the same evidence in the same order.
   const nodes: EvidenceNode[] = [];
-  const pageOrder = (n: EvidenceNode) => Number(n.id.slice(1));
+  const pageOrder = (n: { id: string }) => Number(n.id.slice(1));
   // A page the Genealogist found carries the lead that found it.
   type Lead = { fromNode: string; work: string; year: string | null; wording: string | null };
   type Entry = { url: string; page: { title: string; text: string }; id: string; lead: Lead | null };
+  // The saying's known wordings, plus the one a lead says the work has.
+  const wordingsFor = (lead: Lead | null) => [quote, ...variants, ...(lead?.wording ? [lead.wording] : [])];
+  // Pages found for a lead that were read with no quote, by lead, with their
+  // place in search order so readers finishing in any order give the same list.
+  const misses = new Map<Lead, { order: number; site: string; title: string }[]>();
+  // Every page, a lead's or not, whose reading found no quote.
+  const noQuoteUrls = new Set<string>();
 
   const readPage = async ({ url, page, id, lead }: Entry): Promise<void> => {
     if (mustStop(false)) return;
     const host = hostOf(url);
-    const phrases = [quote, ...variants, ...(lead?.wording ? [lead.wording] : [])];
+    const phrases = wordingsFor(lead);
     const passage = selectPassages(page.text, phrases, READER_CHARS);
     // The lead says which work this page might be. The work's own date goes in
     // page_date, so cited_source stays free for an older work the book itself
@@ -332,6 +357,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       return date && mentionsYear(date, pageText) ? date : null;
     };
 
+    // Whether the last reading found no quote on the page, as opposed to
+    // finding one or failing to read it.
+    let noQuote = false;
     // Reads the page on one model and reports the reading. Returns the node, if
     // the page gave one, and why a stronger reader should try, if it should.
     const readWith = async (model: ModelSpec): Promise<{ node: EvidenceNode | null; retry: string | null }> => {
@@ -345,8 +373,10 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         user: `Saying: "${quote}"\nVariants: ${phrases.slice(1).join(" | ")}${leadNote}\n\nPage: ${page.title}\nURL: ${url}\n\n${passage}`,
       });
       const readSpend = spend(model, read);
-      const report = (outcome: "evidence" | "no_quote" | "too_long" | "failed", reason: string | null = null) =>
-        onEvent({ type: "page_read", ...readSpend, url, host, outcome, reason });
+      const report = (outcome: "evidence" | "no_quote" | "too_long" | "failed", reason: string | null = null) => {
+        noQuote = outcome === "no_quote";
+        onEvent({ type: "page_read", ...readSpend, url, host, outcome, reason, ...(lead && { lookingFor: lead.work }) });
+      };
 
       if (!read.ok) {
         report("failed", read.reason);
@@ -397,7 +427,16 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       onEvent({ type: "escalated", step: "read", from: "lightning", to: "super", thinking: false, reason: first.retry, url });
       node = (await readWith(MODELS.super)).node ?? node;
     }
-    if (!node) return;
+    if (!node) {
+      // A page found for a cited work and read with no quote may count against
+      // the citation, a little. Whether it does is settled per lead, below.
+      if (noQuote) noQuoteUrls.add(url);
+      if (lead && noQuote) {
+        const miss = { order: pageOrder({ id }), site: host, title: page.title.slice(0, MAX_FIELD_CHARS) };
+        misses.set(lead, [...(misses.get(lead) ?? []), miss]);
+      }
+      return;
+    }
     nodes.push(node);
     onEvent({ type: "node_added", node });
   };
@@ -416,6 +455,11 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // in lead order and then result order.
   const readUrls = new Set(entries.map((e) => e.url));
   const followed = new Set<string>();
+  // Every lead whose search worked, in the order followed, with whether any
+  // result had text and every result the run may use, text or not.
+  const searched: { lead: Lead; noText: boolean; urls: string[] }[] = [];
+  // The wording each lead says its work has, searched for or not.
+  const leadWordings: string[] = [];
   let nextId = entries.length + 1;
   let fresh = [...nodes];
   for (let round = 1; round <= TRACE_ROUNDS; round++) {
@@ -465,6 +509,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       if (!citingIds.has(raw.from_node) || !work || !query || tooLong || followed.has(normalizeText(work))) continue;
       followed.add(normalizeText(work));
       leads.push({ fromNode: raw.from_node, work, year: cleanDate(raw.year), query, wording });
+      if (wording) leadWordings.push(wording);
       if (leads.length === LEADS_PER_ROUND) break;
     }
     onEvent({ type: "traced", ...traceSpend, round, leads: leads.map(({ fromNode, work, query }) => ({ fromNode, work, query })) });
@@ -475,6 +520,11 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     for (const lead of leads) {
       if (mustStop()) return finish();
       const results = await search(lead.query, LIBRARY_SITES);
+      if (results) {
+        const usable = results.filter((r) => !isExcluded(r.url));
+        for (const r of usable) if (r.rawContent) keepText(r.url, r.rawContent);
+        searched.push({ lead, noText: !results.some((r) => r.rawContent), urls: usable.map((r) => r.url) });
+      }
       let taken = 0;
       for (const r of results ?? []) {
         if (taken === PAGES_PER_LEAD) break;
@@ -495,6 +545,39 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     fresh = nodes.slice(before);
   }
 
+  // Leads that didn't turn up with the saying, for the judge, settled once every
+  // reader is done. Any page the lead's search returned rules it out if it got
+  // read, for any lead or before, and its reading wasn't a plain no quote (it
+  // gave a node, even a crossed-out one, or couldn't be read), or if any text the
+  // run got for it has a wording the run knows by the end. The reader sees part
+  // of a long page, and only the first few results, so code checks every text.
+  // Otherwise the lead is listed when its search returned no text at all, or
+  // when it has pages read with no quote.
+  const quoteWords = normalizeText(quote).split(" ").length;
+  // A confirmed snippet counts as a wording only when it's about as long as the
+  // quote: a short one ("good men") turns up in unrelated text, and a long one
+  // lets so many words differ that a near miss passes.
+  const aboutAsLong = (snippet: string) => {
+    const words = normalizeText(snippet).split(" ").length;
+    return words >= Math.max(MIN_WORDING_WORDS, Math.ceil(quoteWords / 2)) && words <= quoteWords * 2;
+  };
+  const knownWordings = [
+    ...wordingsFor(null),
+    ...leadWordings,
+    ...nodes.flatMap((n) => {
+      const snippet = n.reader.exact_snippet;
+      return n.check.status !== "not_found" && snippet && aboutAsLong(snippet) ? [snippet] : [];
+    }),
+  ];
+  const holdsSaying = (text: string) => knownWordings.some((phrase) => checkSnippet(phrase, text).status !== "not_found");
+  const checked = searched.flatMap(({ lead, noText, urls }) => {
+    if (urls.some((url) => readUrls.has(url) && !noQuoteUrls.has(url))) return [];
+    if (urls.some((url) => (textsOf.get(url) ?? []).some(holdsSaying))) return [];
+    if (noText) return [{ lead, pages: [] }];
+    const pages = (misses.get(lead) ?? []).sort((a, b) => a.order - b.order).map(({ site, title }) => ({ site, title }));
+    return pages.length > 0 ? [{ lead, pages }] : [];
+  });
+
   // 6) Judge, on verified evidence only. With none there is nothing to judge.
   // A run stopped during the last readers reports why before anything else.
   if (mustStop()) return finish();
@@ -514,12 +597,30 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     cited_source_date: n.citedSourceDate,
     found_via: n.foundVia ? { node: n.foundVia.node, looking_for: n.foundVia.work } : null,
   }));
+  // The sentence the judge may quote is written here, hedged, so a weak check
+  // doesn't turn into "the book doesn't have it" in the verdict.
+  const citedWorks = checked.map(({ lead, pages }) => {
+    const sites = [...new Set(pages.map((p) => p.site))].join(" and ");
+    return {
+      cited_by: lead.fromNode,
+      work: lead.work,
+      checked: pages.length
+        ? `Pages found for ${lead.work} on ${sites} don't have the saying in any wording this run knows.`
+        : `The digital-library search for ${lead.work} returned no page text.`,
+      ...(pages.length > 0 && { pages }),
+    };
+  });
+  if (citedWorks.length > 0) {
+    onEvent({ type: "cited_works", works: citedWorks.map(({ cited_by, work, checked }) => ({ citedBy: cited_by, work, checked })) });
+  }
   const judgeRequest = {
     schema: judgeOutputSchema,
     name: "verdict",
     maxTokens: 8_000,
     system: JUDGE_PROMPT,
-    user: `Saying: "${quote}"\nUsually credited to: ${credit ?? "no one named"}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}`,
+    user:
+      `Saying: "${quote}"\nUsually credited to: ${credit ?? "no one named"}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}` +
+      (citedWorks.length ? `\n\nCited works:\n${JSON.stringify(citedWorks, null, 1)}` : ""),
   };
   const known = new Set(verified.map((n) => n.id));
 
