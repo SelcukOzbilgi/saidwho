@@ -10,6 +10,10 @@ import { VerdictCard } from "./verdict-card";
 type Props = {
   run: RunState;
   running: boolean;
+  // A case page has no other heading, so there the quote is the page's h1.
+  quoteIsHeading?: boolean;
+  // Read new log lines aloud; on for a live run, off for a replay.
+  announce?: boolean;
   // Shown under the progress bar.
   note?: ReactNode;
   // Shown under the verdict.
@@ -17,13 +21,16 @@ type Props = {
 };
 
 // A run as the page shows it, whether it is happening now or replayed from a saved log.
-export function RunView({ run, running, note, afterVerdict }: Props) {
+export function RunView({ run, running, quoteIsHeading = false, announce = false, note, afterVerdict }: Props) {
   const verdict = run.verdict?.output;
+  const Quote = quoteIsHeading ? "h1" : "blockquote";
 
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <blockquote className="font-serif text-2xl leading-snug italic sm:text-3xl">“{run.quote}”</blockquote>
+        <Quote lang={run.language ?? undefined} className="font-serif text-2xl leading-snug italic sm:text-3xl">
+          “{run.quote}”
+        </Quote>
         <p className="mt-2 text-muted">
           <CreditLine run={run} running={running} />
         </p>
@@ -49,7 +56,7 @@ export function RunView({ run, running, note, afterVerdict }: Props) {
             <p className="text-sm text-muted">Pages that carry the quote will show up here as they are checked.</p>
           )}
         </div>
-        <RunLog log={run.log} />
+        <RunLog log={run.log} follow={running} announce={announce} />
       </div>
     </div>
   );

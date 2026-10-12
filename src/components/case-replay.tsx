@@ -27,6 +27,7 @@ export function CaseReplay({ events, afterVerdict }: { events: readonly RunEvent
     <RunView
       run={run}
       running={playing}
+      quoteIsHeading
       note={
         <p>
           <button
