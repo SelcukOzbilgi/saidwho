@@ -19,4 +19,8 @@ describe("supabase migrations", () => {
     expect(sql).toContain(`grant ${privileges} on table public.${table} to service_role;`);
     expect(sql).toContain(`alter table public.${table} enable row level security;`);
   });
+
+  it("deletes ended counts only well after their window", () => {
+    expect(migration("20261012120100_rate_limits.sql")).toContain("where expires_at <= now() - interval '1 hour'");
+  });
 });

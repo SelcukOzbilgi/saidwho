@@ -1,7 +1,7 @@
 -- How many runs each visitor started in the current window, shared by every
 -- server instance (see src/lib/server/rate-limit.ts). A visitor is a keyed hash
--- of their address, never the address itself, and a row is deleted once its
--- window has ended.
+-- of their address, never the address itself. A row is deleted by a later count
+-- once its window has been over for an hour.
 create table public.rate_limits (
   -- The limit's name and the visitor's hash, as in "trial:3f9a...".
   key text not null check (char_length(key) <= 100),
@@ -39,12 +39,15 @@ begin
   end if;
   v_start := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
 
-  -- Ended windows go. Rows another call is already deleting are skipped, so
-  -- two calls never wait on each other here.
+  -- Windows that ended over an hour ago go, up to 500 rows a call. Not sooner: a
+  -- call that worked out its window just before it ended may not have written
+  -- yet, and deleting the row under it would let it start that window over at
+  -- one. Rows another call is already deleting are skipped, so two calls never
+  -- wait on each other here.
   delete from public.rate_limits
   where ctid in (
     select ctid from public.rate_limits
-    where expires_at <= now()
+    where expires_at <= now() - interval '1 hour'
     limit 500
     for update skip locked
   );
