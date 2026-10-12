@@ -6,7 +6,7 @@ import { parseServerEnv } from "./env-schema";
 import { createRunStore, newRunId, runStoreFromEnv } from "./run-store";
 
 const URL_BASE = "https://project.supabase.co";
-const SECRET = "fake-supabase-secret-for-tests-only";
+const SECRET = "sb_secret_fake-for-tests-only"; // gitleaks:allow
 const EVENTS: RunEvent[] = [{ type: "done", nebiusUsd: 0.004, tavilyCredits: 5, unknownCostCalls: 0, seconds: 30 }];
 
 type Seen = { url: string; init: RequestInit };
