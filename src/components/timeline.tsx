@@ -17,15 +17,25 @@ function columns(nodes: readonly EvidenceNode[]): { label: string; nodes: Eviden
 
 export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; marks: Marks }) {
   if (nodes.length === 0) return null;
+  const years = columns(nodes);
   return (
     <section aria-label="Evidence timeline">
       <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">
         Where the quote turns up, oldest first
       </h2>
-      <div className="-mx-4 overflow-x-auto px-4 pb-3">
-        <ol className="flex min-w-max gap-4">
-          {columns(nodes).map((column) => (
-            <li key={column.label} className="w-72 shrink-0">
+      {/* On a phone the years stack; from sm up they sit side by side and scroll sideways. */}
+      {years.length > 2 && (
+        <p className="mb-2 hidden text-xs text-muted sm:block">Scroll sideways for later years →</p>
+      )}
+      <div
+        role="region"
+        aria-label="Evidence by year"
+        tabIndex={0}
+        className="-mx-4 overflow-x-auto px-4 pb-3 focus-visible:outline-2 focus-visible:outline-accent-ink"
+      >
+        <ol className="flex flex-col gap-6 sm:min-w-max sm:flex-row sm:items-start sm:gap-4">
+          {years.map((column) => (
+            <li key={column.label} className="sm:w-72 sm:shrink-0">
               <div className="mb-3 flex items-center gap-2">
                 <span className="font-serif text-2xl font-semibold tabular-nums">{column.label}</span>
                 <span className="h-px flex-1 bg-line" aria-hidden />
