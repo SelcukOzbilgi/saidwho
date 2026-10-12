@@ -60,6 +60,16 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
 const unquote = (text: string): string =>
   text.replace(/^[ \t]*>[ \t]?/gm, "").replace(/^["'“”‘’«»„\s]+|["'“”‘’«»„\s]+$/g, "");
 
+// Readers sometimes copy a page's Markdown, so a title shows up as _Sudden Death_.
+// The card shows the words without the marks; the saved text keeps them.
+export const unmark = (text: string): string =>
+  text
+    // As in Markdown, the marked words can't start or end with a space, so "5 * 3 * 2" stays.
+    .replace(/\*\*(\S(?:[^*\n]*\S)?)\*\*/g, "$1")
+    .replace(/__(\S(?:[^_\n]*\S)?)__/g, "$1")
+    .replace(/\*(\S(?:[^*\n]*\S)?)\*/g, "$1")
+    .replace(/(^|[^\w])_(\S(?:[^_\n]*\S)?)_(?!\w)/g, "$1$2");
+
 // Links come from search results; only web pages get to be one.
 const webUrl = (url: string): string | undefined => (/^https?:\/\//i.test(url) ? url : undefined);
 
@@ -96,14 +106,14 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
 
       {node.reader.exact_snippet && (
         <blockquote className={`font-serif text-[17px] leading-snug ${crossed ? "line-through decoration-bad decoration-2" : ""}`}>
-          “{unquote(node.reader.exact_snippet)}”
+          “{unmark(unquote(node.reader.exact_snippet))}”
         </blockquote>
       )}
 
       <dl className="mt-3 space-y-1 text-xs text-muted">
         {node.attributedTo && (
           <Row label="Credited to">
-            <span className="text-foreground">{node.attributedTo}</span>
+            <span className="text-foreground">{unmark(node.attributedTo)}</span>
           </Row>
         )}
         {node.foundVia && (
@@ -111,12 +121,12 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
             <a href={`#node-${node.foundVia.node}`} className="underline decoration-line underline-offset-2 hover:decoration-foreground">
               {node.foundVia.node}
             </a>
-            , looking for {node.foundVia.work}
+            , looking for {unmark(node.foundVia.work)}
           </Row>
         )}
         {node.reader.cited_source && (
           <Row label="Cites">
-            {node.reader.cited_source}
+            {unmark(node.reader.cited_source)}
             {/* Readers often put the date in the source's name already. */}
             {node.citedSourceDate && !node.reader.cited_source.includes(node.citedSourceDate) ? ` (${node.citedSourceDate})` : ""}
           </Row>
