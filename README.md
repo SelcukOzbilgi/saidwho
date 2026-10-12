@@ -32,7 +32,7 @@ Sometimes the honest answer is "people disagree" or "nothing old enough turned u
 
 The home page lists ten finished investigations. Each is a quote from the [test set](eval/), run once and saved as it happened. Each case has its own page, such as [/cases/insanity-same-thing](https://saidwho.vercel.app/cases/insanity-same-thing), where you can replay the run and see the known answer next to what Said Who? concluded.
 
-Said Who? reaches the same verdict as the known answer in six of the ten, though the earliest source it finds isn't always the one on record. The other four are kept on purpose, and their pages say that the verdict differs.
+These ten come from the first full eval, run on October 12 (see below). Said Who? reaches the same verdict as the known answer in seven of the ten, though the earliest source it finds isn't always the one on record. The other three are kept on purpose, and their pages say that the verdict differs.
 
 | Quote | Usually credited to | Known answer | Said Who?'s verdict |
 |---|---|---|---|
@@ -42,12 +42,12 @@ Said Who? reaches the same verdict as the known answer in six of the ten, though
 | "The only thing necessary for the triumph of evil..." | Edmund Burke | misattributed | misattributed |
 | "Let them eat cake." | Marie Antoinette | misattributed | misattributed |
 | "The only thing we have to fear is fear itself." | Franklin D. Roosevelt | said it | said it |
-| "Gel, gel, ne olursan ol yine gel" | Mevlana (Rumi) | contested | no known source |
+| "Gel, gel, ne olursan ol yine gel" | Mevlana (Rumi) | contested | contested |
 | "If I had asked people what they wanted..." | Henry Ford | no known source | misattributed |
-| "Whether you think you can, or you think you can't..." | Henry Ford | said it | no known source |
+| "Whether you think you can, or you think you can't..." | Henry Ford | said it | misattributed |
 | "Hayatta en hakiki mürşit ilimdir." | Mustafa Kemal Atatürk | said it | no known source |
 
-Each run took 18 to 34 seconds and cost half a cent or less in model use, except "Gel, gel" at about one cent.
+Most runs took 22 to 39 seconds. Two took three and four minutes, because Nebius answered slowly for part of that afternoon and one planning call had to be tried again. Each cost less than a cent in model use.
 
 ## How it works
 
@@ -79,6 +79,29 @@ The Nemotron models are served by [Nebius Token Factory](https://nebius.com/serv
 
 </details>
 
+## How well it does
+
+`pnpm eval` runs all twenty quotes in the test set three ways, with Quote Investigator, Wikiquote, Wikipedia and each answer's own pages left out of the search. The first full run, on October 12 at commit `baf49da`:
+
+| | The app's mix | Every step on Ultra | Every step on Lightning |
+|---|---|---|---|
+| Verdict matches the known answer | 14 of 20 | 14 of 20 | 9 of 20 |
+| Earliest year within two years of the known one | 9 of 19 | 12 of 19 | 8 of 19 |
+| Nebius cost per quote | $0.0045 | $0.0426 | $0.0048 |
+| Time per quote | 51 s | 36 s | 69 s |
+
+The app's mix of models gets as many verdicts right as running every step on Ultra, at about a tenth of the cost. Ultra finds the earliest date more often. The whole eval cost $1.04 of Nebius and 344 Tavily credits, counting the one run done again. Every score, quote by quote, is in [eval/results.md](eval/results.md). One run with the app's mix was spoiled when Nebius timed out and a planned search was refused, so it was run again on its own.
+
+What the misses show:
+
+- **Older dates aren't earlier finds.** Ten runs gave a date earlier than the known one. Each was checked against the page it came from, and none is an earlier printing of the saying. Five are older passages with a related idea, such as John Stuart Mill's 1867 line about good men who "look on and do nothing". Three are the year Rousseau wrote the "brioche" passage instead of the year it was published, 1782. For Bill Gates's "640K", one is the year of a story the page itself doubts, and the other, 1945, belongs to a different quote on the same page.
+- **The Judge sometimes reads a gap as an answer.** When it can't find the early source, it sometimes calls a quote misattributed instead of saying there's no known source. It also sometimes treats a library search that turned up nothing as proof that a book lacks the saying. None of the three setups found the 1947 Reader's Digest credit for Henry Ford's "Whether you think you can", and two of them called it misattributed. Once, it judged whether Laurel Thatcher Ulrich wrote "Well-behaved women seldom make history" instead of whether the usual credit to Marilyn Monroe or Eleanor Roosevelt was right.
+- **Two answers sit on a fine line.** For "faster horses" and the fish that can't climb a tree, the test set says there's no known source: the earliest versions either imagine what Ford might have said or already credit Einstein. All three setups called both misattributed. The Judge's instructions don't draw that line yet.
+- **Quoting the whole saying in a search often finds nothing.** Searches that put the full quote in quotation marks came back empty 26 times in 167, against 3 times in 113 for searches without quotes. With every step on Lightning, all five searches for "Twenty years from now you will be more disappointed..." quoted the full 22 words, all five came back empty, and that run had no verdict.
+- **The smaller and larger models slip in different ways.** With every step on Lightning, 7 verdicts wrote their page ids in the wrong form, such as `[n8]` for `n8`, so the app flagged them as citing pages it couldn't find. Every page they meant had been checked, and the app showed those verdicts with a warning. With every step on Ultra, the Judge used up its 8,000-token budget twice on Edison's "Genius is one percent inspiration", so that run has no verdict.
+
+What the eval showed about Tavily and Token Factory themselves is in [FEEDBACK.md](FEEDBACK.md).
+
 ## Status
 
 I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/). Submissions close on October 30, 2026.
@@ -91,6 +114,7 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] Ten finished example cases that can be played again
 - [x] A [public demo](https://saidwho.vercel.app)
 - [x] Following the older sources a page names, to look for something earlier still
+- [x] An eval of the whole test set, run three ways, with [the results](eval/results.md)
 
 Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
 
@@ -138,7 +162,7 @@ This runs one quote from the test set and prints each step, the verdict and what
 pnpm eval
 ```
 
-This runs every quote in the test set three ways and scores each run against the known answer: the way the app runs it, with every step on Nemotron 3 Ultra, and with every step on Nemotron 3.5 Lightning. The scores go to `eval/results.md`. `--setup cascade` runs only the app's way, and `--only insanity-same-thing,be-the-change` runs only those quotes. Each run is saved to `.runs/eval/`, and a quote that already has a log there isn't run again, so a stopped eval picks up where it left off. One quote run the app's way costs about half a cent of Nebius and 7 or 8 Tavily credits.
+This runs every quote in the test set three ways and scores each run against the known answer: the way the app runs it, with every step on Nemotron 3 Ultra, and with every step on Nemotron 3.5 Lightning. The scores go to `eval/results.md`. `--setup cascade` runs only the app's way, and `--only insanity-same-thing,be-the-change` runs only those quotes. Each run is saved to `.runs/eval/`, and a quote that already has a log there isn't run again, so a stopped eval picks up where it left off. One quote run the app's way costs about half a cent of Nebius and 6 Tavily credits.
 
 ### Adding an example case
 
