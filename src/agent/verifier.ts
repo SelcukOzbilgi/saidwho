@@ -165,9 +165,29 @@ function matchWords(needle: string, pageWords: readonly string[]): SnippetMatch 
   return { status: "near", score, span: { start: Math.max(0, end - words.length), end } };
 }
 
+// Short words that carry little of a saying's meaning in the languages quotes
+// most often come in, normalized like page text (no accents or apostrophes).
+// Leaving them out keeps a page from matching on "the" and "of" alone.
+const FUNCTION_WORDS = new Set([
+  // English
+  "a", "an", "the", "and", "or", "but", "if", "of", "to", "in", "on", "at", "by", "for", "with", "from", "as", "is", "are",
+  "was", "were", "be", "been", "it", "its", "this", "that", "these", "those", "he", "she", "we", "you", "they", "i", "me",
+  "my", "his", "her", "our", "your", "their", "them", "him", "us", "so", "do", "does", "did", "have", "has", "had", "will",
+  "would", "can", "could", "should", "shall", "may", "might", "must", "than", "then", "there", "what", "which", "who",
+  // French, Spanish, German
+  "le", "la", "les", "un", "une", "des", "du", "de", "et", "ou", "en", "est", "que", "qui", "il", "elle", "ils", "on",
+  "el", "los", "las", "y", "o", "es", "se", "lo", "por", "con", "der", "die", "das", "und", "ist", "ein", "eine", "zu",
+  // Turkish
+  "ve", "bir", "bu", "su", "o", "da", "de", "ki", "mi", "ile", "icin",
+]);
+
+// Takes a normalized word.
+export const isFunctionWord = (word: string): boolean => FUNCTION_WORDS.has(word);
+
 // The reader also reports who a page credits and when. Those claims are kept only
-// if the page itself mentions them: the full name or at least the surname, and
-// the year of a date. Anything else may be the model's own guess.
+// if the page itself backs them: the full name or at least the surname anywhere,
+// and the year of a date in the right place (below). Anything else may be the
+// model's own guess.
 export function mentionsName(name: string, pageText: string): boolean {
   // Possessives would otherwise turn "Brown's" into "browns".
   const withoutPossessive = (text: string) => text.replace(/['’]s\b/g, "");
@@ -179,7 +199,53 @@ export function mentionsName(name: string, pageText: string): boolean {
   return surname.length >= 3 && page.includes(` ${surname} `);
 }
 
-export function mentionsYear(date: string, pageText: string): boolean {
+// A date the reader gives is kept only when its year sits where it would if it
+// were that date, not just anywhere on the page: one page can hold a dozen years
+// that belong to other things. Positions are counted in words of the normalized
+// page. The numbers were picked by replaying the first eval's readings over
+// their pages (see the commit that added them).
+// A page's own date sits in its title or near its top, where bylines and a
+// book's front matter are, or next to the snippet, as on a dated post.
+const PAGE_HEAD_WORDS = 300;
+const NEAR_SNIPPET_WORDS = 30;
+// A cited work's date sits next to the snippet or next to where the page names
+// the work ("in her 1976 article").
+const NEAR_SOURCE_WORDS = 20;
+
+const yearPattern = (date: string): RegExp | null => {
   const year = /^\d{4}/.exec(date)?.[0];
-  return Boolean(year) && new RegExp(`(^|\\D)${year}(\\D|$)`).test(pageText);
+  // A year inside a longer number ("119812") isn't that year.
+  return year ? new RegExp(`(^|\\D)${year}(\\D|$)`) : null;
+};
+
+// Word positions of the date's year among the page's normalized words
+// ("1981", "1960s" and "c1981" all count).
+const yearPositions = (pattern: RegExp, pageWords: readonly string[]): number[] =>
+  pageWords.flatMap((word, i) => (pattern.test(word) ? [i] : []));
+
+const within = (positions: readonly number[], span: Span, words: number): boolean =>
+  positions.some((p) => p >= span.start - words && p < span.end + words);
+
+export function keepsPageDate(date: string, page: { title: string; text: string }, span: Span | null): boolean {
+  const pattern = yearPattern(date);
+  if (!pattern) return false;
+  if (pattern.test(page.title)) return true;
+  const years = yearPositions(pattern, normalizeText(page.text).split(" "));
+  return years.some((p) => p < PAGE_HEAD_WORDS) || (span !== null && within(years, span, NEAR_SNIPPET_WORDS));
+}
+
+export function keepsCitedDate(date: string, pageText: string, span: Span | null, citedSource: string | null): boolean {
+  const pattern = yearPattern(date);
+  if (!pattern) return false;
+  const pageWords = normalizeText(pageText).split(" ");
+  const years = yearPositions(pattern, pageWords);
+  if (span !== null && within(years, span, NEAR_SNIPPET_WORDS)) return true;
+  // The work's name, by its longer words: "Narcotics Anonymous" is a better
+  // anchor than "the" or "of", and a year in the name would only find itself.
+  const names = new Set(
+    normalizeText(citedSource ?? "")
+      .split(" ")
+      .filter((w) => w.length >= 4 && /\p{L}/u.test(w) && !isFunctionWord(w)),
+  );
+  return pageWords.some((w, i) => names.has(w) && within(years, { start: i, end: i + 1 }, NEAR_SOURCE_WORDS));
 }

@@ -1046,6 +1046,16 @@ describe("investigate", () => {
     for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
   });
 
+  it("keeps a reader's date only where it sits on the page", async () => {
+    const filler = Array.from({ length: 400 }, () => "lorem").join(" ");
+    const text = `${filler} At the meeting a speaker said: "${QUOTE}." ${filler} A different talk was given in 1905. Sources: Basic Text 1975.`;
+    const { tavily } = tavilyFor(() => [NEWS], () => text);
+    const reading = { ...READ, page_date: "1905", cited_source: "the Basic Text", cited_source_date: "1975" };
+    const events = await run({ nebius: fakeNebius({ read: () => reading }), tavily });
+    const node = events.find((e) => e.type === "node_added");
+    expect(node?.type === "node_added" && node.node).toMatchObject({ pageDate: null, citedSourceDate: "1975", date: "1975" });
+  });
+
   it("counts a failed search as a call with unknown cost", async () => {
     const tavily: TavilyClient = {
       ...fakeTavily(),

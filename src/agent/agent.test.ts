@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { selectPassages } from "./passages";
 import { cleanDate, judgeOutputSchema } from "./schemas";
 import { toStrictJsonSchema } from "./structured";
-import { checkSnippet, matchSnippet, mentionsName, mentionsYear, normalizeText } from "./verifier";
+import { checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText } from "./verifier";
 
 const PAGE = `Knoxville News-Sentinel, October 11, 1981. At the Al-Anon meeting a speaker said:
 “Insanity is doing the same thing over and over again, but expecting different results.”`;
@@ -144,17 +144,41 @@ describe("toStrictJsonSchema", () => {
   });
 });
 
-describe("mentionsName and mentionsYear", () => {
+describe("mentionsName", () => {
   it("keeps a credit only when the page names that person", () => {
     expect(mentionsName("Rita Mae Brown", "a line from Rita Mae Brown's novel")).toBe(true);
     expect(mentionsName("Albert Einstein", "often credited to Einstein")).toBe(true);
     expect(mentionsName("Albert Einstein", PAGE)).toBe(false);
     expect(mentionsName("Rita Mae Brown (via a character)", "by Brown, 1983")).toBe(true);
   });
+});
 
-  it("keeps a date only when its year appears on the page", () => {
-    expect(mentionsYear("1981-10-11", PAGE)).toBe(true);
-    expect(mentionsYear("1905", PAGE)).toBe(false);
-    expect(mentionsYear("1981", "item 119812 in the archive")).toBe(false);
+describe("keepsPageDate and keepsCitedDate", () => {
+  const filler = (words: number) => Array.from({ length: words }, () => "lorem").join(" ");
+  // The snippet sits after 400 words, and other years sit far from it.
+  const text = `${filler(400)} In 1950 he wrote: the lantern burns brightest. ${filler(100)} A song from 1890 was also popular. ${filler(100)} Sources: Old Almanac 1872.`;
+  const span = matchSnippet("the lantern burns brightest", text).span;
+
+  it("keeps a page date in the title, near the top, or next to the snippet", () => {
+    expect(keepsPageDate("2014-05-02", { title: "Lanterns (2014)", text }, span)).toBe(true);
+    expect(keepsPageDate("2014", { title: "Lanterns", text: `Posted May 2, 2014. ${text}` }, span)).toBe(true);
+    expect(keepsPageDate("1950", { title: "Lanterns", text }, span)).toBe(true);
+  });
+
+  it("drops a page date whose year only turns up elsewhere on the page", () => {
+    expect(keepsPageDate("1890", { title: "Lanterns", text }, span)).toBe(false);
+    expect(keepsPageDate("1905", { title: "Lanterns", text }, span)).toBe(false);
+    expect(keepsPageDate("1981", { title: "Lanterns", text: "item 119812 in the archive" }, null)).toBe(false);
+  });
+
+  it("keeps a cited date next to the snippet or next to the cited work's name", () => {
+    expect(keepsCitedDate("1950", text, span, null)).toBe(true);
+    expect(keepsCitedDate("1872", text, span, "The Old Almanac")).toBe(true);
+  });
+
+  it("drops a cited date that sits by neither", () => {
+    expect(keepsCitedDate("1890", text, span, "The Old Almanac")).toBe(false);
+    expect(keepsCitedDate("1872", text, span, null)).toBe(false);
+    expect(keepsCitedDate("1872", text, null, "1872")).toBe(false);
   });
 });

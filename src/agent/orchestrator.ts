@@ -25,7 +25,7 @@ import {
   readerOutputSchema,
 } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult } from "./structured";
-import { checkSnippet, mentionsName, mentionsYear, normalizeText } from "./verifier";
+import { checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText, type Span } from "./verifier";
 
 // Sites that already wrote up where famous quotes come from. The eval excludes
 // them so the agent has to find the trail itself.
@@ -371,10 +371,6 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         "Use cited_source only for an earlier work this page itself names as where the saying appeared."
       : "";
     const pageText = `${page.title}\n${page.text}`;
-    const keepDate = (raw: string | null) => {
-      const date = cleanDate(raw);
-      return date && mentionsYear(date, pageText) ? date : null;
-    };
 
     // Whether the last reading found no quote on the page, as opposed to
     // finding one or failing to read it.
@@ -415,15 +411,21 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       }
       const { exact_snippet: snippet, attributed_to: credit } = read.data;
 
-      const citedSourceDate = keepDate(read.data.cited_source_date);
-      const pageDate = keepDate(read.data.page_date);
+      const match = matchSnippet(snippet, page.text);
+      // Dates are kept only where they sit on the page (see keepsPageDate).
+      const keepDate = (raw: string | null, placed: (date: string, span: Span | null) => boolean) => {
+        const date = cleanDate(raw);
+        return date && placed(date, match.span) ? date : null;
+      };
+      const citedSourceDate = keepDate(read.data.cited_source_date, (date, span) => keepsCitedDate(date, page.text, span, read.data.cited_source));
+      const pageDate = keepDate(read.data.page_date, (date, span) => keepsPageDate(date, page, span));
       const node: EvidenceNode = {
         id,
         url,
         host,
         // Titles come from the page too, so they get the same cap.
         title: page.title.slice(0, MAX_FIELD_CHARS),
-        check: checkSnippet(snippet, page.text),
+        check: { status: match.status, score: match.score },
         reader: read.data,
         attributedTo: credit && mentionsName(credit, pageText) ? credit : null,
         pageDate,

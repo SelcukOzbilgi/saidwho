@@ -29,7 +29,7 @@ export const evidenceNodeSchema = z.strictObject({
   check: z.strictObject({ status: z.enum(["exact", "near", "not_found"]), score: z.number() }),
   // What the reader returned, before any claim was checked against the page.
   reader: readerOutputSchema,
-  // Reader claims kept only when the page mentions them (see mentionsName/mentionsYear).
+  // Reader claims kept only when the page backs them (see mentionsName, keepsPageDate, keepsCitedDate).
   attributedTo: z.string().nullable(),
   pageDate: z.string().nullable(),
   citedSourceDate: z.string().nullable(),
