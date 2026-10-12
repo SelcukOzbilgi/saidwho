@@ -15,8 +15,13 @@ describe("clientIp", () => {
     expect(clientIp(headers({ "x-forwarded-for": "192.0.2.9" }), true)).toBeNull();
   });
 
-  it("takes the first address of a list", () => {
-    expect(clientIp(headers({ "x-vercel-forwarded-for": " 203.0.113.7 , 10.0.0.1" }), true)).toBe("203.0.113.7");
+  it("takes the last address of a list, since the ones before it could come from the client", () => {
+    expect(clientIp(headers({ "x-vercel-forwarded-for": "192.0.2.1, 192.0.2.2 , 203.0.113.7 " }), true)).toBe("203.0.113.7");
+    // A client writing a fresh address in front each time still counts as one visitor.
+    const spoofed = ["192.0.2.1", "192.0.2.2"].map((fake) =>
+      clientIp(headers({ "x-vercel-forwarded-for": `${fake}, 203.0.113.7` }), true),
+    );
+    expect(spoofed).toEqual(["203.0.113.7", "203.0.113.7"]);
   });
 
   it("skips a value that isn't an address", () => {

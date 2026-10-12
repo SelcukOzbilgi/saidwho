@@ -6,7 +6,8 @@ import { isIP } from "node:net";
 // came from and overwrites whatever the client sent, so it can't be faked.
 // x-forwarded-for carries the same address, but Vercel's docs say another proxy
 // in front of Vercel could overwrite it. x-real-ip is the same again and is the
-// fallback.
+// fallback. Should either ever hold a list, the last address is the one the
+// nearest proxy, Vercel, added; the ones before it could come from the client.
 // Off Vercel nothing sets these headers but the client, so none is trusted there
 // and every visitor shares one count.
 
@@ -15,8 +16,8 @@ export const UNKNOWN_VISITOR = "unknown";
 export function clientIp(headers: Headers, onVercel: boolean): string | null {
   if (!onVercel) return null;
   for (const name of ["x-vercel-forwarded-for", "x-real-ip"]) {
-    const first = headers.get(name)?.split(",")[0]?.trim();
-    if (first && isIP(first)) return first;
+    const last = headers.get(name)?.split(",").at(-1)?.trim();
+    if (last && isIP(last)) return last;
   }
   return null;
 }
