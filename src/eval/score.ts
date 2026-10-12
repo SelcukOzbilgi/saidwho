@@ -1,4 +1,5 @@
 import { type RunEvent, standingVerdict } from "../agent/events";
+import { isValidQuery } from "../agent/queries";
 import { cleanDate } from "../agent/schemas";
 import type { EvalCase, Verdict } from "./cases";
 
@@ -84,12 +85,15 @@ export type ProviderTrouble = { kinds: string[]; lasting: boolean; unrecovered: 
 // A plan, a page read or a verdict that failed counts as made up for when a later
 // try of the same thing worked. The app doesn't try a failed search or a failed
 // citation trace again, so those never are.
+// A search the provider refused because a model wrote a query that can't be one
+// (only punctuation, say) is the model's failure, so it is scored. The app no
+// longer sends such queries, but runs saved before it did.
 export function providerTrouble(events: readonly RunEvent[]): ProviderTrouble {
   const kinds = new Set<string>();
   let unrecovered = false;
   events.forEach((e, i) => {
     const failed =
-      e.type === "search_failed" ||
+      (e.type === "search_failed" && isValidQuery(e.query)) ||
       e.type === "plan_failed" ||
       e.type === "trace_failed" ||
       e.type === "judge_failed" ||

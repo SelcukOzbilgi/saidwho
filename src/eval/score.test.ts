@@ -88,15 +88,25 @@ describe("providerTrouble", () => {
     const events: RunEvent[] = [
       { type: "plan_failed", ...spend, reason: "rate_limit: Too many requests; slow down." },
       read("timeout: The provider did not respond in time."),
-      { type: "search_failed", query: "q", reason: "upstream" },
+      { type: "search_failed", query: "origin of the insanity quote", reason: "upstream" },
     ];
     expect(providerTrouble(events)).toEqual({ kinds: ["rate_limit", "timeout", "upstream"], lasting: false, unrecovered: true });
   });
 
   it("tells errors every later run would hit from passing ones", () => {
-    expect(providerTrouble([{ type: "search_failed", query: "q", reason: "quota" }]).lasting).toBe(true);
+    expect(providerTrouble([{ type: "search_failed", query: "origin of the insanity quote", reason: "quota" }]).lasting).toBe(true);
     expect(providerTrouble([{ type: "judge_failed", ...spend, reason: "auth: The API key was rejected." }]).lasting).toBe(true);
     expect(providerTrouble([{ type: "plan_failed", ...spend, reason: "bad_request: The provider rejected the request." }]).lasting).toBe(true);
+  });
+
+  it("leaves a search refused for a query a model wrote that can't be one to the score", () => {
+    const garbage: RunEvent = { type: "search_failed", query: '">"', reason: "unknown" };
+    expect(providerTrouble([garbage, verdict({}), done])).toEqual({ kinds: [], lasting: false, unrecovered: false });
+    expect(worthScoring([garbage, verdict({}), done])).toBe(true);
+    // A real query that hits the same error is still the provider's.
+    const real: RunEvent = { type: "search_failed", query: '"insanity is doing the same thing" origin', reason: "unknown" };
+    expect(providerTrouble([real, verdict({}), done])).toEqual({ kinds: ["unknown"], lasting: false, unrecovered: true });
+    expect(worthScoring([{ ...real, reason: "rate_limit" }, verdict({}), done])).toBe(false);
   });
 
   it("leaves the model's own failures to the score", () => {
@@ -133,13 +143,13 @@ describe("worthScoring", () => {
 
   it("skips a run with a provider error it didn't make up for, even one with a verdict", () => {
     expect(worthScoring([limited, done])).toBe(false);
-    expect(worthScoring([{ type: "search_failed", query: "q", reason: "rate_limit" }, verdict({}), done])).toBe(false);
+    expect(worthScoring([{ type: "search_failed", query: "origin of the insanity quote", reason: "rate_limit" }, verdict({}), done])).toBe(false);
     expect(worthScoring([{ type: "judge_skipped", reason: "no verified evidence" }, done])).toBe(true);
     expect(worthScoring([verdict({}), done])).toBe(true);
   });
 
   it("skips any run with a lasting provider error, even one a later try made up for", () => {
-    expect(worthScoring([{ type: "search_failed", query: "q", reason: "quota" }, verdict({}), done])).toBe(false);
+    expect(worthScoring([{ type: "search_failed", query: "origin of the insanity quote", reason: "quota" }, verdict({}), done])).toBe(false);
     const planned: RunEvent = { type: "planned", ...spend, variants: [], candidateAuthors: [], queries: ["q"] };
     const refused: RunEvent = { type: "plan_failed", ...spend, reason: "bad_request: The provider rejected the request." };
     expect(worthScoring([refused, planned, verdict({}), done])).toBe(false);
