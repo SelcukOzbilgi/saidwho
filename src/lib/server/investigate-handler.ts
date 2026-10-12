@@ -2,7 +2,7 @@ import "server-only";
 
 import type { RunEvent } from "../../agent/events";
 import type { InvestigationOptions } from "../../agent/orchestrator";
-import { clientIp, visitorKey } from "./client-ip";
+import { clientIp, UNKNOWN_VISITOR, visitorKey } from "./client-ip";
 import type { DailyLedger, Reservation } from "./daily-budget";
 import { TAVILY_USD_PER_CREDIT } from "./daily-budget";
 import type { ServerEnv } from "./env-schema";
@@ -83,6 +83,7 @@ const describe = (err: unknown, secrets: readonly string[]): string =>
 
 export function createInvestigateHandler(deps: InvestigateDeps): (request: Request) => Promise<Response> {
   const logError = deps.logError ?? ((message: string) => console.error(message));
+  let warnedNoAddress = false;
 
   return async function POST(request: Request): Promise<Response> {
     const parsed = await parseInvestigateRequest(request);
@@ -135,7 +136,13 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       return response;
     };
 
-    const visitor = visitorKey(clientIp(request.headers, deps.env.VERCEL === "1"));
+    const onVercel = deps.env.VERCEL === "1";
+    const visitor = visitorKey(clientIp(request.headers, onVercel));
+    if (onVercel && visitor === UNKNOWN_VISITOR && !warnedNoAddress) {
+      // Once per server instance, and never with the headers themselves.
+      warnedNoAddress = true;
+      logError("investigate: Vercel gave no visitor address, so visitors without one share a count");
+    }
     // The scarcer trial limit goes first, so a visitor out of trial runs who
     // keeps trying doesn't use up their hourly runs on their own keys too.
     const limits: Limit[] = [{ name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS }];

@@ -441,6 +441,21 @@ describe("POST /api/investigate", () => {
     expect(logError.mock.calls[0][0]).toContain("could not release the daily budget");
   });
 
+  it("logs once when Vercel gives no visitor address, without the headers", async () => {
+    const { handler, logError } = setup({ envVars: { VERCEL: "1" } });
+    const junk = { "x-vercel-forwarded-for": "not-an-address", "x-real-ip": "also-junk" };
+    for (let i = 0; i < 2; i++) await (await handler(post(byok, undefined, junk))).text();
+    expect(logError).toHaveBeenCalledOnce();
+    expect(logError.mock.calls[0][0]).toContain("no visitor address");
+    expect(logError.mock.calls[0][0]).not.toMatch(/not-an-address|also-junk/);
+  });
+
+  it("logs nothing about the address off Vercel, where it is never read", async () => {
+    const { handler, logError } = setup();
+    await (await handler(post(byok))).text();
+    expect(logError).not.toHaveBeenCalled();
+  });
+
   it("refuses a trial run when the visitor limits can't be checked, and gives the budget back", async () => {
     const { limiter } = spyLimiter(async () => Promise.reject(new Error("hit_rate_limit failed with 503")));
     const ledger = createDailyLedger(TRIAL_RESERVE_USD);
