@@ -271,14 +271,15 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   const foundAttribution = popularAttribution === null && plan.ok ? cleanName(plan.data.usual_attribution) : null;
   const credit = popularAttribution ?? foundAttribution;
   // The exact phrase always goes first, even if the planner leaves it out (or
-  // returns nothing). The planner's queries are checked first: one that can't be
-  // a search is dropped and listed in the planned event, and a long quoted
-  // span in one is cut to a distinctive part.
+  // returns nothing). The planner's queries are shaped and checked first: a long
+  // quoted span in one is cut to a distinctive part, so a query that is long
+  // only because it quotes a whole passage still goes, and one that can't be a
+  // search is dropped and listed in the planned event.
   const rejectedQueries: string[] = [];
   const plannedQueries = (plan.ok ? plan.data.queries : []).flatMap((raw) => {
-    const query = cleanQuery(raw);
+    const query = cleanQuery(shortenQuotedSpans(raw));
     if (query === null) rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
-    return query === null ? [] : [shortenQuotedSpans(query)];
+    return query === null ? [] : [query];
   });
   const queries = [`"${quote}"`, ...plannedQueries]
     .filter((q, i, all) => all.findIndex((other) => queryKey(other) === queryKey(q)) === i)
@@ -567,13 +568,13 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       const wording = raw.wording?.replace(/\s+/g, " ").trim() || null;
       const tooLong = [work, wording ?? ""].some((field) => field.length > MAX_FIELD_CHARS);
       if (!citingIds.has(raw.from_node) || !work || tooLong || followed.has(normalizeText(work))) continue;
-      const query = cleanQuery(raw.query);
+      const query = cleanQuery(shortenQuotedSpans(raw.query));
       if (query === null) {
         rejectedQueries.push(raw.query.slice(0, MAX_FIELD_CHARS));
         continue;
       }
       followed.add(normalizeText(work));
-      leads.push({ fromNode: raw.from_node, work, year: cleanDate(raw.year), query: shortenQuotedSpans(query), wording });
+      leads.push({ fromNode: raw.from_node, work, year: cleanDate(raw.year), query, wording });
       if (wording) leadWordings.push(wording);
       if (leads.length === LEADS_PER_ROUND) break;
     }

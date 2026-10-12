@@ -1077,6 +1077,17 @@ describe("investigate", () => {
       expect(fragment.split(" ").length).toBeLessThanOrEqual(10);
     });
 
+    it("cuts a quoted passage before the length check, so a query long only because of it still goes", async () => {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const passage = `${QUOTE} ${"And so the old saying went on and on through the town. ".repeat(8)}`.trim();
+      expect(`"${passage}" origin`.length).toBeGreaterThan(300);
+      const nebius = fakeNebius({ plan: () => ({ ...PLAN, queries: [`"${passage}" origin`] }) });
+      const events = await run({ nebius, tavily });
+      expect(queries).toHaveLength(2);
+      expect(queries[1]).toMatch(/^"[^"]+" origin$/);
+      expect(events.find((e) => e.type === "planned")).not.toHaveProperty("rejectedQueries");
+    });
+
     it("follows a quoted search that finds nothing with a looser one, and stops at five searches", async () => {
       // Only unquoted searches find anything.
       const { tavily, queries, options } = tavilyFor((q) => (q.includes('"') ? [] : [NEWS]));
