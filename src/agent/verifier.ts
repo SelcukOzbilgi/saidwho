@@ -282,5 +282,14 @@ export function keepsCitedDate(date: string, pageText: string, span: Span | null
       .split(" ")
       .filter((w) => w.length >= 4 && /\p{L}/u.test(w) && !isFunctionWord(w)),
   );
-  return pageWords.some((w, i) => names.has(w) && within(years, { start: i, end: i + 1 }, NEAR_SOURCE_WORDS));
+  // One pass over both lists, in page order, so a long page with the name and
+  // the year all over it still costs one look at each.
+  let next = 0;
+  for (let i = 0; i < pageWords.length; i++) {
+    if (!names.has(pageWords[i])) continue;
+    while (next < years.length && years[next] < i - NEAR_SOURCE_WORDS) next++;
+    if (next === years.length) return false;
+    if (years[next] <= i + NEAR_SOURCE_WORDS) return true;
+  }
+  return false;
 }
