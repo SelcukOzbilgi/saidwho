@@ -9,13 +9,16 @@ describe("cleanQuery", () => {
     expect(isValidQuery("« Qu'ils mangent de la brioche » origine")).toBe(true);
     expect(isValidQuery('"640K" memory quote')).toBe(true);
     expect(isValidQuery("640K")).toBe(true);
+    expect(isValidQuery("知足")).toBe(true);
+    expect(isValidQuery("мир")).toBe(true);
+    expect(isValidQuery("Aşk")).toBe(true);
   });
 
   it("rejects a query with no letter, too few characters, or too many", () => {
     expect(cleanQuery('">"')).toBeNull();
     expect(cleanQuery(">")).toBeNull();
     expect(cleanQuery("1981")).toBeNull();
-    expect(cleanQuery('"ab"')).toBeNull();
+    expect(cleanQuery('"a"')).toBeNull();
     expect(cleanQuery("   ")).toBeNull();
     expect(cleanQuery("word ".repeat(70))).toBeNull();
   });
@@ -30,6 +33,12 @@ describe("shortenQuotedSpans", () => {
     const words = /"([^"]+)"/.exec(shorter)?.[1].split(" ") ?? [];
     expect(words.length).toBeGreaterThanOrEqual(6);
     expect(words.length).toBeLessThanOrEqual(10);
+  });
+
+  it("never cuts a span down to a fragment with no letter in it", () => {
+    const dashes = '"… … … … … … … … it is what it is"';
+    expect(shortenQuotedSpans(dashes)).toBe(dashes);
+    expect(broaden(dashes)).toBe("… … … … … … … … it is what it is");
   });
 
   it("leaves short quoted spans and unquoted text alone", () => {

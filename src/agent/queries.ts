@@ -5,7 +5,8 @@
 
 import { isFunctionWord, normalizeText } from "./verifier";
 
-const MIN_QUERY_CHARS = 4;
+// Two, so a two-character Chinese title or a three-letter word still goes.
+const MIN_QUERY_CHARS = 2;
 export const MAX_QUERY_CHARS = 300;
 // A quoted span longer than this many words is searched as a fragment of
 // FRAGMENT_WORDS. In the first eval, queries quoting a whole long saying came
@@ -14,7 +15,7 @@ const LONG_SPAN_WORDS = 10;
 const FRAGMENT_WORDS = 8;
 
 // Whitespace collapsed and trimmed, or null when the query can't be a real
-// search: no letter at all, under four letters and digits, or over 300 characters.
+// search: no letter at all, under two letters and digits, or over 300 characters.
 export function cleanQuery(raw: string): string | null {
   const query = raw.replace(/\s+/g, " ").trim();
   if (query.length > MAX_QUERY_CHARS || !/\p{L}/u.test(query)) return null;
@@ -48,11 +49,15 @@ function fragmentOf(words: readonly string[]): string {
     .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 }
 
-// Cuts every quoted span longer than LONG_SPAN_WORDS words down to a distinctive fragment.
+// Cuts every quoted span longer than LONG_SPAN_WORDS words down to a distinctive
+// fragment. A span whose best fragment has no letter in it (a run of dashes or
+// ellipses) is left whole rather than turned into an empty search.
 export function shortenQuotedSpans(query: string): string {
   return query.replace(/"([^"]+)"/g, (whole, span: string) => {
     const words = span.trim().split(/\s+/);
-    return words.length > LONG_SPAN_WORDS ? `"${fragmentOf(words)}"` : whole;
+    if (words.length <= LONG_SPAN_WORDS) return whole;
+    const fragment = fragmentOf(words);
+    return /\p{L}/u.test(fragment) ? `"${fragment}"` : whole;
   });
 }
 

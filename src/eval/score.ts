@@ -76,6 +76,10 @@ const PASSING_TROUBLE = new Set(["rate_limit", "timeout", "upstream", "network",
 // Errors every later run would hit too: a rejected key, no credits, a missing
 // model, or a request the provider refuses, which is most likely the harness's.
 const LASTING_TROUBLE = new Set(["auth", "quota", "not_found", "bad_request"]);
+// What a search gives when the provider refuses the query itself.
+const REFUSED_QUERY = new Set(["bad_request", "unknown"]);
+const refusedModelQuery = (e: RunEvent): boolean =>
+  e.type === "search_failed" && REFUSED_QUERY.has(e.reason) && !isValidQuery(e.query);
 
 // unrecovered: some call that failed was never made good, so the run's evidence
 // or verdict may be short of what the setup would have found.
@@ -87,13 +91,14 @@ export type ProviderTrouble = { kinds: string[]; lasting: boolean; unrecovered: 
 // citation trace again, so those never are.
 // A search the provider refused because a model wrote a query that can't be one
 // (only punctuation, say) is the model's failure, so it is scored. The app no
-// longer sends such queries, but runs saved before it did.
+// longer sends such queries, but runs saved before it did. Only a refusal
+// counts: a key, quota or network error on such a query is still the provider's.
 export function providerTrouble(events: readonly RunEvent[]): ProviderTrouble {
   const kinds = new Set<string>();
   let unrecovered = false;
   events.forEach((e, i) => {
     const failed =
-      (e.type === "search_failed" && isValidQuery(e.query)) ||
+      (e.type === "search_failed" && !refusedModelQuery(e)) ||
       e.type === "plan_failed" ||
       e.type === "trace_failed" ||
       e.type === "judge_failed" ||

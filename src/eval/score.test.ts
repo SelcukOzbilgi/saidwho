@@ -107,6 +107,8 @@ describe("providerTrouble", () => {
     const real: RunEvent = { type: "search_failed", query: '"insanity is doing the same thing" origin', reason: "unknown" };
     expect(providerTrouble([real, verdict({}), done])).toEqual({ kinds: ["unknown"], lasting: false, unrecovered: true });
     expect(worthScoring([{ ...real, reason: "rate_limit" }, verdict({}), done])).toBe(false);
+    // A quota error on a bad query is still the provider's.
+    expect(providerTrouble([{ ...garbage, reason: "quota" }, verdict({}), done]).lasting).toBe(true);
   });
 
   it("leaves the model's own failures to the score", () => {
