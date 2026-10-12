@@ -94,31 +94,6 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     const keys = resolved.keys;
     const secrets = [keys.nebiusApiKey, keys.tavilyApiKey];
 
-    // Checked before the budget, so one visitor can't hold the day's budget in
-    // reservations. A trial run counts against both limits.
-    const visitor = visitorKey(clientIp(request.headers, deps.env.VERCEL === "1"));
-    const limits: Limit[] = [{ name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS }];
-    if (keys.source === "owner") {
-      limits.push({ name: "trial", max: deps.env.TRIAL_RUNS_PER_IP_PER_DAY, windowSeconds: DAY_SECONDS });
-    }
-    for (const limit of limits) {
-      let allowed: boolean;
-      try {
-        allowed = await deps.limiter.hit(visitor, limit);
-      } catch (err: unknown) {
-        logError(`investigate: could not check the ${limit.name} limit: ${describe(err, secrets)}`);
-        // A trial run spends the owner's money, so without a working count none
-        // starts. A run on the visitor's own keys costs the owner nothing, so a
-        // broken count shouldn't block it.
-        if (keys.source === "owner") return fail(503, "limits_unavailable");
-        continue;
-      }
-      if (!allowed) {
-        const retryAfter = String(secondsLeftInWindow(limit.windowSeconds));
-        return fail(429, LIMIT_ERRORS[limit.name], {}, { "Retry-After": retryAfter });
-      }
-    }
-
     let nebius: NebiusClient;
     let tavily: TavilyClient;
     try {
@@ -136,6 +111,9 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       return fail(500, "server_misconfigured");
     }
 
+    // The budget is set aside before the visitor is counted, so a day whose
+    // budget is spent doesn't use up anyone's runs. A refused run gives its
+    // reservation straight back.
     let reservation: Reservation | null = null;
     if (keys.source === "owner") {
       try {
@@ -146,6 +124,40 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
         return fail(503, "limits_unavailable");
       }
       if (!reservation) return fail(429, "daily_budget_spent");
+    }
+    const refuse = async (response: Response): Promise<Response> => {
+      try {
+        await reservation?.settle(0);
+      } catch (err: unknown) {
+        // The reservation then stays counted until the day ends, which errs toward spending less.
+        logError(`investigate: could not release the daily budget: ${describe(err, secrets)}`);
+      }
+      return response;
+    };
+
+    const visitor = visitorKey(clientIp(request.headers, deps.env.VERCEL === "1"));
+    // The scarcer trial limit goes first, so a visitor out of trial runs who
+    // keeps trying doesn't use up their hourly runs on their own keys too.
+    const limits: Limit[] = [{ name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS }];
+    if (keys.source === "owner") {
+      limits.unshift({ name: "trial", max: deps.env.TRIAL_RUNS_PER_IP_PER_DAY, windowSeconds: DAY_SECONDS });
+    }
+    for (const limit of limits) {
+      let allowed: boolean;
+      try {
+        allowed = await deps.limiter.hit(visitor, limit);
+      } catch (err: unknown) {
+        logError(`investigate: could not check the ${limit.name} limit: ${describe(err, secrets)}`);
+        // A trial run spends the owner's money, so without a working count none
+        // starts. A run on the visitor's own keys costs the owner nothing, so a
+        // broken count shouldn't block it.
+        if (keys.source === "owner") return refuse(fail(503, "limits_unavailable"));
+        continue;
+      }
+      if (!allowed) {
+        const retryAfter = String(secondsLeftInWindow(limit.windowSeconds));
+        return refuse(fail(429, LIMIT_ERRORS[limit.name], {}, { "Retry-After": retryAfter }));
+      }
     }
 
     // One controller stops the run, whether the client disconnects (request.signal),

@@ -373,23 +373,84 @@ describe("POST /api/investigate", () => {
     expect(elsewhere.hits.map((h) => h.visitor)).toEqual(["unknown"]);
   });
 
-  it("checks the visitor limits before setting aside any budget", async () => {
-    const ledger = createDailyLedger(1);
-    const reserve = vi.spyOn(ledger, "reserve");
+  it("gives the budget back when a visitor limit refuses the run", async () => {
+    const ledger = createDailyLedger(TRIAL_RESERVE_USD);
     const { limiter } = spyLimiter(async () => false);
     const res = await setup({ envVars: ownerEnv, ledger, limiter }).handler(post(trial));
     expect(res.status).toBe(429);
+    expect(ledger.spentTodayUsd()).toBe(0);
+    expect(await ledger.reserve(TRIAL_RESERVE_USD)).not.toBeNull();
+  });
+
+  it("uses up no count when the day's budget is spent", async () => {
+    const { limiter, hits } = spyLimiter();
+    const res = await setup({ envVars: ownerEnv, ledger: createDailyLedger(0), limiter }).handler(post(trial));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+    expect(hits).toEqual([]);
+  });
+
+  it("uses up no count when the daily budget can't be checked", async () => {
+    const ledger = { reserve: async () => Promise.reject(new Error("reserve_trial_budget failed with 503")) };
+    const { limiter, hits } = spyLimiter();
+    const res = await setup({ envVars: ownerEnv, ledger, limiter }).handler(post(trial));
+    expect(res.status).toBe(503);
+    expect(hits).toEqual([]);
+  });
+
+  it("uses up no count or budget when the provider clients can't be made", async () => {
+    const ledger = createDailyLedger(1);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { limiter, hits } = spyLimiter();
+    const res = await setup({
+      envVars: ownerEnv,
+      ledger,
+      limiter,
+      createNebius: () => {
+        throw new Error("bad setup");
+      },
+    }).handler(post(trial));
+    expect(res.status).toBe(500);
+    expect(hits).toEqual([]);
     expect(reserve).not.toHaveBeenCalled();
   });
 
-  it("refuses a trial run when the visitor limits can't be checked", async () => {
+  it("keeps a visitor's hourly runs when their trial runs are used up", async () => {
+    const { handler, calls } = setup({
+      envVars: { ...ownerEnv, RUNS_PER_IP_PER_HOUR: "2", TRIAL_RUNS_PER_IP_PER_DAY: "1" },
+      ledger: createDailyLedger(10),
+    });
+    await (await handler(post(trial))).text();
+    for (let i = 0; i < 3; i++) expect((await handler(post(trial))).status).toBe(429);
+    const own = await handler(post(byok));
+    expect(own.status).toBe(200);
+    await own.text();
+    expect((await handler(post(byok))).status).toBe(429);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("still refuses when giving the budget back fails, and logs it", async () => {
+    const settle = vi.fn(async () => Promise.reject(new Error("settle_trial_budget failed with 503")));
+    const ledger = { reserve: async () => ({ settle }) };
+    const { limiter } = spyLimiter(async () => false);
+    const { handler, logError } = setup({ envVars: ownerEnv, ledger, limiter });
+    const res = await handler(post(trial));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "trial_limit_reached" });
+    expect(settle).toHaveBeenCalledWith(0);
+    expect(logError.mock.calls[0][0]).toContain("could not release the daily budget");
+  });
+
+  it("refuses a trial run when the visitor limits can't be checked, and gives the budget back", async () => {
     const { limiter } = spyLimiter(async () => Promise.reject(new Error("hit_rate_limit failed with 503")));
-    const { handler, calls, logError } = setup({ envVars: ownerEnv, ledger: createDailyLedger(1), limiter });
+    const ledger = createDailyLedger(TRIAL_RESERVE_USD);
+    const { handler, calls, logError } = setup({ envVars: ownerEnv, ledger, limiter });
     const res = await handler(post(trial));
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: "limits_unavailable" });
     expect(calls).toHaveLength(0);
-    expect(logError.mock.calls[0][0]).toContain("could not check the runs limit");
+    expect(logError.mock.calls[0][0]).toContain("could not check the trial limit");
+    expect(await ledger.reserve(TRIAL_RESERVE_USD)).not.toBeNull();
   });
 
   it("still runs on the visitor's own keys when the limits can't be checked, and logs it", async () => {
