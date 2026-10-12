@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: PageProps<"/cases/[id]">, par
       ? `No early source ties it to ${popularAttribution}`
       : verdict && HEADLINE[verdict.output.verdict](popularAttribution);
   const description = answer
-    ? `${answer}. A finished Said Who? run, with a link for every step.`
+    ? `What one Said Who? run found: ${answer}. Replay it, with the pages it checked.`
     : popularAttribution
       ? `A finished Said Who? run looking into where this quote, usually credited to ${popularAttribution}, came from, with every step.`
       : "A finished Said Who? run looking into where this quote came from, with every step.";

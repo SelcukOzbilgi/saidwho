@@ -21,7 +21,7 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
-const description = "Paste a quote you saw online and find out where it first appeared, with a link for every step.";
+const description = "Paste a quote you saw online and trace where it first appeared, with a link to every page it checked.";
 
 // Pages below set their own title and description; the share image comes from
 // opengraph-image.jpg and twitter-image.jpg in this folder.
