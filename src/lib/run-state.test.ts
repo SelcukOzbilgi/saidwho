@@ -101,17 +101,44 @@ describe("reduceRun", () => {
       { type: "escalated", step: "judge", from: "super", to: "ultra", thinking: true, reason: "cites n9", url: null },
       { type: "verdict", ...spend, tier: "ultra", verdict: verdict("misattributed"), unknownIds: [] },
     ]);
-    expect(state.verdict).toMatchObject({ tier: "ultra", unknownIds: [], output: { verdict: "misattributed" } });
+    expect(state.verdict).toMatchObject({ tier: "ultra", output: { verdict: "misattributed" } });
+    expect(state.log.find((e) => e.text.startsWith("Set aside"))).toMatchObject({
+      agent: "Judge",
+      tone: "bad",
+      text: "Set aside a verdict (correctly attributed, medium confidence): it cites n9, which were not confirmed",
+    });
     expect(state.log.find((e) => e.text.startsWith("Trying again on ultra"))?.tone).toBe("warn");
   });
 
-  it("keeps the first verdict when the second judge fails", () => {
+  it("shows no verdict when the only one cites an unconfirmed page, even after the second judge fails", () => {
+    const setAside = run([{ type: "verdict", ...spend, tier: "super", verdict: verdict("contested"), unknownIds: ["n9"] }]);
+    expect(setAside.verdict).toBeNull();
+    expect(setAside.noVerdict).toBe("the Judge's verdict cited pages that weren't confirmed, so it was set aside");
+    const failed = reduceRun(setAside, { type: "judge_failed", ...spend, tier: "ultra", reason: "upstream" });
+    expect(failed.verdict).toBeNull();
+    expect(failed.noVerdict).toBe("upstream");
+  });
+
+  it("logs what the checker changed about the earliest date after the verdict", () => {
     const state = run([
-      { type: "verdict", ...spend, tier: "super", verdict: verdict("contested"), unknownIds: ["n9"] },
-      { type: "judge_failed", ...spend, tier: "ultra", reason: "upstream" },
+      {
+        type: "verdict",
+        ...spend,
+        verdict: verdict("misattributed"),
+        unknownIds: [],
+        fixes: ["named n2 as the earliest page instead of n5: n2 gives 1999 and n5 doesn't"],
+      },
     ]);
-    expect(state.verdict?.tier).toBe("super");
-    expect(state.noVerdict).toBeNull();
+    expect(state.log.slice(-2).map((e) => [e.agent, e.tone, e.text])).toEqual([
+      ["Judge", "good", "Verdict: misattributed, medium confidence"],
+      ["Checker", "warn", "Named n2 as the earliest page instead of n5: n2 gives 1999 and n5 doesn't"],
+    ]);
+    expect(state.log.map((e) => e.id)).toEqual(state.log.map((_, i) => i));
+  });
+
+  it("says when the judge is asked for a verdict without the lineage", () => {
+    const state = run([{ type: "escalated", step: "judge", from: "super", to: "super", thinking: false, reason: "ran out of tokens", url: null, compact: true }]);
+    expect(state.log.at(-1)?.text).toBe("Trying again on super with thinking off, without the lineage: ran out of tokens");
   });
 
   it("says why there is no verdict", () => {

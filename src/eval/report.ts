@@ -36,7 +36,7 @@ export function renderResults(cases: readonly EvalCase[], policies: readonly Pol
     row(["Earlier than the known date (checked by hand)", ...per((s) => String(s.earliest.older))]),
     row(["Later than the known date", ...per((s) => String(s.earliest.later))]),
     row(["No date given", ...per((s) => String(s.earliest.missing))]),
-    row(["Verdict citing unverified evidence", ...per((s) => String(s.unsupported))]),
+    row(["Last verdict set aside for citing unverified evidence", ...per((s) => String(s.unsupported))]),
     row(["Stopped at the spending cap", ...per((s) => String(s.capped))]),
     row(["Nebius cost, all quotes", ...per((s) => usd(s.nebiusUsd, 4))]),
     row(["Nebius cost per quote", ...per((s) => (s.runs ? usd(s.nebiusUsd / s.runs, 4) : "-"))]),

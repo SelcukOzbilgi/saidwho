@@ -1,4 +1,4 @@
-import type { RunEvent } from "../agent/events";
+import { type RunEvent, standingVerdict } from "../agent/events";
 import { cleanDate } from "../agent/schemas";
 import type { EvalCase, Verdict } from "./cases";
 
@@ -16,7 +16,8 @@ export type EarliestScore = "match" | "older" | "later" | "missing";
 export type RunScore = {
   caseId: string;
   expected: Verdict;
-  // The verdict that stands (the last one), or null when the run gave none.
+  // The verdict that stands (the last one whose ids all check out), or null
+  // when the run gave none.
   verdict: Verdict | null;
   verdictRight: boolean;
   // When the verdict says the saying first appeared. The judge writes dates
@@ -25,7 +26,8 @@ export type RunScore = {
   earliestDate: string | null;
   // null when the case has no known date to compare with.
   earliest: EarliestScore | null;
-  // The standing verdict cites evidence that was never verified.
+  // The run's last verdict cited evidence that was never verified, so it was set
+  // aside. Runs judged before verdicts were set aside score the same way.
   unsupported: boolean;
   // The run hit the spending cap, so it stopped before it was done.
   capped: boolean;
@@ -38,8 +40,8 @@ export type RunScore = {
 const yearOf = (date: string): number => Number(date.slice(0, 4));
 
 export function scoreRun(evalCase: EvalCase, events: readonly RunEvent[]): RunScore {
-  const verdicts = events.flatMap((e) => (e.type === "verdict" ? [e] : []));
-  const last = verdicts.at(-1);
+  const lastGiven = events.findLast((e) => e.type === "verdict");
+  const last = standingVerdict(events);
   const done = events.findLast((e) => e.type === "done");
   const knownDate = evalCase.earliest.date;
   const runDate = cleanDate(last?.verdict.earliest_date ?? null);
@@ -57,7 +59,7 @@ export function scoreRun(evalCase: EvalCase, events: readonly RunEvent[]): RunSc
     verdictRight: last?.verdict.verdict === evalCase.verdict,
     earliestDate: runDate,
     earliest,
-    unsupported: (last?.unknownIds.length ?? 0) > 0,
+    unsupported: lastGiven?.type === "verdict" && lastGiven.unknownIds.length > 0,
     capped: events.some((e) => e.type === "budget_exceeded"),
     nebiusUsd: done?.type === "done" ? done.nebiusUsd : 0,
     tavilyCredits: done?.type === "done" ? done.tavilyCredits : 0,

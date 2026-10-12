@@ -43,7 +43,7 @@ describe("VerdictCard", () => {
     /<h2[^>]*>([^<]*)<\/h2>/.exec(
       renderToStaticMarkup(
         createElement(VerdictCard, {
-          verdict: { tier: "super", output: output(verdict), unknownIds: [] },
+          verdict: { tier: "super", output: output(verdict) },
           noVerdict: null,
           stopped: null,
           finished: true,

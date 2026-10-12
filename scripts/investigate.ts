@@ -117,8 +117,9 @@ async function main(): Promise<void> {
           console.log(`   expected:  ${evalCase.earliest.author ?? "unknown"}, ${evalCase.earliest.date ?? "?"} (${evalCase.earliest.work})`);
           console.log(`   rationale: ${j.rationale}`);
           if (event.unknownIds.length) {
-            console.log(`   UNSUPPORTED verdict points at ids that are not verified nodes: ${event.unknownIds.join(", ")}`);
+            console.log(`   SET ASIDE: the verdict points at ids that are not verified nodes: ${event.unknownIds.join(", ")}`);
           }
+          for (const fix of event.fixes ?? []) console.log(`   checker ${fix}`);
         }
         break;
       case "budget_exceeded":
