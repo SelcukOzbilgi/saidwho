@@ -20,6 +20,37 @@ export const MODELS: Readonly<Record<Tier, ModelSpec>> = {
   ultra: { tier: "ultra", id: "nvidia/Nemotron-3-Ultra-550b-a55b", inputUsdPerM: 1, outputUsdPerM: 3 },
 };
 
+// Which model each step uses. The app always runs the cascade; the eval also
+// runs every step on one model, to measure what the cascade saves.
+export type ModelPolicy = {
+  readonly plan: ModelSpec;
+  readonly read: ModelSpec;
+  // A page read again after the first reading's check failed.
+  readonly reread: ModelSpec;
+  readonly trace: ModelSpec;
+  readonly judge: ModelSpec;
+  // A second judge after the first one's call or verdict failed its check.
+  readonly rejudge: ModelSpec;
+};
+
+export const CASCADE: ModelPolicy = {
+  plan: MODELS.super,
+  read: MODELS.lightning,
+  reread: MODELS.super,
+  trace: MODELS.super,
+  judge: MODELS.super,
+  rejudge: MODELS.ultra,
+};
+
+export const everyStepOn = (model: ModelSpec): ModelPolicy => ({
+  plan: model,
+  read: model,
+  reread: model,
+  trace: model,
+  judge: model,
+  rejudge: model,
+});
+
 export type TokenUsage = { promptTokens: number; completionTokens: number };
 
 export function estimateCostUsd(model: ModelSpec, usage: TokenUsage): number {
