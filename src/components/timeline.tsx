@@ -64,11 +64,12 @@ const unquote = (text: string): string =>
 // The card shows the words without the marks; the saved text keeps them.
 export const unmark = (text: string): string =>
   text
-    // As in Markdown, the marked words can't start or end with a space, so "5 * 3 * 2" stays.
-    .replace(/\*\*(\S(?:[^*\n]*\S)?)\*\*/g, "$1")
-    .replace(/__(\S(?:[^_\n]*\S)?)__/g, "$1")
-    .replace(/\*(\S(?:[^*\n]*\S)?)\*/g, "$1")
-    .replace(/(^|[^\w])_(\S(?:[^_\n]*\S)?)_(?!\w)/g, "$1$2");
+    // As in Markdown, the marked words can't start or end with a space, so "5 * 3 * 2"
+    // stays, and the marks have to sit at a word's edge, so "f**k" and "2*3*4" stay too.
+    .replace(/(^|[^\p{L}\p{N}*])\*\*(\S(?:[^*\n]*\S)?)\*\*(?![\p{L}\p{N}*])/gu, "$1$2")
+    .replace(/(^|[^\p{L}\p{N}_])__(\S(?:[^_\n]*\S)?)__(?![\p{L}\p{N}_])/gu, "$1$2")
+    .replace(/(^|[^\p{L}\p{N}*])\*(\S(?:[^*\n]*\S)?)\*(?![\p{L}\p{N}*])/gu, "$1$2")
+    .replace(/(^|[^\p{L}\p{N}_])_(\S(?:[^_\n]*\S)?)_(?![\p{L}\p{N}_])/gu, "$1$2");
 
 // Links come from search results; only web pages get to be one.
 const webUrl = (url: string): string | undefined => (/^https?:\/\//i.test(url) ? url : undefined);
