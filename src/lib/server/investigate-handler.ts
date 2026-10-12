@@ -100,7 +100,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
 
     let reservation: Reservation | null = null;
     if (keys.source === "owner") {
-      reservation = deps.ledger.reserve(TRIAL_RESERVE_USD);
+      reservation = await deps.ledger.reserve(TRIAL_RESERVE_USD);
       if (!reservation) return fail(429, "daily_budget_spent");
     }
 
@@ -162,7 +162,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             const finished = done as DoneEvent | null;
             const counted = finished ? finished.nebiusUsd + finished.tavilyCredits * TAVILY_USD_PER_CREDIT : 0;
             const allKnown = finished !== null && finished.unknownCostCalls === 0;
-            reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
+            await reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
             // Saved before the stream closes: work left for after the response ends
             // may never run on a serverless platform. A run that ended before it
             // planned or searched anything, as one with a rejected key does, has

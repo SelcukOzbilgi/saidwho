@@ -11,14 +11,16 @@
 // same budget as model spend.
 export const TAVILY_USD_PER_CREDIT = 0.008;
 
-export type Reservation = { settle: (actualUsd: number) => void };
+// Async, so the count can live somewhere every server instance shares.
+export type Reservation = { settle: (actualUsd: number) => Promise<void> };
 
 export type DailyLedger = {
-  reserve: (amountUsd: number) => Reservation | null;
-  spentTodayUsd: () => number;
+  reserve: (amountUsd: number) => Promise<Reservation | null>;
 };
 
-export function createDailyLedger(budgetUsd: number, now: () => Date = () => new Date()): DailyLedger {
+export type MemoryLedger = DailyLedger & { spentTodayUsd: () => number };
+
+export function createDailyLedger(budgetUsd: number, now: () => Date = () => new Date()): MemoryLedger {
   let day = "";
   let settledUsd = 0;
   let reservedUsd = 0;
@@ -31,13 +33,13 @@ export function createDailyLedger(budgetUsd: number, now: () => Date = () => new
   };
 
   return {
-    reserve(amountUsd) {
+    async reserve(amountUsd) {
       rollOver();
       if (settledUsd + reservedUsd + amountUsd > budgetUsd) return null;
       reservedUsd += amountUsd;
       let settled = false;
       return {
-        settle(actualUsd) {
+        async settle(actualUsd) {
           if (settled) return;
           settled = true;
           rollOver();
