@@ -12,3 +12,9 @@ create table public.runs (
 -- Only the server reads and writes, with the secret key, which bypasses row level
 -- security. With RLS on and no policies, the public API keys can do nothing here.
 alter table public.runs enable row level security;
+
+-- Supabase is moving new projects off granting new tables to the API roles by
+-- default, so the grants are spelled out: the server's role saves and reads
+-- runs, and the public roles get nothing, whichever default the project has.
+revoke all on table public.runs from anon, authenticated;
+grant select, insert on table public.runs to service_role;
