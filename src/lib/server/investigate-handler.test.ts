@@ -44,6 +44,7 @@ function spyLimiter(answer: (limit: Limit) => Promise<boolean> = async () => tru
       hits.push({ visitor, limit });
       return answer(limit);
     },
+    unhit: async () => {},
   };
   return { limiter, hits };
 }

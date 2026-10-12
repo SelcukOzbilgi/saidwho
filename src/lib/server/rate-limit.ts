@@ -18,6 +18,9 @@ export type Limit = { name: "runs" | "trial"; max: number; windowSeconds: number
 export type RateLimiter = {
   // True when the run may start, and then it is counted. A refused run isn't.
   hit: (visitor: string, limit: Limit) => Promise<boolean>;
+  // Gives back one run counted in the current window, for a run refused after it
+  // was counted. Never below 0, and nothing once the window has ended.
+  unhit: (visitor: string, limit: Limit) => Promise<void>;
 };
 
 export const HOUR_SECONDS = 3_600;
@@ -38,19 +41,26 @@ export const hashVisitor = (key: Buffer, visitor: string): string =>
 export function createMemoryLimiter(now: () => number = Date.now): RateLimiter {
   const key = randomBytes(32);
   const counts = new Map<string, { endsAt: number; hits: number }>();
+  const windowAt = (at: number, visitor: string, { name, windowSeconds }: Limit) => {
+    const windowMs = windowSeconds * 1000;
+    const start = Math.floor(at / windowMs) * windowMs;
+    return { id: `${name}:${start}:${hashVisitor(key, visitor)}`, endsAt: start + windowMs };
+  };
   return {
-    async hit(visitor, { name, max, windowSeconds }) {
+    async hit(visitor, limit) {
       const at = now();
       // Ended windows go first. A small demo has few visitors a day, so a full pass is cheap.
       for (const [id, count] of counts) if (count.endsAt <= at) counts.delete(id);
-      const windowMs = windowSeconds * 1000;
-      const start = Math.floor(at / windowMs) * windowMs;
-      const id = `${name}:${start}:${hashVisitor(key, visitor)}`;
-      const count = counts.get(id) ?? { endsAt: start + windowMs, hits: 0 };
-      if (count.hits >= max) return false;
+      const { id, endsAt } = windowAt(at, visitor, limit);
+      const count = counts.get(id) ?? { endsAt, hits: 0 };
+      if (count.hits >= limit.max) return false;
       count.hits += 1;
       counts.set(id, count);
       return true;
+    },
+    async unhit(visitor, limit) {
+      const count = counts.get(windowAt(now(), visitor, limit).id);
+      if (count && count.hits > 0) count.hits -= 1;
     },
   };
 }
@@ -68,6 +78,9 @@ export function createSharedLimiter(rpc: SupabaseRpc, key: Buffer): RateLimiter 
       });
       return z.boolean().parse(reply);
     },
+    async unhit(visitor, { name, windowSeconds }) {
+      await rpc("unhit_rate_limit", { p_key: `${name}:${hashVisitor(key, visitor)}`, p_window_seconds: windowSeconds });
+    },
   };
 }
 
@@ -78,7 +91,8 @@ export const visitorHashKey = (supabaseSecretKey: string): Buffer =>
   createHmac("sha256", supabaseSecretKey).update("saidwho visitor hash v1").digest();
 
 // Every run waits on the count, including one on the visitor's own keys that
-// goes ahead when the count fails, so a slow database gets less time here.
+// goes ahead when the count fails, so a slow database gets less time here. A
+// refused run waits on giving its counts back for no longer.
 export const LIMITER_TIMEOUT_MS = 2_000;
 
 export function limiterFromEnv(env: ServerEnv): RateLimiter {

@@ -51,6 +51,31 @@ describe("memory limiter", () => {
     now = Date.parse("2026-10-13T00:00:00Z");
     expect(await limiter.hit("203.0.113.7", trial)).toBe(true);
   });
+
+  it("takes a count back, never below 0 and never into another window", async () => {
+    let now = Date.parse("2026-10-12T10:00:00Z");
+    const limiter = createMemoryLimiter(() => now);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(true);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(true);
+    await limiter.unhit("203.0.113.7", runs);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(true);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(false);
+
+    // Below 0 would let more runs through than the limit.
+    for (let i = 0; i < 4; i++) await limiter.unhit("203.0.113.7", runs);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(true);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(true);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(false);
+
+    // A visitor never counted, or one counted last hour, has nothing to give back here.
+    await limiter.unhit("198.51.100.1", runs);
+    expect(await limiter.hit("198.51.100.1", runs)).toBe(true);
+    now = Date.parse("2026-10-12T11:00:00Z");
+    await limiter.unhit("203.0.113.7", runs);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(true);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(true);
+    expect(await limiter.hit("203.0.113.7", runs)).toBe(false);
+  });
 });
 
 describe("shared limiter", () => {
@@ -70,6 +95,18 @@ describe("shared limiter", () => {
     expect(calls[0].args).toEqual({ p_key: expect.stringMatching(/^trial:[0-9a-f]{32}$/), p_max: 1, p_window_seconds: DAY_SECONDS });
     expect(JSON.stringify(calls)).not.toContain("203.0.113.7");
     expect(JSON.stringify(calls)).not.toContain(SECRET);
+  });
+
+  it("gives a count back for the same hashed key and window", async () => {
+    const { rpc, calls } = fakeRpc();
+    const limiter = createSharedLimiter(rpc, visitorHashKey(SECRET));
+    await limiter.unhit("203.0.113.7", trial);
+    expect(calls).toEqual([
+      { name: "unhit_rate_limit", args: { p_key: expect.stringMatching(/^trial:[0-9a-f]{32}$/), p_window_seconds: DAY_SECONDS } },
+    ]);
+    await limiter.hit("203.0.113.7", trial);
+    expect(calls[1].args.p_key).toBe(calls[0].args.p_key);
+    expect(JSON.stringify(calls)).not.toContain("203.0.113.7");
   });
 
   it("hashes a visitor the same way on every instance with the same secret, and not otherwise", async () => {
