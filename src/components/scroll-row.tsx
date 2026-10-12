@@ -14,8 +14,11 @@ export function ScrollRow({ label, hint, children }: { label: string; hint: stri
     if (!el) return;
     const measure = () => setOverflows(el.scrollWidth > el.clientWidth + 1);
     measure();
+    // The row grows as a run adds years while the box keeps its width, so the
+    // row is watched as well as the box.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
     return () => observer.disconnect();
   }, []);
 
