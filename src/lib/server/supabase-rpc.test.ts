@@ -32,6 +32,15 @@ describe("supabase rpc", () => {
     expect(await createSupabaseRpc({ url: URL_BASE, secretKey: SECRET, fetch })("settle_trial_budget", {})).toBeNull();
   });
 
+  it("gives up after its timeout", async () => {
+    const fetch = vi.fn(
+      (_input: string | URL | Request, init: RequestInit = {}) =>
+        new Promise<Response>((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason))),
+    ) as unknown as typeof globalThis.fetch;
+    const rpc = createSupabaseRpc({ url: URL_BASE, secretKey: SECRET, fetch, timeoutMs: 10 });
+    await expect(rpc("hit_rate_limit", {})).rejects.toThrow(/timeout|abort/i);
+  });
+
   it("throws on an error reply, with the key taken out of Supabase's message", async () => {
     const { fetch } = fakeFetch(() => new Response(`bad key ${SECRET}`, { status: 401 }));
     const error = await createSupabaseRpc({ url: URL_BASE, secretKey: SECRET, fetch })("hit_rate_limit", {}).catch(

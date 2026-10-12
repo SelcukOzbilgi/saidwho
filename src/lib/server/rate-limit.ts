@@ -10,8 +10,8 @@ import { createSupabaseRpc, type SupabaseRpc } from "./supabase-rpc";
 // How many runs one visitor may start in a window. Windows are fixed and start
 // on the epoch, so a day's window starts at UTC midnight, as the trial budget's
 // day does. A visitor is counted by a keyed hash of their address (see
-// client-ip.ts), never the address itself, and a count is dropped once its
-// window ends.
+// client-ip.ts), never the address itself. In this server's memory a count is
+// dropped once its window ends; in Supabase, an hour after that (see the migration).
 
 export type Limit = { name: "runs" | "trial"; max: number; windowSeconds: number };
 
@@ -77,8 +77,16 @@ export function createSharedLimiter(rpc: SupabaseRpc, key: Buffer): RateLimiter 
 export const visitorHashKey = (supabaseSecretKey: string): Buffer =>
   createHmac("sha256", supabaseSecretKey).update("saidwho visitor hash v1").digest();
 
+// Every run waits on the count, including one on the visitor's own keys that
+// goes ahead when the count fails, so a slow database gets less time here.
+export const LIMITER_TIMEOUT_MS = 2_000;
+
 export function limiterFromEnv(env: ServerEnv): RateLimiter {
   if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return createMemoryLimiter();
-  const rpc = createSupabaseRpc({ url: env.SUPABASE_URL, secretKey: env.SUPABASE_SECRET_KEY });
+  const rpc = createSupabaseRpc({
+    url: env.SUPABASE_URL,
+    secretKey: env.SUPABASE_SECRET_KEY,
+    timeoutMs: LIMITER_TIMEOUT_MS,
+  });
   return createSharedLimiter(rpc, visitorHashKey(env.SUPABASE_SECRET_KEY));
 }
