@@ -663,8 +663,14 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     });
     const judgeSpend = spend(model, judge);
     if (!judge.ok) {
-      onEvent({ type: "judge_failed", ...judgeSpend, reason: judge.reason });
-      return { stands: false, cause: judge.cause, reason: judge.reason, note };
+      // A refused bounded schema is tried again without its limits (see
+      // nextAttempt), so it is logged as that rather than as the provider's
+      // bad_request, which the eval reads as an error every later run would hit.
+      // If the plain schema is refused too, that one is logged as it is.
+      const reason =
+        judge.cause === "bad_request" && bounded ? `schema_limits: the provider refused the schema with limits (${judge.reason})` : judge.reason;
+      onEvent({ type: "judge_failed", ...judgeSpend, reason });
+      return { stands: false, cause: judge.cause, reason, note };
     }
     const { verdict, unknownIds, fixes } = checkVerdict({ lineage: [], ...judge.data }, verified);
     onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds, ...(fixes.length > 0 && { fixes }) });

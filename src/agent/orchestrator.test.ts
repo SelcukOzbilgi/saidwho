@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ChatParams, NebiusClient } from "../lib/server/providers/nebius";
+import { worthScoring } from "../eval/score";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema, standingVerdict } from "./events";
 import { everyStepOn, MODELS, type ModelPolicy } from "./models";
@@ -1003,6 +1004,8 @@ describe("investigate", () => {
     });
     expect(JSON.stringify(plain)).not.toMatch(/maxLength|maxItems|pattern/);
     expect(standingVerdict(events)?.tier).toBe("super");
+    // The eval still scores the run: the refusal was the limits, not the request.
+    expect(worthScoring(events)).toBe(true);
   });
 
   it("names the confirmed page that gives the earliest date when the judge names one that doesn't", async () => {
