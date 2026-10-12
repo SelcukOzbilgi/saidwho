@@ -79,7 +79,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
 
       {(earliest || misattribution) && (
         <p className="mb-2 flex flex-wrap gap-1.5">
-          {earliest && <Badge className="bg-accent text-white">Earliest the judge found</Badge>}
+          {earliest && <Badge className="bg-accent text-on-accent">Earliest the judge found</Badge>}
           {misattribution && <Badge className="bg-bad/15 text-bad">Where the wrong name shows up</Badge>}
         </p>
       )}

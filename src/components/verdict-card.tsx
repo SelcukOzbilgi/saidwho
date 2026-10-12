@@ -108,7 +108,7 @@ function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> })
   return (
     <a
       href={`#node-${id}`}
-      className="mx-0.5 rounded bg-accent/15 px-1 font-mono text-xs text-accent no-underline hover:bg-accent/25"
+      className="mx-0.5 rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink no-underline hover:bg-accent/25"
     >
       {id}
     </a>

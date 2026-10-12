@@ -12,7 +12,7 @@ const LOOK: Record<Tier, string> = {
   lightning: "border-line text-muted",
   nano: "border-line text-muted",
   super: "border-foreground/30 text-foreground",
-  ultra: "border-accent bg-accent/10 text-accent",
+  ultra: "border-accent bg-accent/10 text-accent-ink",
 };
 
 export function TierChip({ tier }: { tier: Tier }) {
