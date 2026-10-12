@@ -66,7 +66,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("plan_failed"), ...spendSchema, reason: z.string() }),
   // A step is about to be tried again because a check failed: on a bigger model,
   // or on the same one with thinking off when thinking used up the token budget.
-  // url names the page for a re-read and is null otherwise.
+  // url names the page for a re-read and is null otherwise. compact is true when
+  // the judge is asked for a verdict without the lineage; older runs have no key.
   z.strictObject({
     type: z.literal("escalated"),
     step: z.enum(["plan", "read", "judge"]),
@@ -75,6 +76,7 @@ export const runEventSchema = z.discriminatedUnion("type", [
     thinking: z.boolean(),
     reason: z.string(),
     url: z.string().nullable(),
+    compact: z.boolean().optional(),
   }),
   z.strictObject({
     type: z.literal("searched"),
@@ -125,14 +127,18 @@ export const runEventSchema = z.discriminatedUnion("type", [
     works: z.array(z.strictObject({ citedBy: z.string(), work: z.string(), checked: z.string() })),
   }),
   z.strictObject({ type: z.literal("judge_skipped"), reason: z.string() }),
-  // A run can carry two verdicts when Ultra judges again after Super (see
-  // escalated); the last one stands.
+  // A run can carry more than one verdict when the judge tries again (see
+  // escalated). The last one whose ids all check out stands (verdictStands).
   z.strictObject({
     type: z.literal("verdict"),
     ...spendSchema,
     verdict: savedJudgeOutputSchema,
-    // Ids the verdict cites that are not verified nodes. Non-empty means unsupported.
+    // Ids the verdict cites that are not verified nodes, and id fields holding
+    // something other than one id. Non-empty means unsupported: it never stands.
     unknownIds: z.array(z.string()),
+    // What code changed about the verdict's earliest date or page. Runs saved
+    // before this check have no key.
+    fixes: z.array(z.string()).optional(),
   }),
   z.strictObject({ type: z.literal("judge_failed"), ...spendSchema, reason: z.string() }),
   z.strictObject({ type: z.literal("budget_exceeded"), spentUsd: z.number(), maxUsd: z.number() }),
@@ -148,3 +154,11 @@ export const runEventSchema = z.discriminatedUnion("type", [
 
 export type EvidenceNode = z.infer<typeof evidenceNodeSchema>;
 export type RunEvent = z.infer<typeof runEventSchema>;
+export type VerdictEvent = Extract<RunEvent, { type: "verdict" }>;
+
+// A verdict citing anything that isn't a confirmed page is never the run's answer.
+export const verdictStands = (event: VerdictEvent): boolean => event.unknownIds.length === 0;
+
+// The run's answer: the last verdict that stands, or null when none does.
+export const standingVerdict = (events: readonly RunEvent[]): VerdictEvent | null =>
+  events.findLast((e): e is VerdictEvent => e.type === "verdict" && verdictStands(e)) ?? null;

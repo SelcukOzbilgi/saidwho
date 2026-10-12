@@ -12,12 +12,14 @@ import type { TavilyClient } from "../lib/server/providers/tavily";
 import type { EvidenceNode, RunEvent } from "./events";
 import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
+import { checkVerdict, retryNote } from "./judge-check";
 import {
+  boundedCompactJudgeOutputSchema,
+  boundedJudgeOutputSchema,
   cleanDate,
+  compactJudgeOutputSchema,
   genealogistOutputSchema,
   judgeOutputSchema,
-  type LineageStep,
-  MAX_LINEAGE_STEPS,
   plannerOutputSchema,
   readerOutputSchema,
 } from "./schemas";
@@ -38,6 +40,9 @@ const MAX_FIELD_CHARS = 300;
 // The same cap as a name a visitor types.
 const MAX_NAME_CHARS = 200;
 const READER_CONCURRENCY = 5;
+// The most judge calls one run makes: a first judge, a second one, and tries
+// again with thinking off or without the lineage when tokens run out.
+const MAX_JUDGE_CALLS = 4;
 // The Genealogist follows what confirmed pages cite: a few works a round, a few
 // pages for each, so the worst case stays well inside the route's time limit.
 const TRACE_ROUNDS = 2;
@@ -617,58 +622,86 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   if (citedWorks.length > 0) {
     onEvent({ type: "cited_works", works: citedWorks.map(({ cited_by, work, checked }) => ({ citedBy: cited_by, work, checked })) });
   }
-  const judgeRequest = {
-    schema: judgeOutputSchema,
-    name: "verdict",
-    system: JUDGE_PROMPT,
-    user:
-      `Saying: "${quote}"\nUsually credited to: ${credit ?? "no one named"}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}` +
-      (citedWorks.length ? `\n\nCited works:\n${JSON.stringify(citedWorks, null, 1)}` : ""),
-  };
-  const known = new Set(verified.map((n) => n.id));
+  const baseUser =
+    `Saying: "${quote}"\nUsually credited to: ${credit ?? "no one named"}\n\nEvidence:\n${JSON.stringify(evidence, null, 1)}` +
+    (citedWorks.length ? `\n\nCited works:\n${JSON.stringify(citedWorks, null, 1)}` : "");
+  const allowedIds = verified.map((n) => n.id);
 
-  // Judges on one model and reports the result. Returns why a second judge
-  // should try, or null when the verdict stands.
-  const judgeWith = async (model: ModelSpec, thinking: boolean): Promise<{ retry: string | null; outOfTokens: boolean }> => {
-    const judge = await callStructured(nebius, { ...judgeRequest, model, thinking, maxTokens: model.judgeMaxTokens });
+  // One judge call and how it went. bounded sends the schema with limits; it is
+  // dropped only if the provider refuses it. note tells a later judge why the
+  // last verdict was set aside.
+  type JudgeAttempt = { model: ModelSpec; thinking: boolean; compact: boolean; bounded: boolean; note: string | null };
+  type JudgeOutcome = { stands: true } | { stands: false; cause: FailureCause | "unsupported"; reason: string; note: string | null };
+  const judgeWith = async ({ model, thinking, compact, bounded, note }: JudgeAttempt): Promise<JudgeOutcome> => {
+    const judge = await callStructured(nebius, {
+      model,
+      thinking,
+      name: "verdict",
+      system: JUDGE_PROMPT,
+      maxTokens: model.judgeMaxTokens,
+      ...(compact
+        ? { schema: compactJudgeOutputSchema, ...(bounded && { responseSchema: boundedCompactJudgeOutputSchema }) }
+        : { schema: judgeOutputSchema, ...(bounded && { responseSchema: boundedJudgeOutputSchema }) }),
+      user:
+        baseUser +
+        (note ? `\n\n${note}` : "") +
+        (compact ? "\n\nThis time leave out the lineage and keep the rationale to three sentences." : ""),
+    });
     const judgeSpend = spend(model, judge);
     if (!judge.ok) {
       onEvent({ type: "judge_failed", ...judgeSpend, reason: judge.reason });
-      return { retry: worthRetrying(judge.cause) ? judge.reason : null, outOfTokens: judge.cause === "out_of_tokens" };
+      return { stands: false, cause: judge.cause, reason: judge.reason, note };
     }
-    // Ids in brackets, alone or grouped: [n2], [n2, n5] and [[n2]] all count.
-    const citedIn = (text: string) => [...text.matchAll(/\[[^\]]*\]/g)].flatMap((m) => m[0].match(/\bn\d+\b/g) ?? []);
-    // A lineage note with braces in it is JSON the model wrote into the string by
-    // mistake, and an over-long one isn't a short note: either step is dropped.
-    const wellFormed = judge.data.lineage.filter((step) => !/[{}]/.test(step.note) && step.note.length <= MAX_FIELD_CHARS);
-    const stepIds = (step: LineageStep) => [step.node, ...citedIn(step.note)];
-    const pointers = [judge.data.earliest_node, judge.data.misattribution_node].filter((id): id is string => id !== null);
-    const unknownIds = [
-      ...new Set([...citedIn(judge.data.rationale), ...pointers, ...wellFormed.flatMap(stepIds)].filter((id) => !known.has(id))),
-    ];
-    // A step that rests on an unverified page is left out of the verdict, since
-    // this verdict stands if a second judge fails; its ids still count above.
-    // Past six steps, the first and the last five are kept: where it started, and
-    // the changes that led to the version people share.
-    const supported = wellFormed.filter((step) => stepIds(step).every((id) => known.has(id)));
-    const lineage = supported.length > MAX_LINEAGE_STEPS ? [supported[0], ...supported.slice(1 - MAX_LINEAGE_STEPS)] : supported;
-    const verdict = { ...judge.data, lineage };
-    onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds });
-    if (unknownIds.length > 0) return { retry: `the verdict points at ${unknownIds.join(", ")}, not verified evidence`, outOfTokens: false };
-    return { retry: null, outOfTokens: false };
+    const { verdict, unknownIds, fixes } = checkVerdict({ lineage: [], ...judge.data }, verified);
+    onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds, ...(fixes.length > 0 && { fixes }) });
+    if (unknownIds.length === 0) return { stands: true };
+    return {
+      stands: false,
+      cause: "unsupported",
+      reason: `the verdict points at ${unknownIds.join(", ")}, not verified evidence`,
+      note: retryNote(unknownIds, allowedIds),
+    };
   };
 
-  // Super judges first. Ultra judges again when Super's call failed or its verdict
-  // points at evidence that isn't verified. Low confidence alone is not a reason:
-  // Ultra sees the same evidence, and thin evidence is an honest answer. A judge
-  // that ran out of tokens thinking tries again with thinking off instead, since
-  // Ultra could run out the same way. If the second judge fails, the first verdict stands.
-  const first = await judgeWith(models.judge, true);
-  if (first.retry && !mustStop()) {
-    const model = first.outOfTokens ? models.judge : models.rejudge;
-    const thinking = !first.outOfTokens;
-    onEvent({ type: "escalated", step: "judge", from: models.judge.tier, to: model.tier, thinking, reason: first.retry, url: null });
-    await judgeWith(model, thinking);
+  // What to try after a judge that didn't give a verdict that stands, or null to
+  // stop. Running out of tokens is tried again on the same model, first with
+  // thinking off and then without the lineage, since a bigger model could run
+  // out the same way. A verdict citing pages that aren't confirmed goes to the
+  // second judge once, told what was wrong and which ids it may use. So does a
+  // failed call, unless it would fail the same way again. Low confidence alone
+  // is not a reason: thin evidence is an honest answer.
+  let escalated = false;
+  const nextAttempt = (tried: JudgeAttempt, outcome: JudgeOutcome & { stands: false }): JudgeAttempt | null => {
+    const { cause, note } = outcome;
+    if (cause === "bad_request" && tried.bounded) return { ...tried, bounded: false };
+    if (cause === "out_of_tokens") {
+      if (tried.thinking) return { ...tried, thinking: false };
+      return tried.compact ? null : { ...tried, compact: true };
+    }
+    if (escalated || (cause !== "unsupported" && !worthRetrying(cause))) return null;
+    escalated = true;
+    return { ...tried, model: models.rejudge, thinking: true, note };
+  };
+
+  // Every verdict is reported, but only one whose ids all check out stands. When
+  // none does, the run has no verdict rather than an unsupported one.
+  let attempt: JudgeAttempt = { model: models.judge, thinking: true, compact: false, bounded: true, note: null };
+  for (let calls = 1; ; calls++) {
+    const outcome = await judgeWith(attempt);
+    if (outcome.stands) break;
+    const next = nextAttempt(attempt, outcome);
+    if (next === null || calls === MAX_JUDGE_CALLS || mustStop()) break;
+    onEvent({
+      type: "escalated",
+      step: "judge",
+      from: attempt.model.tier,
+      to: next.model.tier,
+      thinking: next.thinking,
+      reason: outcome.reason,
+      url: null,
+      ...(next.compact && { compact: true }),
+    });
+    attempt = next;
   }
   finish();
 }

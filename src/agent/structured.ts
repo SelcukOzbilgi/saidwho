@@ -7,6 +7,9 @@ import { estimateCostUsd, type ModelSpec, type TokenUsage } from "./models";
 export type StructuredRequest<S extends z.ZodType> = {
   model: ModelSpec;
   schema: S;
+  // The schema sent to the provider, when it asks for more than the output is
+  // parsed with (limits the code enforces itself). Defaults to schema.
+  responseSchema?: z.ZodType;
   name: string;
   system: string;
   user: string;
@@ -37,7 +40,7 @@ export async function callStructured<S extends z.ZodType>(
   client: NebiusClient,
   request: StructuredRequest<S>,
 ): Promise<StructuredResult<z.infer<S>>> {
-  const { model, schema, name, system, user, thinking, maxTokens } = request;
+  const { model, schema, responseSchema = schema, name, system, user, thinking, maxTokens } = request;
   const result = await client.chat({
     model: model.id,
     temperature: thinking ? 0.6 : 0,
@@ -45,7 +48,7 @@ export async function callStructured<S extends z.ZodType>(
     chat_template_kwargs: { enable_thinking: thinking },
     response_format: {
       type: "json_schema",
-      json_schema: { name, strict: true, schema: toStrictJsonSchema(schema) },
+      json_schema: { name, strict: true, schema: toStrictJsonSchema(responseSchema) },
     },
     messages: [
       { role: "system", content: system },
