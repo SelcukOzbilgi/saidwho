@@ -7,7 +7,9 @@ create table public.rate_limits (
   key text not null check (char_length(key) <= 100),
   window_start timestamptz not null,
   expires_at timestamptz not null,
-  hits integer not null check (hits > 0),
+  -- A run that is refused after it was counted gives its count back, so a row
+  -- can reach 0 (see unhit_rate_limit below).
+  hits integer not null check (hits >= 0),
   primary key (key, window_start)
 );
 
@@ -65,7 +67,31 @@ begin
 end;
 $$;
 
+-- Gives back one run counted in the current window, for a run that was refused
+-- after it was counted, by another limit or the trial budget. A count never goes
+-- below 0, and nothing happens once the row is gone or its window has ended.
+create function public.unhit_rate_limit(p_key text, p_window_seconds integer)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_start timestamptz;
+begin
+  if p_window_seconds < 1 then
+    return;
+  end if;
+  v_start := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
+
+  update public.rate_limits
+  set hits = hits - 1
+  where key = p_key and window_start = v_start and hits > 0;
+end;
+$$;
+
 -- Postgres lets anyone run a new function, and Supabase's API roles would get
 -- it too. Only the secret key's role may.
 revoke all on function public.hit_rate_limit(text, integer, integer) from public, anon, authenticated;
+revoke all on function public.unhit_rate_limit(text, integer) from public, anon, authenticated;
 grant execute on function public.hit_rate_limit(text, integer, integer) to service_role;
+grant execute on function public.unhit_rate_limit(text, integer) to service_role;

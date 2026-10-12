@@ -24,6 +24,15 @@ describe("supabase migrations", () => {
     expect(migration("20261012120100_rate_limits.sql")).toContain("where expires_at <= now() - interval '1 hour'");
   });
 
+  it.each(["hit_rate_limit(text, integer, integer)", "unhit_rate_limit(text, integer)"])(
+    "lets only the server's role run %s",
+    (fn) => {
+      const sql = migration("20261012120100_rate_limits.sql");
+      expect(sql).toContain(`revoke all on function public.${fn} from public, anon, authenticated;`);
+      expect(sql).toContain(`grant execute on function public.${fn} to service_role;`);
+    },
+  );
+
   it("keeps the whole reservation when the spend arrives as null", () => {
     expect(migration("20261012120000_trial_budget.sql")).toContain(
       "set spent_usd = greatest(coalesce(p_spent_usd, t.reserved_usd), 0)",
