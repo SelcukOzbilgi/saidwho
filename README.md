@@ -148,7 +148,11 @@ The free trial option, which runs on the server's own keys, stays off unless all
 
 A run started from the page stops making new model calls once its estimated Nebius spend reaches $0.50 with your keys, or $0.10 on the trial.
 
-To save runs and give each one a public link at `/runs/<id>`, create a Supabase project, run [`supabase/migrations/`](supabase/migrations/) on it, and set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (the project's secret key) in `.env.local`. Without them, runs aren't saved and the app works the same otherwise.
+One visitor can start up to 10 runs an hour on any keys (`RUNS_PER_IP_PER_HOUR`), and up to 3 trial runs a UTC day (`TRIAL_RUNS_PER_IP_PER_DAY`). A visitor is counted by their IP address, as Vercel reports it. Anywhere else the address can't be trusted, since the visitor could send any value, so all visitors share one count. Only a keyed hash of the address is kept, and it is deleted by the first run started after the hour or day it counts has ended.
+
+To save runs and give each one a public link at `/runs/<id>`, create a Supabase project, run [`supabase/migrations/`](supabase/migrations/) on it, and set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (the project's secret key) in `.env.local`. The trial budget and the per-visitor counts are then kept there too, so every server shares them. Without these two variables, runs aren't saved, and each server counts the budget and the visitors in its own memory, starting over when it restarts. The app works the same otherwise.
+
+If the shared counts can't be reached, no trial run starts, since it would spend the server's money with nothing counting it. A run on your own keys still starts.
 
 ### Running an investigation from the command line
 
@@ -188,10 +192,10 @@ src/agent/        the investigation: planner, readers, checker, genealogist, jud
 src/app/          the pages and the /api/investigate route
 src/components/   the form, timeline, verdict card and case replay
 src/cases/        the ten finished example cases
-src/lib/          run state, streaming, and server code (keys, budget, providers)
+src/lib/          run state, streaming, and server code (keys, budget, limits, providers)
 src/eval/         the test set's format, and how a run is scored against it
 eval/             the test set of 20 quotes with known origins
-supabase/         the table saved runs go in
+supabase/         the tables for saved runs, the trial budget and per-visitor limits
 scripts/          the command-line investigation, the eval and the smoke tests
 ```
 
