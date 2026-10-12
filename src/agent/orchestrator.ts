@@ -445,7 +445,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         const date = cleanDate(raw);
         return date && placed(date, match.span) ? date : null;
       };
-      const citedSourceDate = keepDate(read.data.cited_source_date, (date, span) => keepsCitedDate(date, page.text, span, read.data.cited_source));
+      const citedSourceDate = keepDate(read.data.cited_source_date, (date, span) => keepsCitedDate(date, page, span, read.data.cited_source));
       const pageDate = keepDate(read.data.page_date, (date, span) => keepsPageDate(date, page, span));
       const node: EvidenceNode = {
         id,

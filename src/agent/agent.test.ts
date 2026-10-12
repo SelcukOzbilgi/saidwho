@@ -73,10 +73,10 @@ describe("checkSnippet", () => {
   it("says where on the page a snippet matched, in words", () => {
     const page = "One two three. The lantern burns brightest in the darkest hall of the old stone house.";
     expect(matchSnippet("the lantern burns brightest", page).span).toEqual({ start: 3, end: 7 });
-    // One page word left out, so the match is near; its span ends where the page's
-    // run does and is the snippet's length, a word short of the run here.
+    // One page word left out, so the match is near; its span still covers the
+    // page's whole run.
     const near = matchSnippet("The lantern burns brightest in the darkest hall of the old house", page);
-    expect(near).toMatchObject({ status: "near", span: { start: 4, end: 16 } });
+    expect(near).toMatchObject({ status: "near", span: { start: 3, end: 16 } });
     expect(matchSnippet("a candle in the window", page).span).toBeNull();
   });
 });
@@ -99,6 +99,16 @@ describe("carriesSaying", () => {
     expect(carriesSaying("Finally,", [SAYING])).toBe(false);
     expect(carriesSaying("This line about a lantern is often credited to a famous poet.", [SAYING])).toBe(false);
     expect(carriesSaying("The old house was quiet.", [SAYING])).toBe(false);
+  });
+
+  it("matches a saying made only of small words on all its words", () => {
+    expect(carriesSaying('He shrugged and said, "It is what it is."', ["It is what it is"])).toBe(true);
+    expect(carriesSaying("He shrugged.", ["It is what it is"])).toBe(false);
+  });
+
+  it("lets one snippet word stand for only one word of the saying", () => {
+    expect(carriesSaying("Love", ["Live, love, laugh"])).toBe(false);
+    expect(carriesSaying("Live and love", ["Live, love, laugh"])).toBe(true);
   });
 
   it("accepts a translation only when the run knows that wording, notes in brackets aside", () => {
@@ -192,6 +202,13 @@ describe("keepsPageDate and keepsCitedDate", () => {
     expect(keepsPageDate("1950", { title: "Lanterns", text }, span)).toBe(true);
   });
 
+  it("places a close match's span so a date at the window's edge still counts", () => {
+    const page = `${filler(400)} 1906 ${filler(29)} the lantern burns brightest in the darkest hall of the old stone house`;
+    const near = matchSnippet("the lantern burns brightest in the darkest hall of the old house", page);
+    expect(near.status).toBe("near");
+    expect(keepsPageDate("1906", { title: "Lanterns", text: page }, near.span)).toBe(true);
+  });
+
   it("drops a page date whose year only turns up elsewhere on the page", () => {
     expect(keepsPageDate("1890", { title: "Lanterns", text }, span)).toBe(false);
     expect(keepsPageDate("1905", { title: "Lanterns", text }, span)).toBe(false);
@@ -199,13 +216,24 @@ describe("keepsPageDate and keepsCitedDate", () => {
   });
 
   it("keeps a cited date next to the snippet or next to the cited work's name", () => {
-    expect(keepsCitedDate("1950", text, span, null)).toBe(true);
-    expect(keepsCitedDate("1872", text, span, "The Old Almanac")).toBe(true);
+    expect(keepsCitedDate("1950", { title: "Lanterns", text }, span, null)).toBe(true);
+    expect(keepsCitedDate("1872", { title: "Lanterns", text }, span, "The Old Almanac")).toBe(true);
+  });
+
+  it("keeps a cited date in the title, as on a page of the work itself", () => {
+    expect(keepsCitedDate("1597", { title: "Meditationes Sacrae (1597)", text }, span, "Meditationes Sacrae")).toBe(true);
+  });
+
+  it("anchors a cited date on a short name's own words when it has no longer one", () => {
+    const far = `the lantern burns brightest. ${filler(100)}`;
+    const at = matchSnippet("the lantern burns brightest", far).span;
+    expect(keepsCitedDate("1986", { title: "Lanterns", text: `${far} Sources: It (1986).` }, at, "It")).toBe(true);
+    expect(keepsCitedDate("1986", { title: "Lanterns", text: `${far} Sources: It (1986).` }, at, "Them")).toBe(false);
   });
 
   it("drops a cited date that sits by neither", () => {
-    expect(keepsCitedDate("1890", text, span, "The Old Almanac")).toBe(false);
-    expect(keepsCitedDate("1872", text, span, null)).toBe(false);
-    expect(keepsCitedDate("1872", text, null, "1872")).toBe(false);
+    expect(keepsCitedDate("1890", { title: "Lanterns", text }, span, "The Old Almanac")).toBe(false);
+    expect(keepsCitedDate("1872", { title: "Lanterns", text }, span, null)).toBe(false);
+    expect(keepsCitedDate("1872", { title: "Lanterns", text }, null, "1872")).toBe(false);
   });
 });

@@ -161,8 +161,9 @@ function matchWords(needle: string, pageWords: readonly string[]): SnippetMatch 
   const score = Math.max(0, 1 - fewest / words.length);
   const allowed = Math.floor(words.length / WORDS_PER_EDIT);
   if (fewest > allowed) return { status: "not_found", score, span: null };
-  // The run may be a word or two longer or shorter than the snippet; close enough to place a date.
-  return { status: "near", score, span: { start: Math.max(0, end - words.length), end } };
+  // The run is at most one word longer than the snippet per edit, so starting
+  // that much earlier covers all of it. A word or two extra is fine for placing a date.
+  return { status: "near", score, span: { start: Math.max(0, end - words.length - fewest), end } };
 }
 
 // Short words that carry little of a saying's meaning in the languages quotes
@@ -195,11 +196,25 @@ export const isFunctionWord = (word: string): boolean => FUNCTION_WORDS.has(word
 const SAYING_SHARE = 0.4;
 const MIN_FRAGMENT_WORDS = 3;
 
-const contentWords = (text: string): string[] => {
-  const words = [...new Set(normalizeText(text).split(" ").filter(Boolean))];
-  const content = words.filter((w) => !isFunctionWord(w));
-  return content.length > 0 ? content : words;
-};
+const distinctWords = (text: string): string[] => [...new Set(normalizeText(text).split(" ").filter(Boolean))];
+
+// How many of the wording's words the snippet has, each snippet word standing
+// for one of them, so "love" doesn't count for both "live" and "love". Exact
+// matches go first, so a near one can't take a word another needs exactly.
+function sharedWords(want: readonly string[], have: readonly string[]): number {
+  const free = new Set(have);
+  const left: string[] = [];
+  for (const w of want) if (!free.delete(w)) left.push(w);
+  let shared = want.length - left.length;
+  for (const w of left) {
+    const match = [...free].find((h) => sameWord(w, h));
+    if (match !== undefined) {
+      free.delete(match);
+      shared++;
+    }
+  }
+  return shared;
+}
 
 // Whether a snippet carries the saying rather than just some sentence from the
 // page, judged against the quote and its known wordings (variants and
@@ -208,11 +223,16 @@ const contentWords = (text: string): string[] => {
 // counts when it matches the way it would in checkSnippet, so a plural or a
 // one-letter slip still does.
 export function carriesSaying(snippet: string, wordings: readonly string[]): boolean {
-  const have = contentWords(snippet);
+  const snippetWords = distinctWords(snippet);
   return wordings.some((wording) => {
-    const want = contentWords(wording.replace(/\([^)]*\)/g, " "));
+    const words = distinctWords(wording.replace(/\([^)]*\)/g, " "));
+    const content = words.filter((w) => !isFunctionWord(w));
+    // A saying made only of small words ("It is what it is") is matched on all
+    // of them, on both sides.
+    const want = content.length > 0 ? content : words;
+    const have = content.length > 0 ? snippetWords.filter((w) => !isFunctionWord(w)) : snippetWords;
     if (want.length === 0) return false;
-    const shared = want.filter((w) => have.some((h) => sameWord(w, h))).length;
+    const shared = sharedWords(want, have);
     const wholeSaying = shared >= Math.min(2, want.length) && shared >= want.length * SAYING_SHARE;
     const fragment = shared >= MIN_FRAGMENT_WORDS && shared >= have.length * SAYING_SHARE;
     return wholeSaying || fragment;
@@ -243,8 +263,8 @@ export function mentionsName(name: string, pageText: string): boolean {
 // book's front matter are, or next to the snippet, as on a dated post.
 const PAGE_HEAD_WORDS = 300;
 const NEAR_SNIPPET_WORDS = 30;
-// A cited work's date sits next to the snippet or next to where the page names
-// the work ("in her 1976 article").
+// A cited work's date sits in the title, as on a page of the work itself, next
+// to the snippet, or next to where the page names the work ("in her 1976 article").
 const NEAR_SOURCE_WORDS = 20;
 
 const yearPattern = (date: string): RegExp | null => {
@@ -269,21 +289,25 @@ export function keepsPageDate(date: string, page: { title: string; text: string 
   return years.some((p) => p < PAGE_HEAD_WORDS) || (span !== null && within(years, span, NEAR_SNIPPET_WORDS));
 }
 
-export function keepsCitedDate(date: string, pageText: string, span: Span | null, citedSource: string | null): boolean {
+export function keepsCitedDate(date: string, page: { title: string; text: string }, span: Span | null, citedSource: string | null): boolean {
   const pattern = yearPattern(date);
   if (!pattern) return false;
-  const pageWords = normalizeText(pageText).split(" ");
+  if (pattern.test(page.title)) return true;
+  const pageWords = normalizeText(page.text).split(" ");
   const years = yearPositions(pattern, pageWords);
   if (span !== null && within(years, span, NEAR_SNIPPET_WORDS)) return true;
   // The work's name, by its longer words: "Narcotics Anonymous" is a better
   // anchor than "the" or "of", and a year in the name would only find itself.
-  const names = new Set(
-    normalizeText(citedSource ?? "")
-      .split(" ")
-      .filter((w) => w.length >= 4 && /\p{L}/u.test(w) && !isFunctionWord(w)),
-  );
-  // One pass over both lists, in page order, so a long page with the name and
-  // the year all over it still costs one look at each.
+  // A name with no such word ("It") is matched on all its words.
+  const nameWords = normalizeText(citedSource ?? "")
+    .split(" ")
+    .filter((w) => /\p{L}/u.test(w) && !pattern.test(w));
+  const longer = nameWords.filter((w) => w.length >= 4 && !isFunctionWord(w));
+  const names = new Set(longer.length > 0 ? longer : nameWords);
+  // One word of the name is enough: readers often describe a source rather
+  // than give its title ("a 1968 program for a Warhol exhibition"), so asking
+  // for two drops true dates. One pass over both lists, in page order, so a
+  // long page with the name and the year all over it costs one look at each.
   let next = 0;
   for (let i = 0; i < pageWords.length; i++) {
     if (!names.has(pageWords[i])) continue;
