@@ -1,6 +1,6 @@
 {
   "caseId": "fear-itself",
-  "ranAt": "2026-10-09T13:36:28.157Z",
+  "ranAt": "2026-10-12T14:45:43.100Z",
   "events": [
     {
       "type": "started",
@@ -18,76 +18,83 @@
     {
       "type": "planned",
       "tier": "super",
-      "costUsd": 0.0009219000000000001,
+      "costUsd": 0.0007773,
       "usageKnown": true,
-      "latencyMs": 5835,
+      "tokens": {
+        "promptTokens": 191,
+        "completionTokens": 800
+      },
+      "latencyMs": 83233,
       "variants": [
-        "The only thing we have to fear is fear itself",
-        "The only thing to fear is fear itself",
-        "We have nothing to fear but fear itself",
-        "Nothing to fear but fear itself"
+        "/The only thing we have to fear is fear/",
+        "/We have nothing to fear but fear itself/",
+        "/Nothing to fear but fear itself/"
       ],
       "candidateAuthors": [
-        "Franklin D. Roosevelt",
-        "Samuel Rosenman (FDR's speechwriter)",
-        "Eleanor Roosevelt",
-        "Winston Churchill",
-        "Seneca the Younger"
+        "Francis Bacon",
+        "Michel de Montaigne",
+        "Ralph Waldo Emerson",
+        "Henry David Thoreau"
       ],
       "queries": [
         "\"The only thing we have to fear is fear itself.\"",
-        "\"The only thing we have to fear is fear itself\" earliest newspaper 1933",
-        "\"The only thing we have to fear is fear itself\" origin FDR inaugural address",
-        "\"The only thing we have to fear is fear itself\" earlier usage before 1933",
-        "\"The only thing we have to fear is fear itself\" Samuel Rosenman quote"
-      ]
+        "earliest newspaper appearance \"The only thing we have to fear is fear itself\"",
+        "first book or speech where \"The only thing we have to fear is fear itself\" appears",
+        "\"Francis Bacon\" fear itself quote",
+        "\"Michel de Montaigne\" fear itself quote"
+      ],
+      "foundAttribution": null
     },
     {
       "type": "searched",
       "query": "\"The only thing we have to fear is fear itself.\"",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2145
+      "latencyMs": 1977
     },
     {
       "type": "searched",
-      "query": "\"The only thing we have to fear is fear itself\" earliest newspaper 1933",
+      "query": "earliest newspaper appearance \"The only thing we have to fear is fear itself\"",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2012
+      "latencyMs": 1463
     },
     {
       "type": "searched",
-      "query": "\"The only thing we have to fear is fear itself\" origin FDR inaugural address",
+      "query": "first book or speech where \"The only thing we have to fear is fear itself\" appears",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2114
+      "latencyMs": 1825
     },
     {
       "type": "searched",
-      "query": "\"The only thing we have to fear is fear itself\" earlier usage before 1933",
+      "query": "\"Francis Bacon\" fear itself quote",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2679
+      "latencyMs": 1658
     },
     {
       "type": "searched",
-      "query": "\"The only thing we have to fear is fear itself\" Samuel Rosenman quote",
+      "query": "\"Michel de Montaigne\" fear itself quote",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1979
+      "latencyMs": 3959
     },
     {
       "type": "pages_ready",
-      "pages": 13,
+      "pages": 14,
       "droppedExcluded": 0
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00008616,
+      "costUsd": 0.00008586,
       "usageKnown": true,
-      "latencyMs": 676,
+      "tokens": {
+        "promptTokens": 1131,
+        "completionTokens": 75
+      },
+      "latencyMs": 636,
       "url": "https://theinvisiblementor.com/7-lessons-from-franklin-roosevelts-speech-the-only-thing-we-have-to-fear-is-fear-itself",
       "host": "theinvisiblementor.com",
       "outcome": "evidence",
@@ -96,7 +103,7 @@
     {
       "type": "node_added",
       "node": {
-        "id": "n4",
+        "id": "n5",
         "url": "https://theinvisiblementor.com/7-lessons-from-franklin-roosevelts-speech-the-only-thing-we-have-to-fear-is-fear-itself",
         "host": "theinvisiblementor.com",
         "title": "7 Lessons From Franklin Roosevelt's Speech The Only Thing We Have to Fear is Fear Itself - The Invisible Mentor",
@@ -106,7 +113,7 @@
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "There is nothing to fear but fear itself",
+          "exact_snippet": "There is nothing to fear but fear itself.",
           "attributed_to": "Franklin Roosevelt",
           "page_date": "July 26",
           "cited_source": "Speeches That Changed the World",
@@ -115,15 +122,102 @@
         "attributedTo": "Franklin Roosevelt",
         "pageDate": null,
         "citedSourceDate": "1933",
-        "date": "1933"
+        "date": "1933",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.0000801,
+      "costUsd": 0.00010661999999999999,
       "usageKnown": true,
-      "latencyMs": 728,
+      "tokens": {
+        "promptTokens": 1453,
+        "completionTokens": 81
+      },
+      "latencyMs": 662,
+      "url": "https://www.fdrlibrary.org/first-inaugural-curriculum-hub",
+      "host": "fdrlibrary.org",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://www.fdrlibrary.org/first-inaugural-curriculum-hub",
+        "host": "fdrlibrary.org",
+        "title": "First Inaugural Address - FDR Presidential Library & Museum",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "the only thing we have to fear is fear itself.",
+          "attributed_to": "Franklin Roosevelt",
+          "page_date": "2024",
+          "cited_source": "First Inaugural Address, March 4, 1933",
+          "cited_source_date": "1933"
+        },
+        "attributedTo": "Franklin Roosevelt",
+        "pageDate": null,
+        "citedSourceDate": "1933",
+        "date": "1933",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009455999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1296,
+        "completionTokens": 70
+      },
+      "latencyMs": 690,
+      "url": "https://www.presidency.ucsb.edu/documents/inaugural-address-8",
+      "host": "presidency.ucsb.edu",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://www.presidency.ucsb.edu/documents/inaugural-address-8",
+        "host": "presidency.ucsb.edu",
+        "title": "Inaugural Address | The American Presidency Project",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "the only thing we have to fear is fear itself",
+          "attributed_to": "Franklin D. Roosevelt",
+          "page_date": "March 04, 1933",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Franklin D. Roosevelt",
+        "pageDate": "1933",
+        "citedSourceDate": null,
+        "date": "1933",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0000798,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 966,
+        "completionTokens": 91
+      },
+      "latencyMs": 779,
       "url": "https://www.nps.gov/articles/000/franklin-roosevelt-inauguration.htm",
       "host": "nps.gov",
       "outcome": "evidence",
@@ -132,7 +226,7 @@
     {
       "type": "node_added",
       "node": {
-        "id": "n2",
+        "id": "n3",
         "url": "https://www.nps.gov/articles/000/franklin-roosevelt-inauguration.htm",
         "host": "nps.gov",
         "title": "The Inauguration of Franklin D. Roosevelt (U.S. National Park Service)",
@@ -151,53 +245,22 @@
         "attributedTo": "Franklin D. Roosevelt",
         "pageDate": "2021",
         "citedSourceDate": null,
-        "date": "2021"
+        "date": "2021",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00009497999999999999,
+      "costUsd": 0.0000753,
       "usageKnown": true,
-      "latencyMs": 757,
-      "url": "https://www.youtube.com/watch?v=rIKMbma6_dc",
-      "host": "youtube.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n5",
-        "url": "https://www.youtube.com/watch?v=rIKMbma6_dc",
-        "host": "youtube.com",
-        "title": "Franklin D. Roosevelt - Inaugural \"The Only Thing We Have to Fear is Fear Itself\" Speech",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
-          "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "2014-07-10",
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Franklin D. Roosevelt",
-        "pageDate": "2014-07-10",
-        "citedSourceDate": null,
-        "date": "2014-07-10"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00010691999999999999,
-      "usageKnown": true,
-      "latencyMs": 798,
-      "url": "https://www.fdrlibrary.org/first-inaugural-curriculum-hub",
-      "host": "fdrlibrary.org",
+      "tokens": {
+        "promptTokens": 843,
+        "completionTokens": 103
+      },
+      "latencyMs": 949,
+      "url": "https://www.aetc.af.mil/News/Article-Display/Article/2140617/commentary-only-thing-to-fear-is-fear-itself",
+      "host": "aetc.af.mil",
       "outcome": "evidence",
       "reason": null
     },
@@ -205,105 +268,79 @@
       "type": "node_added",
       "node": {
         "id": "n1",
-        "url": "https://www.fdrlibrary.org/first-inaugural-curriculum-hub",
-        "host": "fdrlibrary.org",
-        "title": "First Inaugural Address - FDR Presidential Library & Museum",
+        "url": "https://www.aetc.af.mil/News/Article-Display/Article/2140617/commentary-only-thing-to-fear-is-fear-itself",
+        "host": "aetc.af.mil",
+        "title": "Commentary: Only Thing to Fear is Fear Itself > Air Education and Training Command > Article Display",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
-          "attributed_to": "Franklin Roosevelt",
-          "page_date": "2024",
-          "cited_source": "First Inaugural Address, March 4, 1933",
+          "exact_snippet": "the only thing we have to fear is fear itself—nameless, unreasoning, unjustified terror which paralyzes needed efforts to convert retreat into advance.",
+          "attributed_to": "Franklin Delano Roosevelt",
+          "page_date": "2020-03-20",
+          "cited_source": "Franklin Delano Roosevelt's inaugural address",
           "cited_source_date": "1933"
         },
-        "attributedTo": "Franklin Roosevelt",
+        "attributedTo": "Franklin Delano Roosevelt",
         "pageDate": null,
         "citedSourceDate": "1933",
-        "date": "1933"
+        "date": "1933",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.0000999,
+      "costUsd": 0.000041819999999999996,
       "usageKnown": true,
-      "latencyMs": 815,
-      "url": "https://www.presidency.ucsb.edu/documents/inaugural-address-8",
-      "host": "presidency.ucsb.edu",
+      "tokens": {
+        "promptTokens": 385,
+        "completionTokens": 78
+      },
+      "latencyMs": 511,
+      "url": "https://www.bookbrowse.com/expressions/detail/index.cfm/expression_number/541/the-only-thing-we-have-to-fear-is-fear-itself",
+      "host": "bookbrowse.com",
       "outcome": "evidence",
       "reason": null
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n3",
-        "url": "https://www.presidency.ucsb.edu/documents/inaugural-address-8",
-        "host": "presidency.ucsb.edu",
-        "title": "Inaugural Address | The American Presidency Project",
+        "id": "n8",
+        "url": "https://www.bookbrowse.com/expressions/detail/index.cfm/expression_number/541/the-only-thing-we-have-to-fear-is-fear-itself",
+        "host": "bookbrowse.com",
+        "title": "Why do we say The only thing we have to fear is fear itself?",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself—nameless, unreasoning, unjustified terror which paralyzes needed efforts to convert retreat into advance",
+          "exact_snippet": "The only thing we have to fear is fear itself",
           "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "March 04, 1933",
-          "cited_source": null,
-          "cited_source_date": null
+          "page_date": "2024",
+          "cited_source": "Inaugural Address, 1933",
+          "cited_source_date": "1933"
         },
-        "attributedTo": "Franklin D. Roosevelt",
-        "pageDate": "1933",
+        "attributedTo": null,
+        "pageDate": null,
         "citedSourceDate": null,
-        "date": "1933"
+        "date": null,
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00008064,
+      "costUsd": 0.00006672,
       "usageKnown": true,
-      "latencyMs": 608,
-      "url": "https://www.gilderlehrman.org/history-resources/spotlight-primary-source/franklin-d-roosevelts-first-inauguration-1933",
-      "host": "gilderlehrman.org",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n6",
-        "url": "https://www.gilderlehrman.org/history-resources/spotlight-primary-source/franklin-d-roosevelts-first-inauguration-1933",
-        "host": "gilderlehrman.org",
-        "title": "Franklin D. Roosevelt’s First Inauguration, 1933",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
-          "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "1933",
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Franklin D. Roosevelt",
-        "pageDate": "1933",
-        "citedSourceDate": null,
-        "date": "1933"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00007308,
-      "usageKnown": true,
-      "latencyMs": 581,
+      "tokens": {
+        "promptTokens": 836,
+        "completionTokens": 69
+      },
+      "latencyMs": 780,
       "url": "https://medium.com/writers-blokke/how-a-tiny-homer-an-ex-journeyman-journalist-and-a-department-store-gave-fdr-his-famous-quote-917d5ad6c22c",
       "host": "medium.com",
       "outcome": "evidence",
@@ -331,142 +368,366 @@
         "attributedTo": "FDR",
         "pageDate": "2021-01-22",
         "citedSourceDate": null,
-        "date": "2021-01-22"
+        "date": "2021-01-22",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00004794,
+      "costUsd": 0.00010787999999999999,
       "usageKnown": true,
-      "latencyMs": 500,
-      "url": "https://docsteach.org/activity/analyzing-fdrs-first-inaugural-address",
-      "host": "docsteach.org",
+      "tokens": {
+        "promptTokens": 1618,
+        "completionTokens": 45
+      },
+      "latencyMs": 666,
+      "url": "https://www.c-span.org/program/the-presidency/the-only-thing-we-have-to-fear-is-fear-itself/623622",
+      "host": "c-span.org",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012054,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1829,
+        "completionTokens": 45
+      },
+      "latencyMs": 494,
+      "url": "https://wist.info/author/bacon-francis",
+      "host": "wist.info",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011819999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1474,
+        "completionTokens": 124
+      },
+      "latencyMs": 818,
+      "url": "https://teachinghistory.org/history-content/ask-a-historian/the-only-thing-we-have-to-fear-is-fear-itself",
+      "host": "teachinghistory.org",
       "outcome": "evidence",
       "reason": null
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n10",
-        "url": "https://docsteach.org/activity/analyzing-fdrs-first-inaugural-address",
-        "host": "docsteach.org",
-        "title": "Analyzing FDR’s First Inaugural Address - DocsTeach",
+        "id": "n6",
+        "url": "https://teachinghistory.org/history-content/ask-a-historian/the-only-thing-we-have-to-fear-is-fear-itself",
+        "host": "teachinghistory.org",
+        "title": "The Only Thing We Have to Fear Is Fear Itself | TeachingHistory.org",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
+          "exact_snippet": "I don’t care what else Franklin says in his inaugural address as long as he tells the people that the only thing they have to fear is fear.",
+          "attributed_to": "Louis McHenry Howe",
+          "page_date": "2015",
+          "cited_source": "Lela Stiles, The Man Behind Roosevelt: The Story of Louis McHenry Howe. New York: The World Publishing Company, 1954, p. 235.",
+          "cited_source_date": "1954"
+        },
+        "attributedTo": "Louis McHenry Howe",
+        "pageDate": null,
+        "citedSourceDate": "1954",
+        "date": "1954",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008934,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1309,
+        "completionTokens": 45
+      },
+      "latencyMs": 406,
+      "url": "https://www.britannica.com/biography/Michel-de-Montaigne",
+      "host": "britannica.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00008957999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1313,
+        "completionTokens": 45
+      },
+      "latencyMs": 401,
+      "url": "https://iep.utm.edu/montaigne",
+      "host": "iep.utm.edu",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009593999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1419,
+        "completionTokens": 45
+      },
+      "latencyMs": 432,
+      "url": "https://www.gutenberg.org/files/3600/3600-h/3600-h.htm",
+      "host": "gutenberg.org",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009923999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1434,
+        "completionTokens": 55
+      },
+      "latencyMs": 446,
+      "url": "https://plato.stanford.edu/entries/montaigne",
+      "host": "plato.stanford.edu",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "traced",
+      "tier": "super",
+      "costUsd": 0.000297,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 483,
+        "completionTokens": 169
+      },
+      "latencyMs": 53181,
+      "round": 1,
+      "leads": [
+        {
+          "fromNode": "n1",
+          "work": "First Inaugural Address by Franklin D. Roosevelt",
+          "query": "Franklin D. Roosevelt First Inaugural Address"
+        },
+        {
+          "fromNode": "n2",
+          "work": "Inaugural Address of Franklin D. Roosevelt",
+          "query": "Franklin D. Roosevelt Inaugural Address March 4 1933"
+        }
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "Franklin D. Roosevelt First Inaugural Address",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 3981
+    },
+    {
+      "type": "searched",
+      "query": "Franklin D. Roosevelt Inaugural Address March 4 1933",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 3255
+    },
+    {
+      "type": "pages_ready",
+      "pages": 5,
+      "droppedExcluded": 0,
+      "round": 1
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011633999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1759,
+        "completionTokens": 45
+      },
+      "latencyMs": 668,
+      "url": "https://guides.loc.gov/presidential-inaugurations/1929-1965",
+      "host": "guides.loc.gov",
+      "outcome": "no_quote",
+      "reason": null,
+      "lookingFor": "First Inaugural Address by Franklin D. Roosevelt"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011076,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1582,
+        "completionTokens": 66
+      },
+      "latencyMs": 642,
+      "url": "https://archive.org/download/4926590.1941.001.umich.edu/4926590.1941.001.umich.edu.pdf",
+      "host": "archive.org",
+      "outcome": "evidence",
+      "reason": null,
+      "lookingFor": "Inaugural Address of Franklin D. Roosevelt"
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n19",
+        "url": "https://archive.org/download/4926590.1941.001.umich.edu/4926590.1941.001.umich.edu.pdf",
+        "host": "archive.org",
+        "title": "The public papers and addresses of Franklin D. Roosevelt. ...",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "\"The only thing we have to fear is fear itself.\"",
           "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "2021",
+          "page_date": "1941",
           "cited_source": null,
           "cited_source_date": null
         },
         "attributedTo": "Franklin D. Roosevelt",
-        "pageDate": null,
+        "pageDate": "1941",
         "citedSourceDate": null,
-        "date": null
+        "date": "1941",
+        "foundVia": {
+          "node": "n2",
+          "work": "Inaugural Address of Franklin D. Roosevelt"
+        }
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00009761999999999999,
+      "costUsd": 0.00010128,
       "usageKnown": true,
-      "latencyMs": 543,
-      "url": "https://rivercity.wusd.k12.ca.us/documents/Academics/Social-Science/GRADE-11-US-HISTORY/PRIMARY-SOURCE-DOCUMENTS/7525206563888907214.pdf",
-      "host": "rivercity.wusd.k12.ca.us",
+      "tokens": {
+        "promptTokens": 1404,
+        "completionTokens": 71
+      },
+      "latencyMs": 884,
+      "url": "https://www.gutenberg.org/files/5038/5038-h/5038-h.htm",
+      "host": "gutenberg.org",
       "outcome": "evidence",
-      "reason": null
+      "reason": null,
+      "lookingFor": "Inaugural Address of Franklin D. Roosevelt"
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n9",
-        "url": "https://rivercity.wusd.k12.ca.us/documents/Academics/Social-Science/GRADE-11-US-HISTORY/PRIMARY-SOURCE-DOCUMENTS/7525206563888907214.pdf",
-        "host": "rivercity.wusd.k12.ca.us",
-        "title": "[PDF] Franklin D. Roosevelt: First Inaugural Address (1933)",
+        "id": "n18",
+        "url": "https://www.gutenberg.org/files/5038/5038-h/5038-h.htm",
+        "host": "gutenberg.org",
+        "title": "The Project Gutenberg E-text of State of the Union Addresses, by Franklin D. Roosevelt",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
+          "exact_snippet": "I have said, \"The only thing we have to fear is fear itself.\"",
           "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "1933",
-          "cited_source": "The New York Times",
-          "cited_source_date": "5 March 1933"
+          "page_date": "1934",
+          "cited_source": null,
+          "cited_source_date": null
         },
         "attributedTo": "Franklin D. Roosevelt",
-        "pageDate": "1933",
-        "citedSourceDate": "1933",
-        "date": "1933"
+        "pageDate": "1934",
+        "citedSourceDate": null,
+        "date": "1934",
+        "foundVia": {
+          "node": "n2",
+          "work": "Inaugural Address of Franklin D. Roosevelt"
+        }
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00004308,
+      "costUsd": 0.00007625999999999999,
       "usageKnown": true,
-      "latencyMs": 609,
-      "url": "https://www.bookbrowse.com/expressions/detail/index.cfm/expression_number/541/the-only-thing-we-have-to-fear-is-fear-itself",
-      "host": "bookbrowse.com",
+      "tokens": {
+        "promptTokens": 911,
+        "completionTokens": 90
+      },
+      "latencyMs": 899,
+      "url": "https://www.loc.gov/classroom-materials/united-states-history-primary-source-timeline/great-depression-and-world-war-ii-1929-1945/overview",
+      "host": "loc.gov",
       "outcome": "evidence",
-      "reason": null
+      "reason": null,
+      "lookingFor": "First Inaugural Address by Franklin D. Roosevelt"
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n8",
-        "url": "https://www.bookbrowse.com/expressions/detail/index.cfm/expression_number/541/the-only-thing-we-have-to-fear-is-fear-itself",
-        "host": "bookbrowse.com",
-        "title": "Why do we say The only thing we have to fear is fear itself?",
+        "id": "n16",
+        "url": "https://www.loc.gov/classroom-materials/united-states-history-primary-source-timeline/great-depression-and-world-war-ii-1929-1945/overview",
+        "host": "loc.gov",
+        "title": "Overview | Great Depression and World War II, 1929 to 1945 | U.S. History Primary Source Timeline | Classroom Materials at the Library of Congress | Library of Congress",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "The only thing we have to fear is fear itself",
-          "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "2024",
-          "cited_source": "Inaugural Address, March 4, 1933",
-          "cited_source_date": "1933"
+          "exact_snippet": "In his first inaugural address, FDR asserted his \"firm belief that the only thing we have to fear is fear itself--nameless, unreasoning, unjustified terror.\"",
+          "attributed_to": "Franklin Delano Roosevelt",
+          "page_date": "1933",
+          "cited_source": null,
+          "cited_source_date": null
         },
-        "attributedTo": null,
+        "attributedTo": "Franklin Delano Roosevelt",
         "pageDate": null,
         "citedSourceDate": null,
-        "date": null
+        "date": null,
+        "foundVia": {
+          "node": "n1",
+          "work": "First Inaugural Address by Franklin D. Roosevelt"
+        }
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00011232,
+      "costUsd": 0.00011477999999999998,
       "usageKnown": true,
-      "latencyMs": 489,
-      "url": "https://www.archives.gov/education/lessons/fdr-inaugural",
-      "host": "archives.gov",
+      "tokens": {
+        "promptTokens": 1521,
+        "completionTokens": 98
+      },
+      "latencyMs": 903,
+      "url": "https://www.gutenberg.org/files/925/925-h/925-h.htm",
+      "host": "gutenberg.org",
       "outcome": "evidence",
-      "reason": null
+      "reason": null,
+      "lookingFor": "First Inaugural Address by Franklin D. Roosevelt"
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n11",
-        "url": "https://www.archives.gov/education/lessons/fdr-inaugural",
-        "host": "archives.gov",
-        "title": "FDR's First Inaugural Address Declaring 'War' on the Great Depression | National Archives",
+        "id": "n15",
+        "url": "https://www.gutenberg.org/files/925/925-h/925-h.htm",
+        "host": "gutenberg.org",
+        "title": "Inaugural Addresses of the Presidents Of The United States | Project Gutenberg",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
+          "exact_snippet": "So, first of all, let me assert my firm belief that the only thing we have to fear is fear itself—nameless, unreasoning, unjustified terror which paralyzes needed efforts to convert retreat into advance.",
           "attributed_to": "Franklin D. Roosevelt",
           "page_date": "1933",
           "cited_source": null,
@@ -475,104 +736,47 @@
         "attributedTo": "Franklin D. Roosevelt",
         "pageDate": "1933",
         "citedSourceDate": null,
-        "date": "1933"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00010302,
-      "usageKnown": true,
-      "latencyMs": 509,
-      "url": "https://teachingamericanhistory.org/document/first-inaugural-address-fdr",
-      "host": "teachingamericanhistory.org",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n13",
-        "url": "https://teachingamericanhistory.org/document/first-inaugural-address-fdr",
-        "host": "teachingamericanhistory.org",
-        "title": "Inaugural Address (1933) - Teaching American History",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
-          "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "March 4, 1933",
-          "cited_source": "Samuel Rosenman, ed., The Public Papers of Franklin D. Roosevelt, Volume Two: The Year of Crisis, 1933",
-          "cited_source_date": "1933"
-        },
-        "attributedTo": "Franklin D. Roosevelt",
-        "pageDate": "1933",
-        "citedSourceDate": "1933",
-        "date": "1933"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00005862,
-      "usageKnown": true,
-      "latencyMs": 553,
-      "url": "https://www.youtube.com/watch?v=Y9ZWjHHEnV8",
-      "host": "youtube.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n12",
-        "url": "https://www.youtube.com/watch?v=Y9ZWjHHEnV8",
-        "host": "youtube.com",
-        "title": "1933 Franklin D. Roosevelt’s First Inaugural Address \"Fear Itself\"",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "the only thing we have to fear is fear itself",
-          "attributed_to": "Franklin D. Roosevelt",
-          "page_date": "2026-02-18",
-          "cited_source": "1933 Franklin D. Roosevelt’s First Inaugural Address",
-          "cited_source_date": "1933"
-        },
-        "attributedTo": "Franklin D. Roosevelt",
-        "pageDate": "2026-02-18",
-        "citedSourceDate": "1933",
-        "date": "1933"
+        "date": "1933",
+        "foundVia": {
+          "node": "n1",
+          "work": "First Inaugural Address by Franklin D. Roosevelt"
+        }
       }
     },
     {
       "type": "verdict",
       "tier": "super",
-      "costUsd": 0.0011274000000000002,
+      "costUsd": 0.0018063000000000003,
       "usageKnown": true,
-      "latencyMs": 4031,
+      "tokens": {
+        "promptTokens": 2238,
+        "completionTokens": 1261
+      },
+      "latencyMs": 25705,
       "verdict": {
         "verdict": "correct",
-        "earliest_node": "n1",
+        "earliest_node": "n4",
         "earliest_author": "Franklin D. Roosevelt",
         "earliest_date": "1933",
         "misattribution_node": null,
         "confidence": "high",
-        "rationale": "Multiple independent sources attribute the phrase exactly to Franklin D. Roosevelt’s First Inaugural Address on March 4, 1933. Node n1 cites the source as \"First Inaugural Address, March 4, 1933\" with a cited_source_date of 1933, establishing the earliest known appearance. Other nodes such as n3, n6, n9, and n11 also show the same wording attributed to Roosevelt in 1933, confirming the origin. No evidence points to an earlier or different source, so the saying is correctly credited to Franklin D. Roosevelt."
+        "rationale": "The quotation appears in Franklin D. Roosevelt's First Inaugural Address of March 4, 1933, as shown by nodes n2 ([n2]), n1 ([n1]), and n4 which carries a page_date of 1933 and attributes the line to Franklin D. Roosevelt ([n4]). A later node n6 attributes the phrase to Louis McHenry Howe via a 1954 source, but that attribution is much later and lacks corroboration from the primary speech ([n6]). No earlier instance of the saying is found in the evidence, so the credit to Roosevelt is supported.",
+        "lineage": [
+          {
+            "node": "n4",
+            "change": "first",
+            "note": "First recorded in FDR's 1933 inaugural address."
+          }
+        ]
       },
       "unknownIds": []
     },
     {
       "type": "done",
-      "nebiusUsd": 0.0031336800000000002,
-      "tavilyCredits": 5,
+      "nebiusUsd": 0.00467142,
+      "tavilyCredits": 7,
       "unknownCostCalls": 0,
-      "seconds": 23
+      "seconds": 183
     }
   ]
 }

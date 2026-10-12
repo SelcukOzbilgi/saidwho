@@ -1,6 +1,6 @@
 {
   "caseId": "en-hakiki-mursit",
-  "ranAt": "2026-10-09T13:36:51.064Z",
+  "ranAt": "2026-10-12T14:52:48.669Z",
   "events": [
     {
       "type": "started",
@@ -18,77 +18,289 @@
     {
       "type": "planned",
       "tier": "super",
-      "costUsd": 0.0005718,
+      "costUsd": 0.0011237999999999999,
       "usageKnown": true,
-      "latencyMs": 3792,
+      "tokens": {
+        "promptTokens": 191,
+        "completionTokens": 1185
+      },
+      "latencyMs": 12898,
       "variants": [
-        "Hayatta en hakiki mürşit bilimdir.",
-        "Hayatta en hakiki müreşşid ilimdir.",
-        "Hayatta en hakiki murshid ilimdir.",
-        "Hayatta en hakiki müreşşid bilimdir.",
-        "Hayatta en hakiki ilim mürşettir."
+        "Hayatta en hakiki müreşşid ilmdir.",
+        "İlim, hayatta en hakiki rehberdir.",
+        "Hakiki mürşit ilm.",
+        "En hakiki mürşit ilm.",
+        "Bilgi, hayatta en hakiki yol göstericisidir."
       ],
       "candidateAuthors": [
-        "Mustafa Kemal Atatürk",
+        "Mehmet Akif Ersoy",
         "Yunus Emre",
-        "Mevlana Celaleddin Rumi",
-        "Fuzûlî",
-        "Şeyh Galip"
+        "Ibn Sina (Avicenna)"
       ],
       "queries": [
         "\"Hayatta en hakiki mürşit ilimdir.\"",
-        "\"Hayatta en hakiki mürşit ilim\"",
-        "\"en hakiki mürşit ilimdir\" Atatürk",
-        "\"hayatta en hakiki mürşit\" kitap",
-        "\"en hakiki murshid ilim\" Türkçe"
-      ]
+        "earliest known source of \"Hayatta en hakiki mürşit ilimdir.\"",
+        "Mehmet Akif Ersoy \"Hayatta en hakiki mürşit ilimdir.\"",
+        "Yunus Emre \"Hayatta en hakiki mürşit ilimdir.\"",
+        "Ibn Sina \"Hayatta en hakiki mürşit ilimdir.\""
+      ],
+      "foundAttribution": null
     },
     {
       "type": "searched",
       "query": "\"Hayatta en hakiki mürşit ilimdir.\"",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2124
+      "latencyMs": 2108
     },
     {
       "type": "searched",
-      "query": "\"Hayatta en hakiki mürşit ilim\"",
+      "query": "earliest known source of \"Hayatta en hakiki mürşit ilimdir.\"",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1104
+      "latencyMs": 1548
     },
     {
       "type": "searched",
-      "query": "\"en hakiki mürşit ilimdir\" Atatürk",
+      "query": "Mehmet Akif Ersoy \"Hayatta en hakiki mürşit ilimdir.\"",
+      "results": 0,
+      "credits": 1,
+      "latencyMs": 782
+    },
+    {
+      "type": "searched",
+      "query": "Yunus Emre \"Hayatta en hakiki mürşit ilimdir.\"",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2069
+      "latencyMs": 1256
     },
     {
       "type": "searched",
-      "query": "\"hayatta en hakiki mürşit\" kitap",
-      "results": 0,
+      "query": "Ibn Sina \"Hayatta en hakiki mürşit ilimdir.\"",
+      "results": 5,
       "credits": 1,
-      "latencyMs": 3160
-    },
-    {
-      "type": "searched",
-      "query": "\"en hakiki murshid ilim\" Türkçe",
-      "results": 0,
-      "credits": 1,
-      "latencyMs": 1129
+      "latencyMs": 1205
     },
     {
       "type": "pages_ready",
-      "pages": 2,
+      "pages": 8,
       "droppedExcluded": 0
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.0000984,
+      "costUsd": 0.00011346,
       "usageKnown": true,
-      "latencyMs": 804,
+      "tokens": {
+        "promptTokens": 1475,
+        "completionTokens": 104
+      },
+      "latencyMs": 695,
+      "url": "https://hurfikirler.com/hayatta-en-hakiki-mursit-ilim-midir",
+      "host": "hurfikirler.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://hurfikirler.com/hayatta-en-hakiki-mursit-ilim-midir",
+        "host": "hurfikirler.com",
+        "title": "Hayatta En Hakiki Mürşit İlim midir? - Hür Fikirler",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Çok kullanılan bir söz var: “Hayatta en hakiki mürşit ilimdir.” M. Kemal’e atfedilen bu sözün aslının Hazreti Ali’ye ait olduğu da rivayet edilir.",
+          "attributed_to": "Atilla Yayla",
+          "page_date": "0 yorum",
+          "cited_source": "Hazreti Ali",
+          "cited_source_date": null
+        },
+        "attributedTo": "Atilla Yayla",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null,
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0001041,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1283,
+        "completionTokens": 113
+      },
+      "latencyMs": 760,
+      "url": "https://eksisozluk.com/hayatta-en-hakiki-mursit-ilimdir-fendir--511040",
+      "host": "eksisozluk.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n3",
+        "url": "https://eksisozluk.com/hayatta-en-hakiki-mursit-ilimdir-fendir--511040",
+        "host": "eksisozluk.com",
+        "title": "hayatta en hakiki mürşit ilimdir fendir - ekşi sözlük",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "dünyada herşey için; medeniyet için, hayat için, muvaffakiyet için en hakiki mürşit ilimdir, fendir.",
+          "attributed_to": "ekşi sözlük kullanıcısı (sözlük kaynağına göre Atatürk'ün sözü olarak nitelendirilmiştir)",
+          "page_date": "son 24 saat",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": null,
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null,
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.000132,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1852,
+        "completionTokens": 87
+      },
+      "latencyMs": 846,
+      "url": "https://www.birgun.net/haber/mursit-ne-demek-hayatta-en-hakiki-mursit-ilimdir-ne-demek-596719",
+      "host": "birgun.net",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n5",
+        "url": "https://www.birgun.net/haber/mursit-ne-demek-hayatta-en-hakiki-mursit-ilimdir-ne-demek-596719",
+        "host": "birgun.net",
+        "title": "Mürşit ne demek? Hayatta en hakiki mürşit ilimdir ne demek?",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Atatürk’ün \"Hayatta en hakiki mürşit ilimdir.\" sözü, bunun en güzel örneklerinden biridir.",
+          "attributed_to": "Atatürk",
+          "page_date": "2025-02-04",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Atatürk",
+        "pageDate": "2025-02-04",
+        "citedSourceDate": null,
+        "date": "2025-02-04",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00015282,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 2027,
+        "completionTokens": 130
+      },
+      "latencyMs": 1090,
+      "url": "https://kocaeliaydinlarocagi.org.tr/ataturkun-hayatta-en-hakiki-mursit-ilimdir-vecizesi",
+      "host": "kocaeliaydinlarocagi.org.tr",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://kocaeliaydinlarocagi.org.tr/ataturkun-hayatta-en-hakiki-mursit-ilimdir-vecizesi",
+        "host": "kocaeliaydinlarocagi.org.tr",
+        "title": "Atatürk’ün “Hayatta En Hakiki Mürşit İlimdir” Vecizesi - Kocaeli Aydınlar Ocağı",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Dünyada her şey için medeniyet için, hayat için muvaffakiyet için en hakiki mürşit ilimdir, fendir",
+          "attributed_to": "Atatürk",
+          "page_date": "2026-10-09",
+          "cited_source": "Atatürk’ün Söylev ve Demeçleri I-III, Atatürk Kültür Dil ve Tarih Kurumu, Atatürk Araştırma Merkezi’nin yayınındaki",
+          "cited_source_date": "1924"
+        },
+        "attributedTo": "Atatürk",
+        "pageDate": "2026-10-09",
+        "citedSourceDate": "1924",
+        "date": "1924",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00015756,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 2338,
+        "completionTokens": 72
+      },
+      "latencyMs": 413,
+      "url": "https://www.instagram.com/reel/CqJIUWJJLSg",
+      "host": "instagram.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n6",
+        "url": "https://www.instagram.com/reel/CqJIUWJJLSg",
+        "host": "instagram.com",
+        "title": "Instagram",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Hayatta en hakiki mürşit ilimdir.",
+          "attributed_to": "Ulu Başbuğ Atatürk",
+          "page_date": "March 23, 2023",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Ulu Başbuğ Atatürk",
+        "pageDate": "2023",
+        "citedSourceDate": null,
+        "date": "2023",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012576,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1484,
+        "completionTokens": 153
+      },
+      "latencyMs": 1222,
       "url": "https://www.ackizyurdu.com/blog/hayatta-en-hakkiki-mursit-ilimdir-mustafa-kemal-ataturk",
       "host": "ackizyurdu.com",
       "outcome": "evidence",
@@ -108,96 +320,118 @@
         "reader": {
           "contains_quote": true,
           "exact_snippet": "Dünyada her şey için, maddiyat için, maneviyat için, başarı için en hakiki mürşit ilimdir, fendir. İlim ve fennin haricinde mürşit aramak gaflettir, cehalettir, delalettir. Yalnız ilim ve fennin yaşadığımız her dakikadaki safhalarının gelişimini anlamak ve zamanla takip etmek gerekir",
-          "attributed_to": "Mustafa Kemal ATATÜRK",
+          "attributed_to": "Mustafa Kemal Atatürk",
           "page_date": "19/11/2019",
           "cited_source": null,
           "cited_source_date": null
         },
-        "attributedTo": "Mustafa Kemal ATATÜRK",
+        "attributedTo": "Mustafa Kemal Atatürk",
         "pageDate": "2019",
         "citedSourceDate": null,
-        "date": "2019"
+        "date": "2019",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00016572,
+      "costUsd": 0.000044279999999999996,
       "usageKnown": true,
-      "latencyMs": 916,
-      "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi",
-      "host": "kemalataturk.net",
-      "outcome": "too_long",
+      "tokens": {
+        "promptTokens": 558,
+        "completionTokens": 45
+      },
+      "latencyMs": 401,
+      "url": "https://www.scribd.com/document/643342466/B%C4%B0L%C4%B0M-TAR%C4%B0H%C4%B0-Hayatta-En-Hakiki-Mur%C5%9Fit-%C4%B0limdir-Ayd%C4%B1n-Say%C4%B1l%C4%B1-172-pdf",
+      "host": "scribd.com",
+      "outcome": "no_quote",
       "reason": null
-    },
-    {
-      "type": "escalated",
-      "step": "read",
-      "from": "lightning",
-      "to": "super",
-      "thinking": false,
-      "reason": "a field was too long to be a quote",
-      "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi"
     },
     {
       "type": "page_read",
-      "tier": "super",
-      "costUsd": 0.0006588,
+      "tier": "lightning",
+      "costUsd": 0.00005898,
       "usageKnown": true,
-      "latencyMs": 801,
-      "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi",
-      "host": "kemalataturk.net",
-      "outcome": "evidence",
+      "tokens": {
+        "promptTokens": 763,
+        "completionTokens": 55
+      },
+      "latencyMs": 492,
+      "url": "https://www.instagram.com/p/C6uGz6ooRov",
+      "host": "instagram.com",
+      "outcome": "no_quote",
       "reason": null
     },
     {
-      "type": "node_added",
-      "node": {
-        "id": "n2",
-        "url": "https://kemalataturk.net/ataturkun-soyledikleri/ataturk-hayatta-en-hakiki-mursit-ilimdir-sozunu-nerede-soyledi",
-        "host": "kemalataturk.net",
-        "title": "Hayatta En Hakiki Mürşit İlimdir Sözü Mustafa Kemal Atatürk – Atatürk Sitesi",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Hayatta En Hakiki Mürşit İlimdir",
-          "attributed_to": "Mustafa Kemal Atatürk",
-          "page_date": "2020-05-16",
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Mustafa Kemal Atatürk",
-        "pageDate": "2020-05-16",
-        "citedSourceDate": null,
-        "date": "2020-05-16"
-      }
+      "type": "traced",
+      "tier": "super",
+      "costUsd": 0.00020669999999999998,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 416,
+        "completionTokens": 91
+      },
+      "latencyMs": 1513,
+      "round": 1,
+      "leads": [
+        {
+          "fromNode": "n2",
+          "work": "Atatürk’ün Söylev ve Demeçleri I-III",
+          "query": "Atatürk’ün Söylev ve Demeçleri I-III Hayatta en hakiki mürşit ilimdir"
+        }
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "Atatürk’ün Söylev ve Demeçleri I-III Hayatta en hakiki mürşit ilimdir",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2021
+    },
+    {
+      "type": "pages_ready",
+      "pages": 0,
+      "droppedExcluded": 0,
+      "round": 1
+    },
+    {
+      "type": "cited_works",
+      "works": [
+        {
+          "citedBy": "n2",
+          "work": "Atatürk’ün Söylev ve Demeçleri I-III",
+          "checked": "The digital-library search for Atatürk’ün Söylev ve Demeçleri I-III returned no page text."
+        }
+      ]
     },
     {
       "type": "verdict",
       "tier": "super",
-      "costUsd": 0.0006069,
+      "costUsd": 0.0019796999999999996,
       "usageKnown": true,
-      "latencyMs": 3390,
+      "tokens": {
+        "promptTokens": 1598,
+        "completionTokens": 1667
+      },
+      "latencyMs": 12772,
       "verdict": {
         "verdict": "no_known_source",
         "earliest_node": "n1",
         "earliest_author": null,
-        "earliest_date": null,
+        "earliest_date": "2019",
         "misattribution_node": null,
         "confidence": "low",
-        "rationale": "Both pieces of evidence (n1 and n2) simply repeat the quotation and attribute it to Mustafa Kemal Atatürk without citing any primary source or earlier occurrence. They provide no independent verification that Atatürk actually said or wrote the phrase, nor do they point to any alternative origin. Because there is no documented source linking the saying to Atatürk and no evidence of an earlier or different author, the attribution remains unsupported by verifiable evidence."
+        "rationale": "The earliest dated appearance of the phrase is in n1 (2019), which attributes it to Mustafa Kemal Atatürk, but no earlier source confirms his authorship. Other nodes either repeat the attribution without earlier evidence or suggest alternative origins without dates, leaving the origin unknown.",
+        "lineage": []
       },
       "unknownIds": []
     },
     {
       "type": "done",
-      "nebiusUsd": 0.00210162,
-      "tavilyCredits": 5,
+      "nebiusUsd": 0.004199159999999999,
+      "tavilyCredits": 6,
       "unknownCostCalls": 0,
-      "seconds": 19
+      "seconds": 37
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "caseId": "be-the-change",
-  "ranAt": "2026-10-09T13:35:01.340Z",
+  "ranAt": "2026-10-12T14:01:32.991Z",
   "events": [
     {
       "type": "started",
@@ -16,149 +16,82 @@
     {
       "type": "planned",
       "tier": "super",
-      "costUsd": 0.0007230000000000001,
+      "costUsd": 0.0007187999999999999,
       "usageKnown": true,
-      "latencyMs": 4176,
+      "tokens": {
+        "promptTokens": 191,
+        "completionTokens": 735
+      },
+      "latencyMs": 5706,
       "variants": [
-        "Be the change you wish to see in the world.",
-        "You must be the change you want to see in the world.",
-        "Be the change you want to see in the world.",
-        "Sei die Veränderung, die du in der Welt sehen willst.",
-        "Soyez le changement que vous voulez voir dans le monde."
+        "We but mirror the world.",
+        "As a man changes his own nature, so does the attitude of the world change towards him.",
+        "If we could change ourselves, the tendencies in the world would also change."
       ],
       "candidateAuthors": [
         "Mahatma Gandhi",
-        "Arun Gandhi",
-        "Leo Tolstoy",
-        "Ralph Waldo Emerson",
-        "Aung San Suu Kyi"
+        "Arleen Lorrance",
+        "Anonymous"
       ],
       "queries": [
         "\"Be the change you wish to see in the world.\"",
-        "\"be the change you wish to see in the world\" earliest",
-        "origin of \"be the change you wish to see in the world\"",
-        "first appearance \"be the change you wish to see in the world\" newspaper",
-        "Gandhi \"be the change\" quote source"
-      ]
+        "Be the change you wish to see in the world origin",
+        "earliest newspaper article Be the change you wish to see in the world",
+        "Gandhi Be the change you wish to see in the world source",
+        "Arleen Lorrance Be the change you wish to see in the world"
+      ],
+      "foundAttribution": null
     },
     {
       "type": "searched",
       "query": "\"Be the change you wish to see in the world.\"",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2160
+      "latencyMs": 1922
     },
     {
       "type": "searched",
-      "query": "\"be the change you wish to see in the world\" earliest",
+      "query": "Be the change you wish to see in the world origin",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2821
+      "latencyMs": 1685
     },
     {
       "type": "searched",
-      "query": "origin of \"be the change you wish to see in the world\"",
+      "query": "earliest newspaper article Be the change you wish to see in the world",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1605
+      "latencyMs": 1518
     },
     {
       "type": "searched",
-      "query": "first appearance \"be the change you wish to see in the world\" newspaper",
+      "query": "Gandhi Be the change you wish to see in the world source",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1979
+      "latencyMs": 1624
     },
     {
       "type": "searched",
-      "query": "Gandhi \"be the change\" quote source",
+      "query": "Arleen Lorrance Be the change you wish to see in the world",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2221
+      "latencyMs": 1261
     },
     {
       "type": "pages_ready",
-      "pages": 9,
+      "pages": 18,
       "droppedExcluded": 0
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00008154,
+      "costUsd": 0.00010733999999999999,
       "usageKnown": true,
-      "latencyMs": 683,
-      "url": "https://www.genesisca.org/single-post/2019/06/17/be-the-change",
-      "host": "genesisca.org",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n2",
-        "url": "https://www.genesisca.org/single-post/2019/06/17/be-the-change",
-        "host": "genesisca.org",
-        "title": "Be The Change",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Be the change you wish to see in the world.",
-          "attributed_to": "Mahatma Gandhi",
-          "page_date": "2019-06-17",
-          "cited_source": "Joseph Ranseth, 2017",
-          "cited_source_date": "2017"
-        },
-        "attributedTo": "Mahatma Gandhi",
-        "pageDate": "2019-06-17",
-        "citedSourceDate": "2017",
-        "date": "2017"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.0001806,
-      "usageKnown": true,
-      "latencyMs": 686,
-      "url": "https://www.facebook.com/heart.to.heart.international/posts/wisdomwednesdayyou-must-be-the-change-you-wish-to-see-in-the-world-mahatma-gandh/1089196509914976",
-      "host": "facebook.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n5",
-        "url": "https://www.facebook.com/heart.to.heart.international/posts/wisdomwednesdayyou-must-be-the-change-you-wish-to-see-in-the-world-mahatma-gandh/1089196509914976",
-        "host": "facebook.com",
-        "title": "#WisdomWednesday \"You must... - Heart to Heart International",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "You must be the change you wish to see in the world.",
-          "attributed_to": "Mahatma Gandhi",
-          "page_date": "2025-04-30",
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Mahatma Gandhi",
-        "pageDate": "2025-04-30",
-        "citedSourceDate": null,
-        "date": "2025-04-30"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00010614,
-      "usageKnown": true,
-      "latencyMs": 702,
+      "tokens": {
+        "promptTokens": 1465,
+        "completionTokens": 81
+      },
+      "latencyMs": 650,
       "url": "https://teachdifferent.com/podcast/be-the-change-that-you-wish-to-see-in-the-world-teach-different-with-mahatma-gandhi",
       "host": "teachdifferent.com",
       "outcome": "evidence",
@@ -177,7 +110,7 @@
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "Be the change that you wish to see in the world.",
+          "exact_snippet": "\"Be the change that you wish to see in the world,\" – Teach Different with Mahatma Gandhi",
           "attributed_to": "Mahatma Gandhi",
           "page_date": "12/18/2024",
           "cited_source": null,
@@ -186,15 +119,20 @@
         "attributedTo": "Mahatma Gandhi",
         "pageDate": "2024",
         "citedSourceDate": null,
-        "date": "2024"
+        "date": "2024",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00008117999999999999,
+      "costUsd": 0.00007985999999999998,
       "usageKnown": true,
-      "latencyMs": 739,
+      "tokens": {
+        "promptTokens": 1007,
+        "completionTokens": 81
+      },
+      "latencyMs": 655,
       "url": "https://www.brainyquote.com/quotes/mahatma_gandhi_109075",
       "host": "brainyquote.com",
       "outcome": "evidence",
@@ -222,51 +160,61 @@
         "attributedTo": "Mahatma Gandhi",
         "pageDate": "1869",
         "citedSourceDate": null,
-        "date": "1869"
+        "date": "1869",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00010368,
+      "costUsd": 0.00018095999999999998,
       "usageKnown": true,
-      "latencyMs": 538,
-      "url": "https://quoteiac.com/blogs/journal/be-the-change-the-most-famous-quote-gandhi-probably-never-said",
-      "host": "quoteiac.com",
+      "tokens": {
+        "promptTokens": 2704,
+        "completionTokens": 78
+      },
+      "latencyMs": 756,
+      "url": "https://www.facebook.com/heart.to.heart.international/posts/wisdomwednesdayyou-must-be-the-change-you-wish-to-see-in-the-world-mahatma-gandh/1089196509914976",
+      "host": "facebook.com",
       "outcome": "evidence",
       "reason": null
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n8",
-        "url": "https://quoteiac.com/blogs/journal/be-the-change-the-most-famous-quote-gandhi-probably-never-said",
-        "host": "quoteiac.com",
-        "title": "Be the Change: The Gandhi Quote That Isn't Gandhi",
+        "id": "n5",
+        "url": "https://www.facebook.com/heart.to.heart.international/posts/wisdomwednesdayyou-must-be-the-change-you-wish-to-see-in-the-world-mahatma-gandh/1089196509914976",
+        "host": "facebook.com",
+        "title": "#WisdomWednesday \"You must... - Heart to Heart International",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "Be the change you want to see happen instead of trying to change everyone else.",
-          "attributed_to": "Arleen Lorrance",
-          "page_date": "2024",
-          "cited_source": "The Love Project",
-          "cited_source_date": "1974"
+          "exact_snippet": "\"You must be the change you wish to see in the world.\" - Mahatma Gandhi",
+          "attributed_to": "Mahatma Gandhi",
+          "page_date": "2025-04-30",
+          "cited_source": null,
+          "cited_source_date": null
         },
-        "attributedTo": "Arleen Lorrance",
-        "pageDate": null,
-        "citedSourceDate": "1974",
-        "date": "1974"
+        "attributedTo": "Mahatma Gandhi",
+        "pageDate": "2025-04-30",
+        "citedSourceDate": null,
+        "date": "2025-04-30",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00011184,
+      "costUsd": 0.00011364,
       "usageKnown": true,
-      "latencyMs": 524,
+      "tokens": {
+        "promptTokens": 1514,
+        "completionTokens": 95
+      },
+      "latencyMs": 469,
       "url": "https://www.bbc.co.uk/bitesize/articles/zmvwwnb",
       "host": "bbc.co.uk",
       "outcome": "evidence",
@@ -275,7 +223,7 @@
     {
       "type": "node_added",
       "node": {
-        "id": "n9",
+        "id": "n7",
         "url": "https://www.bbc.co.uk/bitesize/articles/zmvwwnb",
         "host": "bbc.co.uk",
         "title": "Five historical quotes that we probably misquote - BBC Bitesize",
@@ -285,24 +233,68 @@
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "\"Be the change you wish to see in the world.\" – Mahatma Gandhi",
+          "exact_snippet": "We but mirror the world. All the tendencies present in the outer world are to be found in the world of our body. If we could change ourselves, the tendencies in the world would also change.",
           "attributed_to": "Mahatma Gandhi",
-          "page_date": "2026",
-          "cited_source": "Indian Opinion (1913)",
+          "page_date": null,
+          "cited_source": "Indian Opinion",
           "cited_source_date": "1913"
         },
         "attributedTo": "Mahatma Gandhi",
-        "pageDate": "2026",
+        "pageDate": null,
         "citedSourceDate": "1913",
-        "date": "1913"
+        "date": "1913",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00013842000000000002,
+      "costUsd": 0.0000375,
       "usageKnown": true,
-      "latencyMs": 1324,
+      "tokens": {
+        "promptTokens": 445,
+        "completionTokens": 45
+      },
+      "latencyMs": 409,
+      "url": "https://www.goodreads.com/author/quotes/5810891.Mahatma_Gandhi",
+      "host": "goodreads.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009869999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1009,
+        "completionTokens": 159
+      },
+      "latencyMs": 1224,
+      "url": "https://www.genesisca.org/single-post/2019/06/17/be-the-change",
+      "host": "genesisca.org",
+      "outcome": "too_long",
+      "reason": null
+    },
+    {
+      "type": "escalated",
+      "step": "read",
+      "from": "lightning",
+      "to": "super",
+      "thinking": false,
+      "reason": "a field was too long to be a quote",
+      "url": "https://www.genesisca.org/single-post/2019/06/17/be-the-change"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00013812,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1534,
+        "completionTokens": 192
+      },
+      "latencyMs": 1338,
       "url": "https://josephranseth.com/gandhi-didnt-say-be-the-change-you-want-to-see-in-the-world",
       "host": "josephranseth.com",
       "outcome": "too_long",
@@ -320,45 +312,13 @@
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00011717999999999999,
+      "costUsd": 0.00007403999999999999,
       "usageKnown": true,
-      "latencyMs": 794,
-      "url": "https://www.leeandlow.com/blog/did-gandhi-say-be-the-change",
-      "host": "leeandlow.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n6",
-        "url": "https://www.leeandlow.com/blog/did-gandhi-say-be-the-change",
-        "host": "leeandlow.com",
-        "title": "Did Gandhi Really Say 'Be the Change'?: Editing Historical Fiction - Lee & Low Books",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Be the change. As an undergrad working on Gandhi Day of Service, a day of community service that takes place near Mahatma Gandhi’s birthday at colleges across the country, I first heard his famous quote, “Be the change you wish to see in the world.”",
-          "attributed_to": "Supriya Kelkar (via Lee & Low Books blog post)",
-          "page_date": "October 3, 2017",
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Supriya Kelkar (via Lee & Low Books blog post)",
-        "pageDate": "2017",
-        "citedSourceDate": null,
-        "date": "2017"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00007416,
-      "usageKnown": true,
-      "latencyMs": 865,
+      "tokens": {
+        "promptTokens": 622,
+        "completionTokens": 153
+      },
+      "latencyMs": 842,
       "url": "https://jenniferlphillips.com/blog/2021/2/24/origin-story-be-the-change",
       "host": "jenniferlphillips.com",
       "outcome": "too_long",
@@ -375,46 +335,322 @@
     },
     {
       "type": "page_read",
-      "tier": "super",
-      "costUsd": 0.0005346,
+      "tier": "lightning",
+      "costUsd": 0.00010865999999999999,
       "usageKnown": true,
-      "latencyMs": 911,
-      "url": "https://josephranseth.com/gandhi-didnt-say-be-the-change-you-want-to-see-in-the-world",
-      "host": "josephranseth.com",
+      "tokens": {
+        "promptTokens": 1423,
+        "completionTokens": 97
+      },
+      "latencyMs": 556,
+      "url": "https://compassionatespirit.com/wpblog/2012/08/14/be-the-change-where-did-this-saying-come-from",
+      "host": "compassionatespirit.com",
       "outcome": "evidence",
       "reason": null
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n1",
-        "url": "https://josephranseth.com/gandhi-didnt-say-be-the-change-you-want-to-see-in-the-world",
-        "host": "josephranseth.com",
-        "title": "Gandhi didn't say \"Be the change you want to see in the world...\" Here's the real quote",
+        "id": "n10",
+        "url": "https://compassionatespirit.com/wpblog/2012/08/14/be-the-change-where-did-this-saying-come-from",
+        "host": "compassionatespirit.com",
+        "title": "\"Be the Change\" - where did this saying come from? - Compassionate Spirit",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "you know that whole quote: “be the change you want to see in the world” that we attribute to Gandhi all the time?",
-          "attributed_to": null,
-          "page_date": "2015-08-27",
+          "exact_snippet": "We must be the change we want to see in the world.",
+          "attributed_to": "Mahatma Gandhi",
+          "page_date": "2012-08-14",
+          "cited_source": "Arleen Lorrance, as described in the book The Love Project Way (co-authored with Diane Kennedy Pike)",
+          "cited_source_date": "1968"
+        },
+        "attributedTo": "Mahatma Gandhi",
+        "pageDate": "2012-08-14",
+        "citedSourceDate": "1968",
+        "date": "1968",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012432,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1420,
+        "completionTokens": 163
+      },
+      "latencyMs": 781,
+      "url": "https://professorbuzzkill.com/2017/01/09/gandhi-be-the-change-you-wish-to-see-in-the-world",
+      "host": "professorbuzzkill.com",
+      "outcome": "too_long",
+      "reason": null
+    },
+    {
+      "type": "escalated",
+      "step": "read",
+      "from": "lightning",
+      "to": "super",
+      "thinking": false,
+      "reason": "a field was too long to be a quote",
+      "url": "https://professorbuzzkill.com/2017/01/09/gandhi-be-the-change-you-wish-to-see-in-the-world"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009593999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1379,
+        "completionTokens": 55
+      },
+      "latencyMs": 359,
+      "url": "https://www.newyorker.com/magazine/2018/10/22/gandhi-for-the-post-truth-age",
+      "host": "newyorker.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "super",
+      "costUsd": 0.00037380000000000003,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1009,
+        "completionTokens": 79
+      },
+      "latencyMs": 876,
+      "url": "https://www.genesisca.org/single-post/2019/06/17/be-the-change",
+      "host": "genesisca.org",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n2",
+        "url": "https://www.genesisca.org/single-post/2019/06/17/be-the-change",
+        "host": "genesisca.org",
+        "title": "Be The Change",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "We've all heard the saying, \"Be the change you wish to see in the world.\"",
+          "attributed_to": "Mahatma Gandhi",
+          "page_date": "2019-06-17",
           "cited_source": null,
           "cited_source_date": null
         },
-        "attributedTo": null,
-        "pageDate": "2015-08-27",
+        "attributedTo": "Mahatma Gandhi",
+        "pageDate": "2019-06-17",
         "citedSourceDate": null,
-        "date": "2015-08-27"
+        "date": "2019-06-17",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "super",
-      "costUsd": 0.000267,
+      "costUsd": 0.0004755,
       "usageKnown": true,
-      "latencyMs": 842,
+      "tokens": {
+        "promptTokens": 1420,
+        "completionTokens": 55
+      },
+      "latencyMs": 625,
+      "url": "https://professorbuzzkill.com/2017/01/09/gandhi-be-the-change-you-wish-to-see-in-the-world",
+      "host": "professorbuzzkill.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010835999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1490,
+        "completionTokens": 79
+      },
+      "latencyMs": 444,
+      "url": "https://www.wildmind.org/blogs/quote-of-the-month/quote-gandhi",
+      "host": "wildmind.org",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n13",
+        "url": "https://www.wildmind.org/blogs/quote-of-the-month/quote-gandhi",
+        "host": "wildmind.org",
+        "title": "Mahatma Gandhi: \"You must be the change you wish to see in the world.\" - Wildmind",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If we could change ourselves, the tendencies in the world would also change.",
+          "attributed_to": "Mahatma Gandhi",
+          "page_date": "November 11, 2000",
+          "cited_source": "Bhagavad-gita",
+          "cited_source_date": null
+        },
+        "attributedTo": "Mahatma Gandhi",
+        "pageDate": "2000",
+        "citedSourceDate": null,
+        "date": "2000",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010775999999999998,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1384,
+        "completionTokens": 103
+      },
+      "latencyMs": 594,
+      "url": "https://lithub.com/be-the-change-on-the-misattributed-origins-of-a-popular-slogan",
+      "host": "lithub.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n12",
+        "url": "https://lithub.com/be-the-change-on-the-misattributed-origins-of-a-popular-slogan",
+        "host": "lithub.com",
+        "title": "Literary Hub » “Be the Change.” On the Misattributed Origins of a Popular Slogan",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "We but mirror the world. All the tendencies present in the outer world are to be found in the world of our body. If we could change ourselves, the tendencies in the world would also change.",
+          "attributed_to": "Gandhi",
+          "page_date": "2023",
+          "cited_source": "Gandhi (1913)",
+          "cited_source_date": "1913"
+        },
+        "attributedTo": "Gandhi",
+        "pageDate": null,
+        "citedSourceDate": "1913",
+        "date": "1913",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011958,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1813,
+        "completionTokens": 45
+      },
+      "latencyMs": 414,
+      "url": "https://www.imdb.com/title/tt7335184",
+      "host": "imdb.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00003426,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 391,
+        "completionTokens": 45
+      },
+      "latencyMs": 413,
+      "url": "https://www.youtube.com",
+      "host": "youtube.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0001014,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1510,
+        "completionTokens": 45
+      },
+      "latencyMs": 340,
+      "url": "https://www.amazon.com/You-Novel-Caroline-Kepnes/dp/1476785600",
+      "host": "amazon.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00007434000000000001,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1059,
+        "completionTokens": 45
+      },
+      "latencyMs": 432,
+      "url": "https://www.netflix.com/title/80211991",
+      "host": "netflix.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00004698,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 563,
+        "completionTokens": 55
+      },
+      "latencyMs": 441,
+      "url": "https://x.com/YouNetflix",
+      "host": "x.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "super",
+      "costUsd": 0.0005097,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1534,
+        "completionTokens": 55
+      },
+      "latencyMs": 3379,
+      "url": "https://josephranseth.com/gandhi-didnt-say-be-the-change-you-want-to-see-in-the-world",
+      "host": "josephranseth.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "page_read",
+      "tier": "super",
+      "costUsd": 0.0002757,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 622,
+        "completionTokens": 99
+      },
+      "latencyMs": 4075,
       "url": "https://jenniferlphillips.com/blog/2021/2/24/origin-story-be-the-change",
       "host": "jenniferlphillips.com",
       "outcome": "evidence",
@@ -423,7 +659,7 @@
     {
       "type": "node_added",
       "node": {
-        "id": "n7",
+        "id": "n6",
         "url": "https://jenniferlphillips.com/blog/2021/2/24/origin-story-be-the-change",
         "host": "jenniferlphillips.com",
         "title": "Origin Story: Be the Change — Jennifer L. Phillips, Ph.D.",
@@ -436,38 +672,68 @@
           "exact_snippet": "“Be the change you wish to see in the world” is often attributed to Mahatma Gandhi",
           "attributed_to": "Mahatma Gandhi (often attributed)",
           "page_date": "2021-02-24",
-          "cited_source": null,
-          "cited_source_date": null
+          "cited_source": "Indian Opinion, 1913 journal article by Gandhi",
+          "cited_source_date": "1913"
         },
         "attributedTo": "Mahatma Gandhi (often attributed)",
         "pageDate": null,
-        "citedSourceDate": null,
-        "date": null
+        "citedSourceDate": "1913",
+        "date": "1913",
+        "foundVia": null
       }
+    },
+    {
+      "type": "traced",
+      "tier": "super",
+      "costUsd": 0.00014519999999999998,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 460,
+        "completionTokens": 8
+      },
+      "latencyMs": 580,
+      "round": 1,
+      "leads": []
     },
     {
       "type": "verdict",
       "tier": "super",
-      "costUsd": 0.0020838000000000002,
+      "costUsd": 0.0021924,
       "usageKnown": true,
-      "latencyMs": 9668,
+      "tokens": {
+        "promptTokens": 1758,
+        "completionTokens": 1850
+      },
+      "latencyMs": 12661,
       "verdict": {
         "verdict": "misattributed",
-        "earliest_node": "n9",
-        "earliest_author": null,
-        "earliest_date": "1913",
-        "misattribution_node": "n4",
+        "earliest_node": "n10",
+        "earliest_author": "Mahatma Gandhi",
+        "earliest_date": "2012-08-14",
+        "misattribution_node": "n2",
         "confidence": "medium",
-        "rationale": "The earliest traceable source for the phrasing comes from a BBC article that cites the Indian Opinion newspaper in 1913 as the origin of the quote ([n9], cited_source_date: 1913). However, several independent fact‑checking and scholarly sources directly state that Gandhi did not say this. Joseph Ranseth’s analysis concludes the line is not from Gandhi ([n1]), and another site attributes the wording to Arleen Lorrance and her 1974 work “The Love Project” ([n8]). Multiple other pages note the quote is commonly but incorrectly attributed to Gandhi ([n6], [n7]). While one node erroneously lists a page date of 1869 for a Gandhi attribution ([n4]), that date is clearly erroneous (it matches Gandhi’s birth year) and does not represent an actual appearance of the saying. Because credible evidence points to an origin either later than Gandhi’s lifetime or to a different author, the saying is best considered misattributed to Gandhi."
+        "rationale": "The earliest dated occurrence of the saying (or a close variant) is in node n10 (2012-08-14) which reads “We must be the change we want to see in the world” and attributes it to Gandhi【n10】. Earlier nodes that reference Gandhi’s writings (n6, n7, n12) cite his 1913 Indian Opinion article containing the longer passage “We but mirror the world… If we could change ourselves, the tendencies in the world would also change”【n6】【n7】【n12】, but none contain the exact concise phrasing. Later nodes such as n2 (2019) and n3 (2024) present the widely circulated wording “Be the change you wish to see in the world” still credited to Gandhi【n2】【n3】. Because the precise wording does not appear in Gandhi’s known works and first surfaces only in the 2010s, the credit to him is likely a misattribution.",
+        "lineage": [
+          {
+            "node": "n10",
+            "change": "first",
+            "note": "First appearance: ‘We must be the change we want to see in the world.’ attributed to Gandhi"
+          },
+          {
+            "node": "n2",
+            "change": "wording",
+            "note": "Wording changed to ‘Be the change you wish to see in the world.’ still attributed to Gandhi"
+          }
+        ]
       },
       "unknownIds": []
     },
     {
       "type": "done",
-      "nebiusUsd": 0.00460314,
+      "nebiusUsd": 0.00644286,
       "tavilyCredits": 5,
       "unknownCostCalls": 0,
-      "seconds": 27
+      "seconds": 33
     }
   ]
 }
