@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { createDailyLedger, createSharedLedger, ledgerFromEnv } from "./daily-budget";
+import { createDailyLedger, createSharedLedger, LEDGER_TIMEOUT_MS, ledgerFromEnv } from "./daily-budget";
 import { parseServerEnv } from "./env-schema";
 import type { SupabaseRpc } from "./supabase-rpc";
 
@@ -173,5 +173,24 @@ describe("createSharedLedger", () => {
     });
     const shared = ledgerFromEnv(env);
     expect(shared).not.toHaveProperty("spentTodayUsd");
+  });
+
+  it("gives the database less time than a save, so a refusal isn't held long", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(false));
+    try {
+      const env = parseServerEnv({
+        DAILY_BUDGET_USD: "1",
+        SUPABASE_URL: "https://project.supabase.co",
+        SUPABASE_SECRET_KEY: "sb_secret_fake-for-tests-only", // gitleaks:allow
+      });
+      expect(await ledgerFromEnv(env).reserve(0.2)).toBeNull();
+      expect(String(fetch.mock.calls[0][0])).toBe("https://project.supabase.co/rest/v1/rpc/reserve_trial_budget");
+      expect(timeout).toHaveBeenCalledWith(LEDGER_TIMEOUT_MS);
+      expect(LEDGER_TIMEOUT_MS).toBeLessThanOrEqual(3_000);
+    } finally {
+      fetch.mockRestore();
+      timeout.mockRestore();
+    }
   });
 });

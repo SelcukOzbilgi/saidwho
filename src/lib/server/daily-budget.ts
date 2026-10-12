@@ -104,8 +104,18 @@ export function createSharedLedger(
   };
 }
 
+// A trial run waits on its reserve. When that call fails, the refusal also waits
+// on releasing it (the same rpc, so the same limit) and then on giving the
+// visitor's counts back (the limiter's 2 s). With the default 5 s, a slow
+// database could hold that refusal for about 12 s; with this, about 7 s.
+export const LEDGER_TIMEOUT_MS = 2_500;
+
 export function ledgerFromEnv(env: ServerEnv): DailyLedger {
   if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return createDailyLedger(env.DAILY_BUDGET_USD);
-  const rpc = createSupabaseRpc({ url: env.SUPABASE_URL, secretKey: env.SUPABASE_SECRET_KEY });
+  const rpc = createSupabaseRpc({
+    url: env.SUPABASE_URL,
+    secretKey: env.SUPABASE_SECRET_KEY,
+    timeoutMs: LEDGER_TIMEOUT_MS,
+  });
   return createSharedLedger(rpc, env.DAILY_BUDGET_USD);
 }
