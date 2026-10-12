@@ -273,6 +273,24 @@ describe("POST /api/investigate", () => {
     expect(logError.mock.calls[0][0]).not.toContain(NEBIUS_KEY);
   });
 
+  it("settles a trial's reservation when the run throws before returning a promise", async () => {
+    const ledger = createDailyLedger(1);
+    const { handler, logError } = setup({
+      envVars: ownerEnv,
+      ledger,
+      run: () => {
+        throw new Error(`thrown at once with ${ownerEnv.NEBIUS_API_KEY}`);
+      },
+    });
+    const text = await (await handler(post(trial))).text();
+    expect(frames(text).at(-1)).toEqual({ event: "error", data: { error: "run_failed" }, comment: false });
+    expect(logError.mock.calls[0][0]).toContain("run failed");
+    expect(logError.mock.calls[0][0]).not.toContain(ownerEnv.NEBIUS_API_KEY);
+    // No done event, so the whole reservation counts as spent, and none is left held.
+    expect(ledger.spentTodayUsd()).toBeCloseTo(TRIAL_RESERVE_USD);
+    expect(await ledger.reserve(1 - TRIAL_RESERVE_USD)).not.toBeNull();
+  });
+
   it("saves the run once it ends and sends its id last", async () => {
     const saved: Parameters<RunStore["save"]>[0][] = [];
     const store: RunStore = { save: async (run) => void saved.push(run), load: async () => null };

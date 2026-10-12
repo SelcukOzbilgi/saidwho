@@ -210,19 +210,23 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
         if (runId) send(toRunIdChunk(runId));
         heartbeat = setInterval(() => send(SSE_HEARTBEAT), HEARTBEAT_MS);
 
-        deps
-          .investigate({
-            nebius,
-            tavily,
-            input: { quote, popularAttribution, language, excludeDomains: deps.excludeDomains },
-            maxUsd: keys.source === "owner" ? TRIAL_MAX_USD : BYOK_MAX_USD,
-            signal: abort.signal,
-            onEvent: (event) => {
-              if (event.type === "done") done = event;
-              events.push(event);
-              send(toSseChunk(event));
-            },
-          })
+        // Called inside a promise, so a run that throws before it returns one still
+        // ends below, with its reservation settled.
+        Promise.resolve()
+          .then(() =>
+            deps.investigate({
+              nebius,
+              tavily,
+              input: { quote, popularAttribution, language, excludeDomains: deps.excludeDomains },
+              maxUsd: keys.source === "owner" ? TRIAL_MAX_USD : BYOK_MAX_USD,
+              signal: abort.signal,
+              onEvent: (event) => {
+                if (event.type === "done") done = event;
+                events.push(event);
+                send(toSseChunk(event));
+              },
+            }),
+          )
           .catch((err: unknown) => {
             logError(`investigate: run failed: ${describe(err, secrets)}`);
             send(SSE_RUN_FAILED);
