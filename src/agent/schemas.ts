@@ -47,11 +47,11 @@ export const genealogistOutputSchema = z.strictObject({
 
 // The most lineage steps a verdict keeps, and the page shows.
 export const MAX_LINEAGE_STEPS = 6;
-// The longest lineage note and rationale a verdict keeps. Code enforces both
-// (see judge-check.ts); the schema sent to the model asks for them too.
+// The longest lineage note, rationale and author name a verdict keeps. Code
+// enforces them (see judge-check.ts); the schema sent to the model asks for them too.
 export const MAX_NOTE_CHARS = 300;
 export const MAX_RATIONALE_CHARS = 1_500;
-const MAX_JUDGE_FIELD_CHARS = 200;
+export const MAX_JUDGE_FIELD_CHARS = 200;
 
 // One step in how the saying got to the form people share: where it first
 // appears, then each place its wording, language or credit changed.

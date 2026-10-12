@@ -1,5 +1,13 @@
 import type { EvidenceNode } from "./events";
-import { cleanDate, type JudgeOutput, type LineageStep, MAX_LINEAGE_STEPS, MAX_NOTE_CHARS, MAX_RATIONALE_CHARS } from "./schemas";
+import {
+  cleanDate,
+  type JudgeOutput,
+  type LineageStep,
+  MAX_JUDGE_FIELD_CHARS,
+  MAX_LINEAGE_STEPS,
+  MAX_NOTE_CHARS,
+  MAX_RATIONALE_CHARS,
+} from "./schemas";
 
 // Plain-code checks on a verdict before it can stand. The model's ids are
 // tidied first, since a slip like "[n8]" or "null" says nothing about the
@@ -21,8 +29,9 @@ export function canonicalId(raw: string | null): CanonicalId {
   return /^n\d+$/.test(text) ? { id: text } : { malformed: raw };
 }
 
-// Ids in brackets, alone or grouped: [n2], [n2, n5] and [[n2]] all count.
-export const citedIn = (text: string): string[] => [...text.matchAll(/\[[^\]]*\]/g)].flatMap((m) => m[0].match(/\bn\d+\b/g) ?? []);
+// Page ids anywhere in the text, since the verdict card links them wherever
+// they are: [n2], [n2, n5], (n2) or a bare n2 all count, in any case.
+export const citedIn = (text: string): string[] => (text.match(/\bn\d+\b/gi) ?? []).map((id) => id.toLowerCase());
 
 const yearOf = (date: string | null): string | null => cleanDate(date)?.slice(0, 4) ?? null;
 // The years a page gives, from its own date or the date of the source it cites.
@@ -91,15 +100,20 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
   const kept = lineage.length > MAX_LINEAGE_STEPS ? [lineage[0], ...lineage.slice(1 - MAX_LINEAGE_STEPS)] : lineage;
 
   // The earliest date has to come from a confirmed page. When the page named
-  // doesn't give that year and another confirmed page does, the first such page
-  // in page order is named instead, preferring one whose own date is that year. When none does, the date is left out: no
-  // page this run checked backs it.
+  // doesn't give that year and another confirmed page does, that page is named
+  // instead: first among the pages the verdict cites, then among the rest, in
+  // page order, preferring one the timeline puts in that year (by its cited
+  // source's date, else its own). When none does, the date is left out: no page
+  // this run checked backs it.
   const fixes: string[] = [];
   let earliestDate = cleanDate(raw.earliest_date);
   const year = yearOf(earliestDate);
   const named = earliestNode !== null ? byId.get(earliestNode) : undefined;
   if (year !== null && !(named && pageYears(named).includes(year))) {
-    const backing = verified.find((n) => yearOf(n.date) === year) ?? verified.find((n) => pageYears(n).includes(year));
+    const givesYear = (pages: readonly EvidenceNode[]) =>
+      pages.find((n) => yearOf(n.date) === year) ?? pages.find((n) => pageYears(n).includes(year));
+    const cited = new Set([...citedIn(raw.rationale), ...kept.map((step) => step.node)]);
+    const backing = givesYear(verified.filter((n) => cited.has(n.id))) ?? givesYear(verified.filter((n) => !cited.has(n.id)));
     if (backing) {
       fixes.push(
         earliestNode !== null
@@ -119,6 +133,7 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
       earliest_node: earliestNode,
       misattribution_node: misattributionNode,
       earliest_date: earliestDate,
+      earliest_author: raw.earliest_author?.slice(0, MAX_JUDGE_FIELD_CHARS) ?? null,
       rationale: capText(raw.rationale, MAX_RATIONALE_CHARS),
       lineage: kept,
     },

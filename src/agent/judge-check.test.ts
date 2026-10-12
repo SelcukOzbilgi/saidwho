@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { EvidenceNode } from "./events";
 import { canonicalId, checkVerdict, retryNote } from "./judge-check";
-import { type JudgeOutput, MAX_RATIONALE_CHARS } from "./schemas";
+import { type JudgeOutput, MAX_JUDGE_FIELD_CHARS, MAX_RATIONALE_CHARS } from "./schemas";
 
 const node = (id: string, dates: { pageDate?: string; citedSourceDate?: string } = {}): EvidenceNode => {
   const pageDate = dates.pageDate ?? null;
@@ -105,9 +105,27 @@ describe("checkVerdict", () => {
     expect(fixes).toEqual(["named n1 as the earliest page, since it gives 1950"]);
   });
 
-  it("prefers a page whose own date is the year", () => {
+  it("prefers a page the timeline puts in that year", () => {
     const pages = [node("n1", { pageDate: "1931", citedSourceDate: "1900" }), node("n2", { citedSourceDate: "1931" })];
-    expect(checkVerdict({ ...VERDICT, earliest_node: null, earliest_date: "1931" }, pages).verdict.earliest_node).toBe("n2");
+    const both = { ...VERDICT, rationale: "Two pages have it [n1, n2].", earliest_node: null, earliest_date: "1931" };
+    expect(checkVerdict(both, pages).verdict.earliest_node).toBe("n2");
+  });
+
+  it("looks first among the pages the verdict cites", () => {
+    const pages = [node("n1", { pageDate: "1931" }), node("n2", { citedSourceDate: "1931" })];
+    const citesTwo = { ...VERDICT, rationale: "A page cites a 1931 source [n2].", earliest_node: null, earliest_date: "1931", lineage: [] };
+    expect(checkVerdict(citesTwo, pages).verdict.earliest_node).toBe("n2");
+  });
+
+  it("counts page ids in parentheses or on their own as cited", () => {
+    for (const rationale of ["The source is (n99).", "The source is n99.", "The source is [N99]."]) {
+      expect(checkVerdict({ ...VERDICT, rationale }, PAGES).unknownIds).toEqual(["n99"]);
+    }
+  });
+
+  it("cuts an over-long author name", () => {
+    const author = checkVerdict({ ...VERDICT, earliest_author: "X".repeat(500) }, PAGES).verdict.earliest_author;
+    expect(author).toHaveLength(MAX_JUDGE_FIELD_CHARS);
   });
 
   it("leaves out an earliest date no confirmed page gives, and keeps the page", () => {
