@@ -26,7 +26,14 @@ export const evidenceNodeSchema = z.strictObject({
   url: z.string(),
   host: z.string(),
   title: z.string(),
-  check: z.strictObject({ status: z.enum(["exact", "near", "not_found"]), score: z.number() }),
+  // exact and near are after normalization (see checkSnippet). reason is set
+  // when a snippet that is on the page was crossed out for not being the
+  // saying; runs saved before that check have no key.
+  check: z.strictObject({
+    status: z.enum(["exact", "near", "not_found"]),
+    score: z.number(),
+    reason: z.literal("not_the_saying").optional(),
+  }),
   // What the reader returned, before any claim was checked against the page.
   reader: readerOutputSchema,
   // Reader claims kept only when the page backs them (see mentionsName, keepsPageDate, keepsCitedDate).

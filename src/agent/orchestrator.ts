@@ -25,7 +25,7 @@ import {
   readerOutputSchema,
 } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult } from "./structured";
-import { checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText, type Span } from "./verifier";
+import { carriesSaying, checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText, type Span } from "./verifier";
 
 // Sites that already wrote up where famous quotes come from. The eval excludes
 // them so the agent has to find the trail itself.
@@ -411,7 +411,14 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       }
       const { exact_snippet: snippet, attributed_to: credit } = read.data;
 
+      // The snippet must be on the page and must be the saying, not just any
+      // sentence from it ("Finally,"). Either failure crosses the node out.
       const match = matchSnippet(snippet, page.text);
+      const onSaying = carriesSaying(snippet, phrases);
+      const check: EvidenceNode["check"] =
+        match.status !== "not_found" && !onSaying
+          ? { status: "not_found", score: match.score, reason: "not_the_saying" }
+          : { status: match.status, score: match.score };
       // Dates are kept only where they sit on the page (see keepsPageDate).
       const keepDate = (raw: string | null, placed: (date: string, span: Span | null) => boolean) => {
         const date = cleanDate(raw);
@@ -425,7 +432,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         host,
         // Titles come from the page too, so they get the same cap.
         title: page.title.slice(0, MAX_FIELD_CHARS),
-        check: { status: match.status, score: match.score },
+        check,
         reader: read.data,
         attributedTo: credit && mentionsName(credit, pageText) ? credit : null,
         pageDate,
@@ -434,14 +441,20 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         foundVia: lead ? { node: lead.fromNode, work: lead.work } : null,
       };
       report("evidence");
-      return { node, retry: node.check.status === "not_found" ? "the snippet is not on the page" : null };
+      const retry =
+        check.reason === "not_the_saying"
+          ? "the snippet is not the saying"
+          : check.status === "not_found"
+            ? "the snippet is not on the page"
+            : null;
+      return { node, retry };
     };
 
     // Lightning reads every page. Super reads a page again only when Lightning's
     // call failed, or it returned a snippet the Verifier could not find, which is
-    // how a "tidied" quote looks. The second reading's node replaces the first;
-    // when it has none, the first (crossed-out) node stays. Either way a page
-    // gives at most one node.
+    // how a "tidied" quote looks, or one that isn't the saying. The second
+    // reading's node replaces the first; when it has none, the first
+    // (crossed-out) node stays. Either way a page gives at most one node.
     const first = await readWith(models.read);
     let node = first.node;
     if (first.retry && !mustStop(false)) {

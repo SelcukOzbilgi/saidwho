@@ -184,6 +184,41 @@ const FUNCTION_WORDS = new Set([
 // Takes a normalized word.
 export const isFunctionWord = (word: string): boolean => FUNCTION_WORDS.has(word);
 
+// How much of a wording a snippet must share to count as carrying it, in
+// distinct content words. Either the snippet has this share of the wording's
+// words (the whole saying, maybe inside a longer sentence), or this share of the
+// snippet's own words come from the wording and there are at least
+// MIN_FRAGMENT_WORDS of them (a part of a long saying). Chosen against the first
+// eval's logs: at this share no snippet there that holds the saying is
+// dropped, and a higher one drops an older wording that shares three of its
+// seven content words with the saying.
+const SAYING_SHARE = 0.4;
+const MIN_FRAGMENT_WORDS = 3;
+
+const contentWords = (text: string): string[] => {
+  const words = [...new Set(normalizeText(text).split(" ").filter(Boolean))];
+  const content = words.filter((w) => !isFunctionWord(w));
+  return content.length > 0 ? content : words;
+};
+
+// Whether a snippet carries the saying rather than just some sentence from the
+// page, judged against the quote and its known wordings (variants and
+// translations the planner gave, or the wording a lead says a work has). A
+// note in brackets after a wording ("(French original)") is left out. A word
+// counts when it matches the way it would in checkSnippet, so a plural or a
+// one-letter slip still does.
+export function carriesSaying(snippet: string, wordings: readonly string[]): boolean {
+  const have = contentWords(snippet);
+  return wordings.some((wording) => {
+    const want = contentWords(wording.replace(/\([^)]*\)/g, " "));
+    if (want.length === 0) return false;
+    const shared = want.filter((w) => have.some((h) => sameWord(w, h))).length;
+    const wholeSaying = shared >= Math.min(2, want.length) && shared >= want.length * SAYING_SHARE;
+    const fragment = shared >= MIN_FRAGMENT_WORDS && shared >= have.length * SAYING_SHARE;
+    return wholeSaying || fragment;
+  });
+}
+
 // The reader also reports who a page credits and when. Those claims are kept only
 // if the page itself backs them: the full name or at least the surname anywhere,
 // and the year of a date in the right place (below). Anything else may be the

@@ -472,7 +472,7 @@ describe("investigate", () => {
 
     it("says nothing about a cited work when its search returns a page read before that gave a reading", async () => {
       // The newspaper has a wording the run doesn't know, and the Checker confirms it.
-      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const VARIANT = "Insanity is doing the same thing again and again and expecting a different result";
       const { tavily } = tavilyFor(
         (q) => (q === LEAD.query ? [NEWS, BOOK] : [NEWS]),
         (url) => (url === BOOK ? BOOK_WITHOUT : `Knoxville News-Sentinel, 1981. She said "${VARIANT}."`),
@@ -490,7 +490,7 @@ describe("investigate", () => {
       // Two pages cite two works, and both library searches return the same fourth page.
       const SECOND = "https://news.example.org/1990";
       const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "Collected Letters by Rita Mae Brown", query: "rita mae brown letters" };
-      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const VARIANT = "Insanity is doing the same thing again and again and expecting a different result";
       const copies = [1, 2, 3].map((n) => `https://archive.org/details/sudden-death-${n}`);
       const shared = "https://www.gutenberg.org/ebooks/shared";
       const { tavily } = tavilyFor(
@@ -534,7 +534,7 @@ describe("investigate", () => {
     it("says nothing about a cited work when a result nobody read has a wording another page confirmed", async () => {
       const SECOND = "https://news.example.org/1990";
       const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "Collected Letters by Rita Mae Brown", query: "rita mae brown letters" };
-      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const VARIANT = "Insanity is doing the same thing again and again and expecting a different result";
       const copies = [1, 2, 3, 4].map((n) => `https://archive.org/details/sudden-death-${n}`);
       const elsewhere = "https://www.gutenberg.org/ebooks/elsewhere";
       const { tavily } = tavilyFor(
@@ -582,7 +582,7 @@ describe("investigate", () => {
 
     it("checks the wording a lead gives even when that lead's search fails", async () => {
       const SECOND = "https://news.example.org/1990";
-      const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
+      const VARIANT = "Insanity is doing the same thing again and again and expecting a different result";
       const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "Collected Letters by Rita Mae Brown", query: "rita mae brown letters", wording: VARIANT };
       const { tavily } = tavilyFor(
         (q) => (q === LEAD.query ? [BOOK] : [NEWS, SECOND]),
@@ -606,10 +606,11 @@ describe("investigate", () => {
       // A reader quotes only part of the saying, and the book has those words in another sentence.
       const { tavily } = tavilyFor(
         (q) => (q === LEAD.query ? [BOOK] : [NEWS, SECOND]),
-        (url) => (url === BOOK ? `${BOOK_WITHOUT} They did the same thing every day.` : PAGE_TEXT),
+        (url) => (url === BOOK ? `${BOOK_WITHOUT} They did the same thing over and over every day.` : PAGE_TEXT),
       );
       const nebius = fakeNebius({
-        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : user.includes(SECOND) ? { ...READ, exact_snippet: "the same thing" } : CITES_BOOK),
+        read: ({ user }) =>
+          user.includes("Lead:") ? NO_QUOTE : user.includes(SECOND) ? { ...READ, exact_snippet: "the same thing over and over" } : CITES_BOOK,
         trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
       });
       const events = await run({ nebius, tavily });
@@ -1044,6 +1045,22 @@ describe("investigate", () => {
       ["judge", "ultra", "ultra"],
     ]);
     for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it("crosses out a snippet that is on the page but isn't the saying, and asks Super", async () => {
+    const nebius = fakeNebius({
+      read: ({ model }) => (model === MODELS.lightning.id ? { ...READ, exact_snippet: "Knoxville News-Sentinel, 1981." } : READ),
+    });
+    const events = await run({ nebius });
+    expect(events.find((e) => e.type === "escalated")).toMatchObject({ step: "read", reason: "the snippet is not the saying" });
+    const node = events.find((e) => e.type === "node_added");
+    expect(node?.type === "node_added" && node.node.check).toEqual({ status: "exact", score: 1 });
+
+    const stubborn = await run({ nebius: fakeNebius({ read: () => ({ ...READ, exact_snippet: "Knoxville News-Sentinel, 1981." }) }) });
+    const crossed = stubborn.find((e) => e.type === "node_added");
+    expect(crossed?.type === "node_added" && crossed.node.check).toEqual({ status: "not_found", score: 1, reason: "not_the_saying" });
+    expect(stubborn.find((e) => e.type === "judge_skipped")).toBeDefined();
+    for (const event of stubborn) expect(runEventSchema.safeParse(event).success).toBe(true);
   });
 
   it("keeps a reader's date only where it sits on the page", async () => {

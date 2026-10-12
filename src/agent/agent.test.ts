@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { selectPassages } from "./passages";
 import { cleanDate, judgeOutputSchema } from "./schemas";
 import { toStrictJsonSchema } from "./structured";
-import { checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText } from "./verifier";
+import { carriesSaying, checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText } from "./verifier";
 
 const PAGE = `Knoxville News-Sentinel, October 11, 1981. At the Al-Anon meeting a speaker said:
 “Insanity is doing the same thing over and over again, but expecting different results.”`;
@@ -78,6 +78,33 @@ describe("checkSnippet", () => {
     const near = matchSnippet("The lantern burns brightest in the darkest hall of the old house", page);
     expect(near).toMatchObject({ status: "near", span: { start: 4, end: 16 } });
     expect(matchSnippet("a candle in the window", page).span).toBeNull();
+  });
+});
+
+describe("carriesSaying", () => {
+  const SAYING = "The lantern burns brightest in the darkest hall of the old house";
+
+  it("accepts the saying alone, inside a longer sentence, or in a known wording", () => {
+    expect(carriesSaying("the lantern burns brightest in the darkest hall of the old house", [SAYING])).toBe(true);
+    expect(carriesSaying(`As my grandmother liked to say, "${SAYING}," and she meant it.`, [SAYING])).toBe(true);
+    expect(carriesSaying("A lamp shines brightest in the darkest room", [SAYING, "A lamp shines brightest in the darkest room"])).toBe(true);
+  });
+
+  it("accepts a part of a long saying, and a lightly changed wording", () => {
+    expect(carriesSaying("burns brightest in the darkest hall", [SAYING])).toBe(true);
+    expect(carriesSaying("The lanterns burn brightest in the darkest halls", [SAYING])).toBe(true);
+  });
+
+  it("rejects a sentence that only names or circles the saying", () => {
+    expect(carriesSaying("Finally,", [SAYING])).toBe(false);
+    expect(carriesSaying("This line about a lantern is often credited to a famous poet.", [SAYING])).toBe(false);
+    expect(carriesSaying("The old house was quiet.", [SAYING])).toBe(false);
+  });
+
+  it("accepts a translation only when the run knows that wording, notes in brackets aside", () => {
+    const french = "La lanterne brille le plus dans la salle la plus sombre";
+    expect(carriesSaying(french, [SAYING])).toBe(false);
+    expect(carriesSaying(french, [SAYING, `${french} (French version, as printed in an old almanac)`])).toBe(true);
   });
 });
 
