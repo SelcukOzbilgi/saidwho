@@ -27,6 +27,15 @@ export const serverEnvSchema = z.object({
   TRIAL_RUNS_ENABLED: flag,
   DAILY_BUDGET_USD: z.preprocess(blankToUndefined, z.coerce.number().min(0).max(100).default(0)),
 
+  // Runs one visitor (one IP address) may start: any run, per hour, and trial
+  // runs, per UTC day. Both apply to a trial run.
+  RUNS_PER_IP_PER_HOUR: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(1000).default(10)),
+  TRIAL_RUNS_PER_IP_PER_DAY: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(100).default(3)),
+
+  // Set to "1" by Vercel on its own servers. Only there does the platform, not
+  // the visitor, set the headers that carry the visitor's address.
+  VERCEL: z.string().optional(),
+
   // Where runs are saved, so each one gets a public link. Both unset means runs
   // aren't saved. The secret key bypasses row level security: server only. It
   // has to be a secret key (sb_secret_...), which goes in the apikey header; an

@@ -2,12 +2,14 @@ import "server-only";
 
 import type { RunEvent } from "../../agent/events";
 import type { InvestigationOptions } from "../../agent/orchestrator";
+import { clientIp, visitorKey } from "./client-ip";
 import type { DailyLedger, Reservation } from "./daily-budget";
 import { TAVILY_USD_PER_CREDIT } from "./daily-budget";
 import type { ServerEnv } from "./env-schema";
 import { parseInvestigateRequest } from "./investigate-request";
 import type { NebiusClient, NebiusClientOptions } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
+import { DAY_SECONDS, HOUR_SECONDS, type Limit, type RateLimiter, secondsLeftInWindow } from "./rate-limit";
 import { resolveRunKeys } from "./run-keys";
 import { newRunId, type RunStore } from "./run-store";
 import { redactSecrets } from "./safe-error";
@@ -45,6 +47,8 @@ export const NEBIUS_TIMEOUT_MS = 90_000;
 export type InvestigateDeps = {
   env: ServerEnv;
   ledger: DailyLedger;
+  // Counts runs per visitor.
+  limiter: RateLimiter;
   // Sites left out of every live run, so the agent finds the trail itself.
   excludeDomains: readonly string[];
   createNebius: (options: NebiusClientOptions) => NebiusClient;
@@ -57,8 +61,14 @@ export type InvestigateDeps = {
 };
 
 // Error bodies carry a fixed code, never provider text or anything the visitor sent.
-const fail = (status: number, error: string, extra: Record<string, unknown> = {}): Response =>
-  Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store" } });
+const fail = (
+  status: number,
+  error: string,
+  extra: Record<string, unknown> = {},
+  headers: Record<string, string> = {},
+): Response => Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store", ...headers } });
+
+const LIMIT_ERRORS = { runs: "too_many_runs", trial: "trial_limit_reached" } as const;
 
 const KEY_ERRORS = {
   byok_incomplete: 400,
@@ -83,6 +93,31 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     if (!resolved.ok) return fail(KEY_ERRORS[resolved.reason], resolved.reason);
     const keys = resolved.keys;
     const secrets = [keys.nebiusApiKey, keys.tavilyApiKey];
+
+    // Checked before the budget, so one visitor can't hold the day's budget in
+    // reservations. A trial run counts against both limits.
+    const visitor = visitorKey(clientIp(request.headers, deps.env.VERCEL === "1"));
+    const limits: Limit[] = [{ name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS }];
+    if (keys.source === "owner") {
+      limits.push({ name: "trial", max: deps.env.TRIAL_RUNS_PER_IP_PER_DAY, windowSeconds: DAY_SECONDS });
+    }
+    for (const limit of limits) {
+      let allowed: boolean;
+      try {
+        allowed = await deps.limiter.hit(visitor, limit);
+      } catch (err: unknown) {
+        logError(`investigate: could not check the ${limit.name} limit: ${describe(err, secrets)}`);
+        // A trial run spends the owner's money, so without a working count none
+        // starts. A run on the visitor's own keys costs the owner nothing, so a
+        // broken count shouldn't block it.
+        if (keys.source === "owner") return fail(503, "limits_unavailable");
+        continue;
+      }
+      if (!allowed) {
+        const retryAfter = String(secondsLeftInWindow(limit.windowSeconds));
+        return fail(429, LIMIT_ERRORS[limit.name], {}, { "Retry-After": retryAfter });
+      }
+    }
 
     let nebius: NebiusClient;
     let tavily: TavilyClient;

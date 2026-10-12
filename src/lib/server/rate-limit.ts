@@ -1,0 +1,84 @@
+import "server-only";
+
+import { createHmac, randomBytes } from "node:crypto";
+
+import { z } from "zod";
+
+import type { ServerEnv } from "./env-schema";
+import { createSupabaseRpc, type SupabaseRpc } from "./supabase-rpc";
+
+// How many runs one visitor may start in a window. Windows are fixed and start
+// on the epoch, so a day's window starts at UTC midnight, as the trial budget's
+// day does. A visitor is counted by a keyed hash of their address (see
+// client-ip.ts), never the address itself, and a count is dropped once its
+// window ends.
+
+export type Limit = { name: "runs" | "trial"; max: number; windowSeconds: number };
+
+export type RateLimiter = {
+  // True when the run may start, and then it is counted. A refused run isn't.
+  hit: (visitor: string, limit: Limit) => Promise<boolean>;
+};
+
+export const HOUR_SECONDS = 3_600;
+export const DAY_SECONDS = 86_400;
+
+// Seconds until the window holding `nowMs` ends, for a Retry-After header.
+export const secondsLeftInWindow = (windowSeconds: number, nowMs: number = Date.now()): number =>
+  windowSeconds - (Math.floor(nowMs / 1000) % windowSeconds);
+
+// Without the key, a stored hash can't be matched to an address by trying every
+// IPv4 address. Cut to 128 bits, which is plenty to keep visitors apart.
+export const hashVisitor = (key: Buffer, visitor: string): string =>
+  createHmac("sha256", key).update(visitor).digest("hex").slice(0, 32);
+
+// Counts in this server's memory, with a key made fresh on each start. Each
+// instance keeps its own counts and a restart clears them, as the in-memory
+// ledger does.
+export function createMemoryLimiter(now: () => number = Date.now): RateLimiter {
+  const key = randomBytes(32);
+  const counts = new Map<string, { endsAt: number; hits: number }>();
+  return {
+    async hit(visitor, { name, max, windowSeconds }) {
+      const at = now();
+      // Ended windows go first. A small demo has few visitors a day, so a full pass is cheap.
+      for (const [id, count] of counts) if (count.endsAt <= at) counts.delete(id);
+      const windowMs = windowSeconds * 1000;
+      const start = Math.floor(at / windowMs) * windowMs;
+      const id = `${name}:${start}:${hashVisitor(key, visitor)}`;
+      const count = counts.get(id) ?? { endsAt: start + windowMs, hits: 0 };
+      if (count.hits >= max) return false;
+      count.hits += 1;
+      counts.set(id, count);
+      return true;
+    },
+  };
+}
+
+// Counts in the Supabase function from supabase/migrations/, so every instance
+// shares them. Each hit is one statement in the database. Errors are thrown,
+// and the caller decides what a failed count means.
+export function createSharedLimiter(rpc: SupabaseRpc, key: Buffer): RateLimiter {
+  return {
+    async hit(visitor, { name, max, windowSeconds }) {
+      const reply = await rpc("hit_rate_limit", {
+        p_key: `${name}:${hashVisitor(key, visitor)}`,
+        p_max: max,
+        p_window_seconds: windowSeconds,
+      });
+      return z.boolean().parse(reply);
+    },
+  };
+}
+
+// Every instance must hash a visitor the same way, so the key comes from a secret
+// they all hold. It is derived rather than the Supabase key itself, so the hash
+// can't be used to learn anything about that key.
+export const visitorHashKey = (supabaseSecretKey: string): Buffer =>
+  createHmac("sha256", supabaseSecretKey).update("saidwho visitor hash v1").digest();
+
+export function limiterFromEnv(env: ServerEnv): RateLimiter {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return createMemoryLimiter();
+  const rpc = createSupabaseRpc({ url: env.SUPABASE_URL, secretKey: env.SUPABASE_SECRET_KEY });
+  return createSharedLimiter(rpc, visitorHashKey(env.SUPABASE_SECRET_KEY));
+}
