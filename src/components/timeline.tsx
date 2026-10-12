@@ -1,5 +1,6 @@
 import type { EvidenceNode } from "../agent/events";
 import { byDate } from "../lib/run-state";
+import { ScrollRow } from "./scroll-row";
 
 type Marks = { earliest: string | null; misattribution: string | null };
 
@@ -24,15 +25,7 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
         Where the quote turns up, oldest first
       </h2>
       {/* On a phone the years stack; from sm up they sit side by side and scroll sideways. */}
-      {years.length > 2 && (
-        <p className="mb-2 hidden text-xs text-muted sm:block">Scroll sideways for later years →</p>
-      )}
-      <div
-        role="region"
-        aria-label="Evidence by year"
-        tabIndex={0}
-        className="-mx-4 overflow-x-auto px-4 pb-3 focus-visible:outline-2 focus-visible:outline-accent-ink"
-      >
+      <ScrollRow label="Evidence by year" hint="Scroll sideways for later years →">
         <ol className="flex flex-col gap-6 sm:min-w-max sm:flex-row sm:items-start sm:gap-4">
           {years.map((column) => (
             <li key={column.label} className="sm:w-72 sm:shrink-0">
@@ -50,7 +43,7 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
             </li>
           ))}
         </ol>
-      </div>
+      </ScrollRow>
     </section>
   );
 }
