@@ -23,4 +23,10 @@ describe("supabase migrations", () => {
   it("deletes ended counts only well after their window", () => {
     expect(migration("20261012120100_rate_limits.sql")).toContain("where expires_at <= now() - interval '1 hour'");
   });
+
+  it("keeps the whole reservation when the spend arrives as null", () => {
+    expect(migration("20261012120000_trial_budget.sql")).toContain(
+      "set spent_usd = greatest(coalesce(p_spent_usd, t.reserved_usd), 0)",
+    );
+  });
 });
