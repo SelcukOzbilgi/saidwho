@@ -429,7 +429,12 @@ describe("POST /api/investigate", () => {
       envVars: { ...ownerEnv, RUNS_PER_IP_PER_HOUR: "1", TRIAL_RUNS_PER_IP_PER_DAY: "1" },
       ledger: createDailyLedger(0),
     });
-    for (let i = 0; i < 3; i++) expect((await handler(post(trial))).status).toBe(429);
+    // A leaked trial count would refuse the second request with trial_limit_reached instead.
+    for (let i = 0; i < 3; i++) {
+      const res = await handler(post(trial));
+      expect(res.status).toBe(429);
+      expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+    }
     const own = await handler(post(byok));
     expect(own.status).toBe(200);
     await own.text();
