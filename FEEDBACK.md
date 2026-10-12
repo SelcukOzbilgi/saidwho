@@ -83,7 +83,7 @@ Setup: `pnpm eval` ran the twenty test quotes three ways: the app's mix of model
 ### Tavily
 
 - **A long exact phrase can come back empty even when the index has it.** We send `exact_match: true` when a query holds a quoted phrase. The full 22-word wording of "Twenty years from now you will be more disappointed..." returned no results in every setup. Yet four pages holding exactly that wording, Medium and clearingcustoms.net among them, came back from other, shorter queries in the same eval. Across all runs, queries that quoted the whole saying returned nothing 26 times in 167 (16%). Queries without quotes returned nothing 3 times in 113 (3%). A note on how `exact_match` handles long phrases would help. So would an option to fall back to a looser match instead of returning nothing.
-- **Some Turkish page text loses "â".** On "Gel, gel" and the Atatürk quote, `raw_content` for a few pages reads "Mevlna", "Kfir" and "derghımız" for Mevlânâ, Kâfir and dergâhımız. The same pages keep "î" and "û", and other pages keep "â". We can't tell whether the sites or the extraction drop it. The Checker then confirms the damaged wording, because it is what the page text says.
+- **Some Turkish page text loses "â".** On "Gel, gel", `raw_content` for a few pages reads "Mevlna", "Kfir" and "derghımız" for Mevlânâ, Kâfir and dergâhımız. A page about the Atatürk quote reads "hayt" and "hricinde" for hayât and hâricinde. The same pages keep "î" and "û", and other pages keep "â". We can't tell whether the sites or the extraction drop it. The Checker then confirms the damaged wording, because it is what the page text says.
 
 ### Token Factory
 
