@@ -2,11 +2,18 @@
 // sounds right, so every snippet it returns is checked against the page text the
 // snippet supposedly came from. Anything not found there is rejected.
 
+// "exact" means the snippet's words appear on the page in order once both are
+// normalized (case, accents, punctuation), not character for character.
 export type SnippetCheck = {
   status: "exact" | "near" | "not_found";
   // 1 minus the word edits needed per snippet word, 0..1.
   score: number;
 };
+
+// Where a snippet matched, in words of the normalized page text: start is the
+// first word, end one past the last. null when it wasn't found.
+export type Span = { start: number; end: number };
+export type SnippetMatch = SnippetCheck & { span: Span | null };
 
 const SHINGLE_SIZE = 3;
 // A near match may differ by one whole word in ten (OCR noise, a dropped
@@ -59,10 +66,11 @@ function sameWord(a: string, b: string): boolean {
 const skipCost = (word: string): number => (NEGATIONS.has(word) ? Infinity : 1);
 
 // Fewest whole-word insertions, deletions or swaps to turn the snippet into some
-// contiguous run of the page window (page words before and after are free).
+// contiguous run of the page window (page words before and after are free), and
+// where in the window that run ends.
 // The snippet's first and last words must match the page: an extra word at the
 // edge is how an invented attribution ("Einstein: ...") would slip in.
-function wordEdits(snippet: readonly string[], window: readonly string[]): number {
+function wordEdits(snippet: readonly string[], window: readonly string[]): { edits: number; end: number } {
   let prev = new Array<number>(window.length + 1).fill(0);
   for (let i = 1; i <= snippet.length; i++) {
     const edge = i === 1 || i === snippet.length;
@@ -76,23 +84,53 @@ function wordEdits(snippet: readonly string[], window: readonly string[]): numbe
     }
     prev = cur;
   }
-  return Math.min(...prev);
+  const edits = Math.min(...prev);
+  return { edits, end: prev.indexOf(edits) };
+}
+
+const NOT_FOUND: SnippetMatch = { status: "not_found", score: 0, span: null };
+
+// Footnote numbers glued to a word ("science34") that a reader copying the
+// sentence leaves out. Only letters followed by one to three digits, so "640k"
+// and years stay as they are.
+const stripFootnotes = (words: readonly string[]): string[] => words.map((w) => /^(\p{L}+)\d{1,3}$/u.exec(w)?.[1] ?? w);
+
+// Matches a snippet against the page, then, short of an exact match, against the
+// page with footnote numbers taken off word ends, and keeps the better. Both have the same words in the same
+// places, so the span is right either way.
+export function matchSnippet(snippet: string, pageText: string): SnippetMatch {
+  const needle = normalizeText(snippet);
+  if (!needle) return NOT_FOUND;
+  const pageWords = normalizeText(pageText).split(" ");
+  const found = matchWords(needle, pageWords);
+  if (found.status === "exact") return found;
+  const stripped = stripFootnotes(pageWords);
+  if (stripped.every((w, i) => w === pageWords[i])) return found;
+  const again = matchWords(needle, stripped);
+  const rank = (m: SnippetMatch) => (m.status === "exact" ? 2 : m.status === "near" ? 1 : 0);
+  return rank(again) > rank(found) || (rank(again) === rank(found) && again.score > found.score) ? again : found;
 }
 
 export function checkSnippet(snippet: string, pageText: string): SnippetCheck {
-  const needle = normalizeText(snippet);
-  if (!needle) return { status: "not_found", score: 0 };
-  const haystack = normalizeText(pageText);
-  if (` ${haystack} `.includes(` ${needle} `)) return { status: "exact", score: 1 };
+  const { status, score } = matchSnippet(snippet, pageText);
+  return { status, score };
+}
+
+function matchWords(needle: string, pageWords: readonly string[]): SnippetMatch {
+  const words = needle.split(" ");
+  const haystack = ` ${pageWords.join(" ")} `;
+  const at = haystack.indexOf(` ${needle} `);
+  if (at !== -1) {
+    const start = haystack.slice(0, at).split(" ").length - 1;
+    return { status: "exact", score: 1, span: { start, end: start + words.length } };
+  }
 
   // Too short to judge by overlap; only an exact match counts.
-  const words = needle.split(" ");
-  if (words.length < SHINGLE_SIZE + 1) return { status: "not_found", score: 0 };
+  if (words.length < SHINGLE_SIZE + 1) return NOT_FOUND;
 
   // Each three-word sequence the snippet shares with the page votes for an
   // offset (page position minus snippet position). Only the best-supported
   // offsets are aligned word by word, so matches scattered across the page don't add up.
-  const pageWords = haystack.split(" ");
   const positions = new Map<string, number[]>();
   for (let p = 0; p + SHINGLE_SIZE <= pageWords.length; p++) {
     const key = pageWords.slice(p, p + SHINGLE_SIZE).join(" ");
@@ -112,15 +150,19 @@ export function checkSnippet(snippet: string, pageText: string): SnippetCheck {
     .map(([offset]) => offset);
 
   let fewest = Infinity;
+  let end = 0;
   for (const offset of offsets) {
     const start = Math.max(0, offset - ALIGNMENT_SLACK);
     const window = pageWords.slice(start, offset + words.length + ALIGNMENT_SLACK);
-    fewest = Math.min(fewest, wordEdits(words, window));
+    const aligned = wordEdits(words, window);
+    if (aligned.edits < fewest) [fewest, end] = [aligned.edits, start + aligned.end];
   }
-  if (fewest === Infinity) return { status: "not_found", score: 0 };
+  if (fewest === Infinity) return NOT_FOUND;
   const score = Math.max(0, 1 - fewest / words.length);
   const allowed = Math.floor(words.length / WORDS_PER_EDIT);
-  return { status: fewest <= allowed ? "near" : "not_found", score };
+  if (fewest > allowed) return { status: "not_found", score, span: null };
+  // The run may be a word or two longer or shorter than the snippet; close enough to place a date.
+  return { status: "near", score, span: { start: Math.max(0, end - words.length), end } };
 }
 
 // The reader also reports who a page credits and when. Those claims are kept only

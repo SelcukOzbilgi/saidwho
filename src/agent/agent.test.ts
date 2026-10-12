@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { selectPassages } from "./passages";
 import { cleanDate, judgeOutputSchema } from "./schemas";
 import { toStrictJsonSchema } from "./structured";
-import { checkSnippet, mentionsName, mentionsYear, normalizeText } from "./verifier";
+import { checkSnippet, matchSnippet, mentionsName, mentionsYear, normalizeText } from "./verifier";
 
 const PAGE = `Knoxville News-Sentinel, October 11, 1981. At the Al-Anon meeting a speaker said:
 “Insanity is doing the same thing over and over again, but expecting different results.”`;
@@ -61,6 +61,23 @@ describe("checkSnippet", () => {
   it("treats Turkish letters the same way on both sides", () => {
     expect(normalizeText("Gel, gel, ne olursan ol YİNE gel")).toBe("gel gel ne olursan ol yine gel");
     expect(checkSnippet("ne olursan ol yine gel", "“Gel, gel, ne olursan ol yine gel”").status).toBe("exact");
+  });
+
+  it("finds a snippet whose page glues footnote numbers to word ends", () => {
+    const page = "The lantern burns brightest in the darkest hall12 of the old house3, the keeper wrote.";
+    expect(checkSnippet("The lantern burns brightest in the darkest hall of the old house", page).status).toBe("exact");
+    // Numbers that are part of the text stay: 640k is not "k" with a footnote.
+    expect(checkSnippet("only k of memory", "only 640k of memory").status).toBe("not_found");
+  });
+
+  it("says where on the page a snippet matched, in words", () => {
+    const page = "One two three. The lantern burns brightest in the darkest hall of the old stone house.";
+    expect(matchSnippet("the lantern burns brightest", page).span).toEqual({ start: 3, end: 7 });
+    // One page word left out, so the match is near; its span ends where the page's
+    // run does and is the snippet's length, a word short of the run here.
+    const near = matchSnippet("The lantern burns brightest in the darkest hall of the old house", page);
+    expect(near).toMatchObject({ status: "near", span: { start: 4, end: 16 } });
+    expect(matchSnippet("a candle in the window", page).span).toBeNull();
   });
 });
 
