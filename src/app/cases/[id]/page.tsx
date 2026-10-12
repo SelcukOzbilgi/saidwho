@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -9,6 +9,7 @@ import { CASES, findCase } from "@/cases/cases";
 import { CaseReplay } from "@/components/case-replay";
 import { KnownAnswer } from "@/components/known-answer";
 import { SiteFooter } from "@/components/site-footer";
+import { HEADLINE } from "@/components/verdict-card";
 import { parseEvalCases } from "@/eval/cases";
 
 // Every case page is built ahead of time, so the test set is read at build time only.
@@ -22,15 +23,31 @@ export function generateStaticParams() {
   return CASES.map(({ caseId }) => ({ id: caseId }));
 }
 
-export async function generateMetadata({ params }: PageProps<"/cases/[id]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/cases/[id]">, parent: ResolvingMetadata): Promise<Metadata> {
   const found = findCase((await params).id);
   if (!found) return {};
+  const { quote, popularAttribution, verdict } = found.run;
+  const title = `“${quote}” · Said Who?`;
+  // A share preview gives the run's answer when there is one; not every run finds an origin.
+  const answer =
+    verdict?.output.verdict === "no_known_source" && popularAttribution
+      ? `No early source ties it to ${popularAttribution}`
+      : verdict && HEADLINE[verdict.output.verdict](popularAttribution);
+  const description = answer
+    ? `${answer}. A finished Said Who? run, with a link for every step.`
+    : popularAttribution
+      ? `A finished Said Who? run looking into where this quote, usually credited to ${popularAttribution}, came from, with every step.`
+      : "A finished Said Who? run looking into where this quote came from, with every step.";
+  const url = `/cases/${found.caseId}`;
+  const shared = await parent;
   return {
-    title: `“${found.run.quote}” · Said Who?`,
-    // Not every run finds an origin, so the description doesn't promise one.
-    description: found.run.popularAttribution
-      ? `A finished Said Who? run looking into where this quote, usually credited to ${found.run.popularAttribution}, came from, with every step.`
-      : "A finished Said Who? run looking into where this quote came from, with every step.",
+    title,
+    description,
+    alternates: { canonical: url },
+    // These replace the layout's whole openGraph and twitter blocks, so they carry
+    // its share image over too.
+    openGraph: { type: "article", siteName: "Said Who?", title, description, url, images: shared.openGraph?.images },
+    twitter: { card: "summary_large_image", title, description, images: shared.twitter?.images },
   };
 }
 
