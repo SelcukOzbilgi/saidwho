@@ -13,6 +13,7 @@ import type { EvidenceNode, RunEvent } from "./events";
 import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { checkVerdict, retryNote } from "./judge-check";
+import { mayHoldWork } from "./library-pages";
 import {
   boundedCompactJudgeOutputSchema,
   boundedJudgeOutputSchema,
@@ -449,7 +450,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       // A page found for a cited work and read with no quote may count against
       // the citation, a little. Whether it does is settled per lead, below.
       if (noQuote) noQuoteUrls.add(url);
-      if (lead && noQuote) {
+      // A library's help, search or catalog page lacking the saying says nothing
+      // about the work, so only a page that may hold the work's text counts.
+      if (lead && noQuote && mayHoldWork(url, page.title, page.text, lead.work)) {
         const miss = { order: pageOrder({ id }), site: host, title: page.title.slice(0, MAX_FIELD_CHARS) };
         misses.set(lead, [...(misses.get(lead) ?? []), miss]);
       }
@@ -473,8 +476,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // in lead order and then result order.
   const readUrls = new Set(entries.map((e) => e.url));
   const followed = new Set<string>();
-  // Every lead whose search worked, in the order followed, with whether any
-  // result had text and every result the run may use, text or not.
+  // Every lead whose search worked, in the order followed, with whether no
+  // result had text that may be the work's (see mayHoldWork) and every result
+  // the run may use, text or not.
   const searched: { lead: Lead; noText: boolean; urls: string[] }[] = [];
   // The wording each lead says its work has, searched for or not.
   const leadWordings: string[] = [];
@@ -541,7 +545,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       if (results) {
         const usable = results.filter((r) => !isExcluded(r.url));
         for (const r of usable) if (r.rawContent) keepText(r.url, r.rawContent);
-        searched.push({ lead, noText: !results.some((r) => r.rawContent), urls: usable.map((r) => r.url) });
+        const workText = usable.some((r) => r.rawContent && mayHoldWork(r.url, r.title, r.rawContent, lead.work));
+        searched.push({ lead, noText: !workText, urls: usable.map((r) => r.url) });
       }
       let taken = 0;
       for (const r of results ?? []) {
@@ -569,8 +574,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // gave a node, even a crossed-out one, or couldn't be read), or if any text the
   // run got for it has a wording the run knows by the end. The reader sees part
   // of a long page, and only the first few results, so code checks every text.
-  // Otherwise the lead is listed when its search returned no text at all, or
-  // when it has pages read with no quote.
+  // Otherwise the lead is listed when its search returned no text that may be
+  // the work's, or when it has such pages read with no quote.
   const quoteWords = normalizeText(quote).split(" ").length;
   // A confirmed snippet counts as a wording only when it's about as long as the
   // quote: a short one ("good men") turns up in unrelated text, and a long one
@@ -624,7 +629,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       work: lead.work,
       checked: pages.length
         ? `Pages found for ${lead.work} on ${sites} don't have the saying in any wording this run knows.`
-        : `The digital-library search for ${lead.work} returned no page text.`,
+        : `The digital-library search for ${lead.work} returned no text of the work.`,
       ...(pages.length > 0 && { pages }),
     };
   });

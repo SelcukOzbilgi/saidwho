@@ -330,7 +330,8 @@ describe("investigate", () => {
     });
 
     // The book as a library has it, without the saying.
-    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} Chapter one. ${SECRET}`;
+    // Long enough to be a work's text rather than a catalog record.
+    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} ${"Chapter one. ".repeat(100)}${SECRET}`;
     const NO_QUOTE: ReaderOutput = { ...READ, contains_quote: false, exact_snippet: null, page_date: null };
     const citedWorks = (prompt = "") => {
       const at = prompt.indexOf("Cited works:\n");
@@ -367,7 +368,40 @@ describe("investigate", () => {
       const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
       await run({ nebius, tavily });
       expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
-        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no page text.` },
+        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no text of the work.` },
+      ]);
+    });
+
+    it("doesn't count a library's help, search or catalog page against a cited work", async () => {
+      const help = "https://help.archive.org/books";
+      const record = "https://books.google.com/books/about/Sudden_Death.html?id=abc";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [help, record, BOOK] : [NEWS]),
+        (url) => (url === NEWS ? PAGE_TEXT : url === BOOK ? BOOK_WITHOUT : `Sudden Death, Rita Mae Brown. ${"About this book. ".repeat(80)}`),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      await run({ nebius, tavily });
+      const [entry] = citedWorks(nebius.prompts.get("verdict"));
+      expect(entry.pages).toEqual([{ site: "archive.org", title: `Page at ${BOOK}` }]);
+    });
+
+    it("says the search found no text of the work when it found only catalog pages and pages too short to hold it", async () => {
+      const record = "https://catalog.hathitrust.org/Record/123";
+      const stub = "https://archive.org/details/sudden-death-stub";
+      const { tavily } = tavilyFor(
+        (q) => (q === LEAD.query ? [record, stub] : [NEWS]),
+        (url) => (url === NEWS ? PAGE_TEXT : url === stub ? "Sudden Death : Rita Mae Brown : Free Download, Borrow" : BOOK_WITHOUT),
+      );
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+      });
+      await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
+        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no text of the work.` },
       ]);
     });
 
@@ -454,7 +488,7 @@ describe("investigate", () => {
     it("says nothing about a cited work when another lead reads one of its results and gets a reading", async () => {
       // Two pages cite two works, and both library searches return the same fourth page.
       const SECOND = "https://news.example.org/1990";
-      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "The Unwritten Book", query: "unwritten book" };
+      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "Collected Letters by Rita Mae Brown", query: "rita mae brown letters" };
       const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
       const copies = [1, 2, 3].map((n) => `https://archive.org/details/sudden-death-${n}`);
       const shared = "https://www.gutenberg.org/ebooks/shared";
@@ -498,7 +532,7 @@ describe("investigate", () => {
 
     it("says nothing about a cited work when a result nobody read has a wording another page confirmed", async () => {
       const SECOND = "https://news.example.org/1990";
-      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "The Unwritten Book", query: "unwritten book" };
+      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "Collected Letters by Rita Mae Brown", query: "rita mae brown letters" };
       const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
       const copies = [1, 2, 3, 4].map((n) => `https://archive.org/details/sudden-death-${n}`);
       const elsewhere = "https://www.gutenberg.org/ebooks/elsewhere";
@@ -548,7 +582,7 @@ describe("investigate", () => {
     it("checks the wording a lead gives even when that lead's search fails", async () => {
       const SECOND = "https://news.example.org/1990";
       const VARIANT = "Insanity means repeating the same action and hoping for a new outcome";
-      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "The Unwritten Book", query: "unwritten book", wording: VARIANT };
+      const OTHER_LEAD = { ...LEAD, from_node: "n2", work: "Collected Letters by Rita Mae Brown", query: "rita mae brown letters", wording: VARIANT };
       const { tavily } = tavilyFor(
         (q) => (q === LEAD.query ? [BOOK] : [NEWS, SECOND]),
         (url) => (url === BOOK ? `Sudden Death. She said "${VARIANT}."` : PAGE_TEXT),
