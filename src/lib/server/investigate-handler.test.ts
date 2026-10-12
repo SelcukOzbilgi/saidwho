@@ -124,6 +124,26 @@ describe("POST /api/investigate", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("refuses a trial run when the daily budget can't be checked, and logs why", async () => {
+    const ledger = { reserve: async () => Promise.reject(new Error("reserve_trial_budget failed with 503")) };
+    const { handler, calls, logError } = setup({ envVars: ownerEnv, ledger });
+    const res = await handler(post(trial));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "limits_unavailable" });
+    expect(calls).toHaveLength(0);
+    expect(logError.mock.calls[0][0]).toContain("could not check the daily budget");
+  });
+
+  it("still ends the stream when settling fails, and logs it", async () => {
+    const ledger = {
+      reserve: async () => ({ settle: async () => Promise.reject(new Error("settle_trial_budget failed with 500")) }),
+    };
+    const { handler, logError } = setup({ envVars: ownerEnv, ledger });
+    const events = frames(await (await handler(post(trial))).text()).map((f) => f.data?.type);
+    expect(events.at(-1)).toBe("done");
+    expect(logError.mock.calls[0][0]).toContain("could not settle the daily budget");
+  });
+
   it("runs a trial on owner keys with the trial limit, then settles what it spent", async () => {
     const ledger = createDailyLedger(1);
     const { handler, calls, createNebius } = setup({ envVars: ownerEnv, ledger });

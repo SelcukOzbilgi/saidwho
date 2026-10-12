@@ -68,6 +68,9 @@ const KEY_ERRORS = {
 
 type DoneEvent = Extract<RunEvent, { type: "done" }>;
 
+const describe = (err: unknown, secrets: readonly string[]): string =>
+  (err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown").slice(0, 300);
+
 export function createInvestigateHandler(deps: InvestigateDeps): (request: Request) => Promise<Response> {
   const logError = deps.logError ?? ((message: string) => console.error(message));
 
@@ -100,7 +103,13 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
 
     let reservation: Reservation | null = null;
     if (keys.source === "owner") {
-      reservation = await deps.ledger.reserve(TRIAL_RESERVE_USD);
+      try {
+        reservation = await deps.ledger.reserve(TRIAL_RESERVE_USD);
+      } catch (err: unknown) {
+        // A trial run spends the owner's money, so without a working count none starts.
+        logError(`investigate: could not check the daily budget: ${describe(err, secrets)}`);
+        return fail(503, "limits_unavailable");
+      }
       if (!reservation) return fail(429, "daily_budget_spent");
     }
 
@@ -149,8 +158,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             },
           })
           .catch((err: unknown) => {
-            const message = err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown";
-            logError(`investigate: run failed: ${message.slice(0, 300)}`);
+            logError(`investigate: run failed: ${describe(err, secrets)}`);
             send(SSE_RUN_FAILED);
           })
           .finally(async () => {
@@ -162,7 +170,12 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             const finished = done as DoneEvent | null;
             const counted = finished ? finished.nebiusUsd + finished.tavilyCredits * TAVILY_USD_PER_CREDIT : 0;
             const allKnown = finished !== null && finished.unknownCostCalls === 0;
-            await reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
+            try {
+              await reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
+            } catch (err: unknown) {
+              // The reservation then stays counted in full, which errs toward spending less.
+              logError(`investigate: could not settle the daily budget: ${describe(err, secrets)}`);
+            }
             // Saved before the stream closes: work left for after the response ends
             // may never run on a serverless platform. A run that ended before it
             // planned or searched anything, as one with a rejected key does, has
@@ -174,8 +187,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
                 await deps.store.save({ id: runId, keys: keys.source === "owner" ? "trial" : "own", events });
                 send(toSavedChunk(runId));
               } catch (err: unknown) {
-                const message = err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown";
-                logError(`investigate: could not save the run: ${message.slice(0, 300)}`);
+                logError(`investigate: could not save the run: ${describe(err, secrets)}`);
               }
             }
             if (!closed) {

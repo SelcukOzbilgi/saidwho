@@ -1,5 +1,5 @@
 import { ANSWER_SITES, investigate } from "@/agent/orchestrator";
-import { createDailyLedger } from "@/lib/server/daily-budget";
+import { ledgerFromEnv } from "@/lib/server/daily-budget";
 import { env } from "@/lib/server/env";
 import { createInvestigateHandler } from "@/lib/server/investigate-handler";
 import { createNebiusClient } from "@/lib/server/providers/nebius";
@@ -13,7 +13,7 @@ export const maxDuration = 300;
 // finding the trail itself, as in the test set.
 export const POST = createInvestigateHandler({
   env,
-  ledger: createDailyLedger(env.DAILY_BUDGET_USD),
+  ledger: ledgerFromEnv(env),
   excludeDomains: ANSWER_SITES,
   createNebius: createNebiusClient,
   createTavily: createTavilyClient,
