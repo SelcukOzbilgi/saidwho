@@ -2,10 +2,11 @@ import { isIP } from "node:net";
 
 // Who a run is counted against, for the per-visitor limits in rate-limit.ts.
 //
-// On Vercel, the platform sets x-vercel-forwarded-for to the address the request
-// came from and overwrites whatever the client sent, so it can't be faked.
-// x-forwarded-for carries the same address, but Vercel's docs say another proxy
-// in front of Vercel could overwrite it. x-real-ip is the same again and is the
+// Vercel's request-headers docs say Vercel overwrites x-forwarded-for with the
+// client's public address and doesn't pass on one the client sent, to prevent
+// spoofing. They call x-vercel-forwarded-for identical to it, except that
+// x-forwarded-for could be overwritten by a proxy in front of Vercel, so that
+// one is read first. x-real-ip is also identical to x-forwarded-for and is the
 // fallback. Should either ever hold a list, the last address is the one the
 // nearest proxy, Vercel, added; the ones before it could come from the client.
 // Off Vercel nothing sets these headers but the client, so none is trusted there
