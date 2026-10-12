@@ -112,30 +112,6 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       return fail(500, "server_misconfigured");
     }
 
-    // The budget is set aside before the visitor is counted, so a day whose
-    // budget is spent doesn't use up anyone's runs. A refused run gives its
-    // reservation straight back.
-    let reservation: Reservation | null = null;
-    if (keys.source === "owner") {
-      try {
-        reservation = await deps.ledger.reserve(TRIAL_RESERVE_USD);
-      } catch (err: unknown) {
-        // A trial run spends the owner's money, so without a working count none starts.
-        logError(`investigate: could not check the daily budget: ${describe(err, secrets)}`);
-        return fail(503, "limits_unavailable");
-      }
-      if (!reservation) return fail(429, "daily_budget_spent");
-    }
-    const refuse = async (response: Response): Promise<Response> => {
-      try {
-        await reservation?.settle(0);
-      } catch (err: unknown) {
-        // The reservation then stays counted until the day ends, which errs toward spending less.
-        logError(`investigate: could not release the daily budget: ${describe(err, secrets)}`);
-      }
-      return response;
-    };
-
     const onVercel = deps.env.VERCEL === "1";
     const visitor = visitorKey(clientIp(request.headers, onVercel));
     if (onVercel && visitor === UNKNOWN_VISITOR && !warnedNoAddress) {
@@ -143,12 +119,31 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       warnedNoAddress = true;
       logError("investigate: Vercel gave no visitor address, so visitors without one share a count");
     }
-    // The scarcer trial limit goes first, so a visitor out of trial runs who
-    // keeps trying doesn't use up their hourly runs on their own keys too.
+
+    // The visitor is counted before the budget is touched, so a visitor at their
+    // limit can't hold any of the day's budget, however many requests they send.
+    // The scarcer trial limit goes first, so a visitor out of trial runs who keeps
+    // trying doesn't use up their hourly runs on their own keys too.
     const limits: Limit[] = [{ name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS }];
     if (keys.source === "owner") {
       limits.unshift({ name: "trial", max: deps.env.TRIAL_RUNS_PER_IP_PER_DAY, windowSeconds: DAY_SECONDS });
     }
+    // A run refused after it was counted gives its counts back, so a run that never
+    // starts leaves the visitor's counts as they were. This is best effort: when it
+    // fails the run is still refused, and the count stays until its window ends.
+    const taken: Limit[] = [];
+    const refuse = async (response: Response): Promise<Response> => {
+      await Promise.all(
+        taken.map(async (limit) => {
+          try {
+            await deps.limiter.unhit(visitor, limit);
+          } catch (err: unknown) {
+            logError(`investigate: could not give back the ${limit.name} count: ${describe(err, secrets)}`);
+          }
+        }),
+      );
+      return response;
+    };
     for (const limit of limits) {
       let allowed: boolean;
       try {
@@ -157,7 +152,8 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
         logError(`investigate: could not check the ${limit.name} limit: ${describe(err, secrets)}`);
         // A trial run spends the owner's money, so without a working count none
         // starts. A run on the visitor's own keys costs the owner nothing, so a
-        // broken count shouldn't block it.
+        // broken count shouldn't block it. A count whose call failed may or may
+        // not have been made, so it isn't given back.
         if (keys.source === "owner") return refuse(fail(503, "limits_unavailable"));
         continue;
       }
@@ -165,6 +161,21 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
         const retryAfter = String(secondsLeftInWindow(limit.windowSeconds));
         return refuse(fail(429, LIMIT_ERRORS[limit.name], {}, { "Retry-After": retryAfter }));
       }
+      taken.push(limit);
+    }
+
+    // The budget comes last, so nothing after it can refuse the run and leave a
+    // reservation behind.
+    let reservation: Reservation | null = null;
+    if (keys.source === "owner") {
+      try {
+        reservation = await deps.ledger.reserve(TRIAL_RESERVE_USD);
+      } catch (err: unknown) {
+        // A trial run spends the owner's money, so without a working count none starts.
+        logError(`investigate: could not check the daily budget: ${describe(err, secrets)}`);
+        return refuse(fail(503, "limits_unavailable"));
+      }
+      if (!reservation) return refuse(fail(429, "daily_budget_spent"));
     }
 
     // One controller stops the run, whether the client disconnects (request.signal),
