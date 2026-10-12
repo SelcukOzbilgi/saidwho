@@ -121,7 +121,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
           href={webUrl(node.url)}
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-auto max-w-[60%] truncate underline decoration-line underline-offset-2 hover:decoration-foreground"
+          className="-my-1.5 ml-auto max-w-[60%] truncate py-1.5 underline decoration-line underline-offset-2 hover:decoration-foreground"
           title={node.title}
         >
           {node.title || node.host}
