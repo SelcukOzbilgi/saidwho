@@ -24,11 +24,11 @@ alter table public.rate_limits enable row level security;
 revoke all on table public.rate_limits from anon, authenticated;
 grant select, insert, update, delete on table public.rate_limits to service_role;
 
--- Counts one run and returns true, or returns false without counting when the
--- visitor already reached p_max in this window. Windows start on the epoch, so a
--- day's window starts at UTC midnight.
+-- Counts one run and returns the start of the window it was counted in, or
+-- returns null without counting when the visitor already reached p_max in this
+-- window. Windows start on the epoch, so a day's window starts at UTC midnight.
 create function public.hit_rate_limit(p_key text, p_max integer, p_window_seconds integer)
-returns boolean
+returns timestamptz
 language plpgsql
 set search_path = ''
 as $$
@@ -37,7 +37,7 @@ declare
   v_hits integer;
 begin
   if p_max < 1 or p_window_seconds < 1 then
-    return false;
+    return null;
   end if;
   v_start := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
 
@@ -63,35 +63,34 @@ begin
     where r.hits < p_max
   returning r.hits into v_hits;
 
-  return v_hits is not null;
+  if v_hits is null then
+    return null;
+  end if;
+  return v_start;
 end;
 $$;
 
--- Gives back one run counted in the current window, for a run that was refused
--- after it was counted, by another limit or the trial budget. A count never goes
--- below 0, and nothing happens once the row is gone or its window has ended.
-create function public.unhit_rate_limit(p_key text, p_window_seconds integer)
+-- Gives back one run counted in the window that starts at p_window_start, as
+-- hit_rate_limit returned it, for a run that was refused after it was counted,
+-- by another limit or the trial budget. The window is passed in rather than
+-- worked out from now(), so a give-back that lands after its window ended can't
+-- take a count from the next one. A count never goes below 0, and nothing
+-- happens once the row is gone.
+create function public.unhit_rate_limit(p_key text, p_window_start timestamptz)
 returns void
 language plpgsql
 set search_path = ''
 as $$
-declare
-  v_start timestamptz;
 begin
-  if p_window_seconds < 1 then
-    return;
-  end if;
-  v_start := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
-
   update public.rate_limits
   set hits = hits - 1
-  where key = p_key and window_start = v_start and hits > 0;
+  where key = p_key and window_start = p_window_start and hits > 0;
 end;
 $$;
 
 -- Postgres lets anyone run a new function, and Supabase's API roles would get
 -- it too. Only the secret key's role may.
 revoke all on function public.hit_rate_limit(text, integer, integer) from public, anon, authenticated;
-revoke all on function public.unhit_rate_limit(text, integer) from public, anon, authenticated;
+revoke all on function public.unhit_rate_limit(text, timestamptz) from public, anon, authenticated;
 grant execute on function public.hit_rate_limit(text, integer, integer) to service_role;
-grant execute on function public.unhit_rate_limit(text, integer) to service_role;
+grant execute on function public.unhit_rate_limit(text, timestamptz) to service_role;

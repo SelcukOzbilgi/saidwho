@@ -128,15 +128,16 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     if (keys.source === "owner") {
       limits.unshift({ name: "trial", max: deps.env.TRIAL_RUNS_PER_IP_PER_DAY, windowSeconds: DAY_SECONDS });
     }
-    // A run refused after it was counted gives its counts back, so a run that never
-    // starts leaves the visitor's counts as they were. This is best effort: when it
-    // fails the run is still refused, and the count stays until its window ends.
-    const taken: Limit[] = [];
+    // A run refused after it was counted gives its counts back, to the window each
+    // was counted in, so a run that never starts leaves the visitor's counts as
+    // they were. This is best effort: when it fails the run is still refused, and
+    // the count stays until its window ends.
+    const taken: { limit: Limit; windowStart: number }[] = [];
     const refuse = async (response: Response): Promise<Response> => {
       await Promise.all(
-        taken.map(async (limit) => {
+        taken.map(async ({ limit, windowStart }) => {
           try {
-            await deps.limiter.unhit(visitor, limit);
+            await deps.limiter.unhit(visitor, limit, windowStart);
           } catch (err: unknown) {
             logError(`investigate: could not give back the ${limit.name} count: ${describe(err, secrets)}`);
           }
@@ -145,9 +146,9 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       return response;
     };
     for (const limit of limits) {
-      let allowed: boolean;
+      let windowStart: number | null;
       try {
-        allowed = await deps.limiter.hit(visitor, limit);
+        windowStart = await deps.limiter.hit(visitor, limit);
       } catch (err: unknown) {
         logError(`investigate: could not check the ${limit.name} limit: ${describe(err, secrets)}`);
         // A trial run spends the owner's money, so without a working count none
@@ -157,11 +158,11 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
         if (keys.source === "owner") return refuse(fail(503, "limits_unavailable"));
         continue;
       }
-      if (!allowed) {
+      if (windowStart === null) {
         const retryAfter = String(secondsLeftInWindow(limit.windowSeconds));
         return refuse(fail(429, LIMIT_ERRORS[limit.name], {}, { "Retry-After": retryAfter }));
       }
-      taken.push(limit);
+      taken.push({ limit, windowStart });
     }
 
     // The budget comes last, so nothing after it can refuse the run and leave a

@@ -16,11 +16,14 @@ import { createSupabaseRpc, type SupabaseRpc } from "./supabase-rpc";
 export type Limit = { name: "runs" | "trial"; max: number; windowSeconds: number };
 
 export type RateLimiter = {
-  // True when the run may start, and then it is counted. A refused run isn't.
-  hit: (visitor: string, limit: Limit) => Promise<boolean>;
-  // Gives back one run counted in the current window, for a run refused after it
-  // was counted. Never below 0, and nothing once the window has ended.
-  unhit: (visitor: string, limit: Limit) => Promise<void>;
+  // When the run may start, it is counted and this gives the start of the window
+  // it was counted in, in epoch milliseconds. A refused run isn't counted: null.
+  hit: (visitor: string, limit: Limit) => Promise<number | null>;
+  // Gives back one run counted in the window that starts at `windowStart`, as
+  // `hit` gave it, for a run refused after it was counted. Never below 0. The
+  // window is passed in, not worked out again, so a give-back that runs after a
+  // window ends can't take a count from the next one.
+  unhit: (visitor: string, limit: Limit, windowStart: number) => Promise<void>;
 };
 
 export const HOUR_SECONDS = 3_600;
@@ -41,25 +44,23 @@ export const hashVisitor = (key: Buffer, visitor: string): string =>
 export function createMemoryLimiter(now: () => number = Date.now): RateLimiter {
   const key = randomBytes(32);
   const counts = new Map<string, { endsAt: number; hits: number }>();
-  const windowAt = (at: number, visitor: string, { name, windowSeconds }: Limit) => {
-    const windowMs = windowSeconds * 1000;
-    const start = Math.floor(at / windowMs) * windowMs;
-    return { id: `${name}:${start}:${hashVisitor(key, visitor)}`, endsAt: start + windowMs };
-  };
+  const idOf = (start: number, visitor: string, { name }: Limit) => `${name}:${start}:${hashVisitor(key, visitor)}`;
   return {
     async hit(visitor, limit) {
       const at = now();
       // Ended windows go first. A small demo has few visitors a day, so a full pass is cheap.
       for (const [id, count] of counts) if (count.endsAt <= at) counts.delete(id);
-      const { id, endsAt } = windowAt(at, visitor, limit);
-      const count = counts.get(id) ?? { endsAt, hits: 0 };
-      if (count.hits >= limit.max) return false;
+      const windowMs = limit.windowSeconds * 1000;
+      const start = Math.floor(at / windowMs) * windowMs;
+      const id = idOf(start, visitor, limit);
+      const count = counts.get(id) ?? { endsAt: start + windowMs, hits: 0 };
+      if (count.hits >= limit.max) return null;
       count.hits += 1;
       counts.set(id, count);
-      return true;
+      return start;
     },
-    async unhit(visitor, limit) {
-      const count = counts.get(windowAt(now(), visitor, limit).id);
+    async unhit(visitor, limit, windowStart) {
+      const count = counts.get(idOf(windowStart, visitor, limit));
       if (count && count.hits > 0) count.hits -= 1;
     },
   };
@@ -76,10 +77,18 @@ export function createSharedLimiter(rpc: SupabaseRpc, key: Buffer): RateLimiter 
         p_max: max,
         p_window_seconds: windowSeconds,
       });
-      return z.boolean().parse(reply);
+      // The window's start as a timestamp, or null when the run is refused.
+      const start = z.string().nullable().parse(reply);
+      if (start === null) return null;
+      const ms = Date.parse(start);
+      if (!Number.isFinite(ms)) throw new Error("hit_rate_limit returned a window start that isn't a time");
+      return ms;
     },
-    async unhit(visitor, { name, windowSeconds }) {
-      await rpc("unhit_rate_limit", { p_key: `${name}:${hashVisitor(key, visitor)}`, p_window_seconds: windowSeconds });
+    async unhit(visitor, { name }, windowStart) {
+      await rpc("unhit_rate_limit", {
+        p_key: `${name}:${hashVisitor(key, visitor)}`,
+        p_window_start: new Date(windowStart).toISOString(),
+      });
     },
   };
 }

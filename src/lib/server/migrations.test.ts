@@ -24,7 +24,7 @@ describe("supabase migrations", () => {
     expect(migration("20261012120100_rate_limits.sql")).toContain("where expires_at <= now() - interval '1 hour'");
   });
 
-  it.each(["hit_rate_limit(text, integer, integer)", "unhit_rate_limit(text, integer)"])(
+  it.each(["hit_rate_limit(text, integer, integer)", "unhit_rate_limit(text, timestamptz)"])(
     "lets only the server's role run %s",
     (fn) => {
       const sql = migration("20261012120100_rate_limits.sql");

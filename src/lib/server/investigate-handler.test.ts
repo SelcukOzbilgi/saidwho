@@ -36,20 +36,25 @@ const post = (json: unknown, signal?: AbortSignal, headers: Record<string, strin
     signal,
   });
 
+// The window each limit's count lands in, so a give-back can be matched to its hit.
+const WINDOW_STARTS = { runs: Date.parse("2026-10-12T10:00:00Z"), trial: Date.parse("2026-10-12T00:00:00Z") };
+
 // A limiter that remembers who it was asked about and what it gave back, and can be made to fail.
 function spyLimiter(
   answer: (limit: Limit) => Promise<boolean> = async () => true,
   giveBack: (limit: Limit) => Promise<void> = async () => {},
 ) {
-  const hits: { visitor: string; limit: Limit }[] = [];
-  const unhits: { visitor: string; limit: Limit }[] = [];
+  const hits: { visitor: string; limit: Limit; windowStart: number | null }[] = [];
+  const unhits: { visitor: string; limit: Limit; windowStart: number }[] = [];
   const limiter: RateLimiter = {
     hit: async (visitor, limit) => {
-      hits.push({ visitor, limit });
-      return answer(limit);
+      const hit = { visitor, limit, windowStart: null as number | null };
+      hits.push(hit);
+      hit.windowStart = (await answer(limit)) ? WINDOW_STARTS[limit.name] : null;
+      return hit.windowStart;
     },
-    unhit: async (visitor, limit) => {
-      unhits.push({ visitor, limit });
+    unhit: async (visitor, limit, windowStart) => {
+      unhits.push({ visitor, limit, windowStart });
       return giveBack(limit);
     },
   };
