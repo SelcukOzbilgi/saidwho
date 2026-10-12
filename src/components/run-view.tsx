@@ -28,7 +28,7 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <Quote lang={run.language ?? undefined} className="font-serif text-2xl leading-snug italic sm:text-3xl">
+        <Quote lang={run.language ?? undefined} dir="auto" className="font-serif text-2xl leading-snug italic sm:text-3xl">
           “{run.quote}”
         </Quote>
         <p className="mt-2 text-muted">
