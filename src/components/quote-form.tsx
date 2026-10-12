@@ -38,7 +38,7 @@ const LANGUAGES = [
 
 // A visible ring for keyboard focus, on top of the darker border any focus gets.
 const FIELD =
-  "w-full rounded-lg border border-line bg-card outline-none focus:border-foreground/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink";
+  "w-full rounded-lg border border-line bg-card outline-none focus:border-foreground/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-accent-ink";
 
 type Props = {
   trialOpen: boolean;
