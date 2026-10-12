@@ -141,6 +141,11 @@ describe("reduceRun", () => {
     expect(state.log.at(-1)?.text).toBe("Trying again on super with thinking off, without the lineage: ran out of tokens");
   });
 
+  it("doesn't say thinking is off when a judge on the same model tries again with it on", () => {
+    const state = run([{ type: "escalated", step: "judge", from: "super", to: "super", thinking: true, reason: "bad_request: schema", url: null }]);
+    expect(state.log.at(-1)?.text).toBe("Trying again on super: bad_request: schema");
+  });
+
   it("says why there is no verdict", () => {
     expect(run([{ type: "judge_skipped", reason: "no verified evidence" }]).noVerdict).toBe("no verified evidence");
     expect(run([{ type: "judge_failed", ...spend, reason: "bad output" }]).noVerdict).toBe("bad output");

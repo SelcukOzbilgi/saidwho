@@ -145,7 +145,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       };
     case "escalated": {
       const how =
-        (event.from === event.to ? `again on ${event.to} with thinking off` : `again on ${event.to}`) +
+        (event.from === event.to && !event.thinking ? `again on ${event.to} with thinking off` : `again on ${event.to}`) +
         (event.compact ? ", without the lineage" : "");
       const agent: Agent = event.step === "plan" ? "Planner" : event.step === "read" ? "Reader" : "Judge";
       const page = event.url ? ` (${hostOf(event.url)})` : "";
