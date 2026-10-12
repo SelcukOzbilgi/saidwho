@@ -14,6 +14,7 @@ import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { checkVerdict, retryNote } from "./judge-check";
 import { mayHoldWork } from "./library-pages";
+import { broaden, cleanQuery, queryKey, shortenQuotedSpans } from "./queries";
 import {
   boundedCompactJudgeOutputSchema,
   boundedJudgeOutputSchema,
@@ -250,6 +251,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "The search engine does not support operators such as site:, before:, after:, OR or year ranges; write plain queries. " +
       "Start with the saying in double quotes, then queries about its origin and first appearance " +
       "(for example: earliest newspaper, book or speech where it appeared), and one per candidate author. " +
+      "Pages often word a long saying a little differently, so when it is longer than ten words, " +
+      "quote only a distinctive part of six to ten words in those later queries, or leave the quotes off. " +
       "usual_attribution: only when no credit is given, the person the saying is most often credited to, name only; " +
       "null when a credit is given or you don't know one.",
     user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language}`,
@@ -267,9 +270,18 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // With no name given, the planner's name for the usual credit stands in for it.
   const foundAttribution = popularAttribution === null && plan.ok ? cleanName(plan.data.usual_attribution) : null;
   const credit = popularAttribution ?? foundAttribution;
-  // The exact phrase always goes first, even if the planner leaves it out (or returns nothing).
-  const queries = [`"${quote}"`, ...(plan.ok ? plan.data.queries : [])]
-    .filter((q, i, all) => all.findIndex((other) => normalizeText(other) === normalizeText(q)) === i)
+  // The exact phrase always goes first, even if the planner leaves it out (or
+  // returns nothing). The planner's queries are checked first: one that can't be
+  // a search is dropped and listed in the planned event, and a long quoted
+  // span in one is cut to a distinctive part.
+  const rejectedQueries: string[] = [];
+  const plannedQueries = (plan.ok ? plan.data.queries : []).flatMap((raw) => {
+    const query = cleanQuery(raw);
+    if (query === null) rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
+    return query === null ? [] : [shortenQuotedSpans(query)];
+  });
+  const queries = [`"${quote}"`, ...plannedQueries]
+    .filter((q, i, all) => all.findIndex((other) => queryKey(other) === queryKey(q)) === i)
     .slice(0, MAX_QUERIES);
   if (plan.ok) {
     onEvent({
@@ -279,6 +291,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       candidateAuthors: plan.data.candidate_authors,
       queries,
       foundAttribution,
+      ...(rejectedQueries.length > 0 && { rejectedQueries }),
     });
   }
 
@@ -315,9 +328,17 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     const kept = textsOf.get(url) ?? [];
     if (!kept.includes(text)) textsOf.set(url, [...kept, text]);
   };
-  for (const query of queries) {
+  // Searches run one at a time, so a quoted query that finds nothing is followed
+  // straight away by a looser one (see broaden), once per planned query. It
+  // takes the place of the last planned query, so the run never searches more
+  // than MAX_QUERIES times.
+  const toRun = [...queries];
+  for (let i = 0; i < toRun.length && i < MAX_QUERIES; i++) {
     if (mustStop()) return finish();
+    const query = toRun[i];
     const results = await search(query);
+    const wider = results?.length === 0 && queries.includes(query) ? broaden(query) : null;
+    if (wider && !toRun.some((q) => queryKey(q) === queryKey(wider))) toRun.splice(i + 1, 0, wider);
     // Only full page text counts. `content` is Tavily's short summary, and a snippet
     // checked against a summary was never checked against the page.
     for (const r of results ?? []) {
@@ -535,21 +556,34 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     }
 
     // Leads go into prompts, events and searches, so they are checked and capped
-    // like reader fields. One pointing at a node it wasn't shown is dropped.
+    // like reader fields. One pointing at a node it wasn't shown is dropped, and
+    // so is one whose query can't be a search (see cleanQuery), which is listed
+    // in the traced event.
     const citingIds = new Set(citing.map((n) => n.id));
     const leads: (Lead & { query: string })[] = [];
+    const rejectedQueries: string[] = [];
     for (const raw of trace.data.leads) {
       const work = raw.work.replace(/\s+/g, " ").trim();
-      const query = raw.query.replace(/\s+/g, " ").trim();
       const wording = raw.wording?.replace(/\s+/g, " ").trim() || null;
-      const tooLong = [work, query, wording ?? ""].some((field) => field.length > MAX_FIELD_CHARS);
-      if (!citingIds.has(raw.from_node) || !work || !query || tooLong || followed.has(normalizeText(work))) continue;
+      const tooLong = [work, wording ?? ""].some((field) => field.length > MAX_FIELD_CHARS);
+      if (!citingIds.has(raw.from_node) || !work || tooLong || followed.has(normalizeText(work))) continue;
+      const query = cleanQuery(raw.query);
+      if (query === null) {
+        rejectedQueries.push(raw.query.slice(0, MAX_FIELD_CHARS));
+        continue;
+      }
       followed.add(normalizeText(work));
-      leads.push({ fromNode: raw.from_node, work, year: cleanDate(raw.year), query, wording });
+      leads.push({ fromNode: raw.from_node, work, year: cleanDate(raw.year), query: shortenQuotedSpans(query), wording });
       if (wording) leadWordings.push(wording);
       if (leads.length === LEADS_PER_ROUND) break;
     }
-    onEvent({ type: "traced", ...traceSpend, round, leads: leads.map(({ fromNode, work, query }) => ({ fromNode, work, query })) });
+    onEvent({
+      type: "traced",
+      ...traceSpend,
+      round,
+      leads: leads.map(({ fromNode, work, query }) => ({ fromNode, work, query })),
+      ...(rejectedQueries.length > 0 && { rejectedQueries }),
+    });
     if (leads.length === 0) break;
 
     const found: Entry[] = [];

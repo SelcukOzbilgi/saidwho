@@ -64,6 +64,9 @@ export const runEventSchema = z.discriminatedUnion("type", [
     // The planner's name for the usual credit, only when the visitor gave none;
     // null otherwise. Runs saved before this field have no key.
     foundAttribution: z.string().nullable().optional(),
+    // Queries the planner wrote that can't be a search (see cleanQuery), never
+    // sent. Only when there are some.
+    rejectedQueries: z.array(z.string()).optional(),
   }),
   // A failed plan is tried once more, on Super with thinking off, unless the
   // failure would repeat (a rejected key, no credits, a rate limit, a refused
@@ -109,6 +112,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
     ...spendSchema,
     round: z.number(),
     leads: z.array(z.strictObject({ fromNode: z.string(), work: z.string(), query: z.string() })),
+    // Lead queries that can't be a search, dropped with their leads. Only when there are some.
+    rejectedQueries: z.array(z.string()).optional(),
   }),
   // A failed trace is not tried again: the run already has evidence to judge.
   z.strictObject({ type: z.literal("trace_failed"), ...spendSchema, round: z.number(), reason: z.string() }),

@@ -330,6 +330,15 @@ describe("investigate", () => {
       expect(events.find((e) => e.type === "traced")).toMatchObject({ leads: [{ fromNode: "n1", work: LEAD.work }] });
     });
 
+    it("never searches for a lead whose query can't be a search, and lists the query", async () => {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const nebius = fakeNebius({ read: () => CITES_BOOK, trace: () => ({ leads: [{ ...LEAD, query: ' ">" ' }] }) });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "traced")).toMatchObject({ leads: [], rejectedQueries: [' ">" '] });
+      expect(queries).not.toContain('">"');
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    });
+
     // The book as a library has it, without the saying.
     // Long enough to be a work's text rather than a catalog record.
     const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} ${"Chapter one. ".repeat(100)}${SECRET}`;
@@ -1045,6 +1054,43 @@ describe("investigate", () => {
       ["judge", "ultra", "ultra"],
     ]);
     for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  describe("search queries", () => {
+    it("never sends a planner query that can't be a search, and lists it", async () => {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const nebius = fakeNebius({ plan: () => ({ ...PLAN, queries: ['">"', "  origin of\n the insanity quote "] }) });
+      const events = await run({ nebius, tavily });
+      expect(queries).toEqual([`"${QUOTE}"`, "origin of the insanity quote"]);
+      expect(events.find((e) => e.type === "planned")).toMatchObject({ rejectedQueries: ['">"'] });
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    });
+
+    it("keeps the exact quote first and cuts a long quoted span in later queries", async () => {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const nebius = fakeNebius({ plan: () => ({ ...PLAN, queries: [`"${QUOTE}" first newspaper`] }) });
+      await run({ nebius, tavily });
+      expect(queries[0]).toBe(`"${QUOTE}"`);
+      const fragment = /^"([^"]+)" first newspaper$/.exec(queries[1])?.[1] ?? "";
+      expect(QUOTE).toContain(fragment);
+      expect(fragment.split(" ").length).toBeGreaterThanOrEqual(6);
+      expect(fragment.split(" ").length).toBeLessThanOrEqual(10);
+    });
+
+    it("follows a quoted search that finds nothing with a looser one, and stops at five searches", async () => {
+      // Only unquoted searches find anything.
+      const { tavily, queries, options } = tavilyFor((q) => (q.includes('"') ? [] : [NEWS]));
+      const planned = ['"over and over again" origin', "insanity quote origin", "insanity quote first newspaper", "insanity quote Einstein"];
+      const nebius = fakeNebius({ plan: () => ({ ...PLAN, queries: planned }) });
+      const events = await run({ nebius, tavily });
+      // The exact quote is cut to a fragment once; the fragment, found empty too, is not loosened again.
+      expect(queries).toHaveLength(5);
+      expect(queries[0]).toBe(`"${QUOTE}"`);
+      expect(queries[1]).toMatch(/^"[^"]+"$/);
+      expect(queries.slice(2)).toEqual(['"over and over again" origin', "over and over again origin", "insanity quote origin"]);
+      expect(options.map((o) => (o as { exactMatch: boolean }).exactMatch)).toEqual([true, true, true, false, false]);
+      expect(events.filter((e) => e.type === "searched")).toHaveLength(5);
+    });
   });
 
   it("crosses out a snippet that is on the page but isn't the saying, and asks Super", async () => {
