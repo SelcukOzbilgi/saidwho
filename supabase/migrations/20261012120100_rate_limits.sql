@@ -16,6 +16,12 @@ create index rate_limits_expires_at on public.rate_limits (expires_at);
 -- As with runs: only the server, with the secret key, reaches this table.
 alter table public.rate_limits enable row level security;
 
+-- Supabase is moving new projects off granting new tables to the API roles by
+-- default, so the grants are spelled out: the function below runs as the
+-- server's role and needs these, and the public roles get nothing.
+revoke all on table public.rate_limits from anon, authenticated;
+grant select, insert, update, delete on table public.rate_limits to service_role;
+
 -- Counts one run and returns true, or returns false without counting when the
 -- visitor already reached p_max in this window. Windows start on the epoch, so a
 -- day's window starts at UTC midnight.

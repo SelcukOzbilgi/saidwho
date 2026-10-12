@@ -19,6 +19,12 @@ create index trial_spend_day on public.trial_spend (day);
 -- As with runs: only the server, with the secret key, reaches this table.
 alter table public.trial_spend enable row level security;
 
+-- Supabase is moving new projects off granting new tables to the API roles by
+-- default, so the grants are spelled out: the functions below run as the
+-- server's role and need these, and the public roles get nothing.
+revoke all on table public.trial_spend from anon, authenticated;
+grant select, insert, update, delete on table public.trial_spend to service_role;
+
 -- Returns the reservation's id, or null when the day's budget can't cover it.
 create function public.reserve_trial_budget(p_amount_usd numeric, p_budget_usd numeric)
 returns uuid
