@@ -48,4 +48,8 @@ export const CASES: readonly ExampleCase[] = [
   return { ...log, run: log.events.reduce(reduceRun, initialRunState) };
 });
 
+// The case at the top of the home page: a clear verdict, high confidence, and a
+// trail where the credit changes hands twice.
+export const FEATURED_CASE_ID = "insanity-same-thing";
+
 export const findCase = (id: string): ExampleCase | undefined => CASES.find((c) => c.caseId === id);

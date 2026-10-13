@@ -231,7 +231,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
             <KeyInput id={`${id}-code`} label="Access code" value={accessCode} onChange={setAccessCode} maxLength={200} />
             <p className="text-xs text-muted sm:col-span-2">
               Hackathon judges get the code in the testing instructions. No code? Use your own keys, or open a finished
-              case below.
+              case above.
             </p>
           </div>
         )}
@@ -276,7 +276,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
             <>
               Add both keys above to run it, or{" "}
               <a href="#cases" className="underline underline-offset-2 hover:text-foreground">
-                open a finished case below
+                open a finished case above
               </a>
               . No keys needed there.
             </>
