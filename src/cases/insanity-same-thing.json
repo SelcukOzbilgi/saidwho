@@ -1,6 +1,6 @@
 {
   "caseId": "insanity-same-thing",
-  "ranAt": "2026-10-08T15:51:01.026Z",
+  "ranAt": "2026-10-12T13:59:23.522Z",
   "events": [
     {
       "type": "started",
@@ -16,65 +16,67 @@
     {
       "type": "planned",
       "tier": "super",
-      "costUsd": 0.0006801,
+      "costUsd": 0.0008595,
       "usageKnown": true,
-      "latencyMs": 4654,
+      "tokens": {
+        "promptTokens": 195,
+        "completionTokens": 890
+      },
+      "latencyMs": 4954,
       "variants": [
-        "Insanity is doing the same thing over and over again and expecting different results.",
-        "The definition of insanity is doing the same thing over and over again but expecting different results.",
-        "Insanity is repeating the same mistakes and expecting a different outcome.",
-        "Doing the same thing over and over while expecting a different result is insanity.",
-        "Insanity: repeating the same action and anticipating a different result."
+        "Doing the same thing over and over again and expecting different results is the definition of insanity.",
+        "The definition of insanity is doing the same thing over and over and expecting different results.",
+        "Insanity: repeating the same mistakes and expecting a different outcome."
       ],
       "candidateAuthors": [
         "Rita Mae Brown",
-        "Narcotics Anonymous (1981 text)",
-        "Benjamin Franklin (misattribution)",
-        "Albert Einstein (common misattribution)",
-        "Unknown folk proverb"
+        "Benjamin Franklin",
+        "Mark Twain",
+        "Unknown"
       ],
       "queries": [
         "\"Insanity is doing the same thing over and over again and expecting different results.\"",
-        "\"doing the same thing over and over\" insanity earliest use",
-        "\"definition of insanity\" repeating same action",
-        "\"Insanity is repeating the same mistakes\" Narcotics Anonymous",
-        "\"Rita Mae Brown\" insanity quote"
-      ]
+        "\"Insanity is doing the same thing over and over again\" earliest newspaper",
+        "\"doing the same thing over and over expecting different results\" book quote",
+        "\"definition of insanity\" speech origin",
+        "Rita Mae Brown insanity quote source"
+      ],
+      "foundAttribution": null
     },
     {
       "type": "searched",
       "query": "\"Insanity is doing the same thing over and over again and expecting different results.\"",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1669
+      "latencyMs": 1948
     },
     {
       "type": "searched",
-      "query": "\"doing the same thing over and over\" insanity earliest use",
+      "query": "\"Insanity is doing the same thing over and over again\" earliest newspaper",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1211
+      "latencyMs": 1435
     },
     {
       "type": "searched",
-      "query": "\"definition of insanity\" repeating same action",
+      "query": "\"doing the same thing over and over expecting different results\" book quote",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1629
+      "latencyMs": 2221
     },
     {
       "type": "searched",
-      "query": "\"Insanity is repeating the same mistakes\" Narcotics Anonymous",
-      "results": 0,
-      "credits": 1,
-      "latencyMs": 3156
-    },
-    {
-      "type": "searched",
-      "query": "\"Rita Mae Brown\" insanity quote",
+      "query": "\"definition of insanity\" speech origin",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1681
+      "latencyMs": 1434
+    },
+    {
+      "type": "searched",
+      "query": "Rita Mae Brown insanity quote source",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 1385
     },
     {
       "type": "pages_ready",
@@ -84,45 +86,13 @@
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00008795999999999999,
+      "costUsd": 0.00009216,
       "usageKnown": true,
-      "latencyMs": 1263,
-      "url": "https://artsandculture.google.com/story/who-really-said-these-5-famous-phrases/JAXh1xsiCEHOqw?hl=en",
-      "host": "artsandculture.google.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n5",
-        "url": "https://artsandculture.google.com/story/who-really-said-these-5-famous-phrases/JAXh1xsiCEHOqw?hl=en",
-        "host": "artsandculture.google.com",
-        "title": "Who Really Said These 5 Famous Phrases? — Google Arts & Culture",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Insanity is doing the same thing over and over again and expecting different results.",
-          "attributed_to": "Rita Mae Brown",
-          "page_date": null,
-          "cited_source": "Sudden Death",
-          "cited_source_date": "1983"
-        },
-        "attributedTo": "Rita Mae Brown",
-        "pageDate": null,
-        "citedSourceDate": "1983",
-        "date": "1983"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00009504,
-      "usageKnown": true,
-      "latencyMs": 1268,
+      "tokens": {
+        "promptTokens": 1256,
+        "completionTokens": 70
+      },
+      "latencyMs": 759,
       "url": "https://pedroinnecco.com/2025/06/insanity-quote",
       "host": "pedroinnecco.com",
       "outcome": "evidence",
@@ -143,24 +113,70 @@
           "contains_quote": true,
           "exact_snippet": "\"Insanity is doing the same thing over and over again and expecting different results.\"",
           "attributed_to": null,
-          "page_date": "2025-06-04",
+          "page_date": "4 June 2025",
           "cited_source": null,
           "cited_source_date": null
         },
         "attributedTo": null,
-        "pageDate": "2025-06-04",
+        "pageDate": "2025",
         "citedSourceDate": null,
-        "date": "2025-06-04"
+        "date": "2025",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00009918,
+      "costUsd": 0.00020148,
       "usageKnown": true,
-      "latencyMs": 1399,
-      "url": "https://www.duperrin.com/english/2025/08/15/insanity-is-doing-the-same-thing-over-and-over-again-and-expecting-different-results-albert-einstein-or-not",
-      "host": "duperrin.com",
+      "tokens": {
+        "promptTokens": 3018,
+        "completionTokens": 85
+      },
+      "latencyMs": 773,
+      "url": "https://www.mentalfloss.com/language/definition-of-insanity-albert-einstein",
+      "host": "mentalfloss.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n5",
+        "url": "https://www.mentalfloss.com/language/definition-of-insanity-albert-einstein",
+        "host": "mentalfloss.com",
+        "title": "‘Definition of Insanity’: Did Albert Einstein Really Coin This Famous Phrase?",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "The definition of insanity is doing the same thing over and over again and expecting a different result.",
+          "attributed_to": "Albert Einstein",
+          "page_date": "1990",
+          "cited_source": "Alcoholics Anonymous meeting in 1981",
+          "cited_source_date": "1981"
+        },
+        "attributedTo": "Albert Einstein",
+        "pageDate": "1990",
+        "citedSourceDate": "1981",
+        "date": "1981",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009221999999999998,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1177,
+        "completionTokens": 90
+      },
+      "latencyMs": 798,
+      "url": "https://www.businessinsider.com/misattributed-quotes-2013-10",
+      "host": "businessinsider.com",
       "outcome": "evidence",
       "reason": null
     },
@@ -168,35 +184,40 @@
       "type": "node_added",
       "node": {
         "id": "n1",
-        "url": "https://www.duperrin.com/english/2025/08/15/insanity-is-doing-the-same-thing-over-and-over-again-and-expecting-different-results-albert-einstein-or-not",
-        "host": "duperrin.com",
-        "title": "\"Insanity is doing the same thing over and over again and expecting different results\". Albert Einstein (or not)",
+        "url": "https://www.businessinsider.com/misattributed-quotes-2013-10",
+        "host": "businessinsider.com",
+        "title": "Misattributed Quotes - Business Insider",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "Insanity is doing the same thing over and over again and expecting different results",
+          "exact_snippet": "Insanity is doing the same thing over and over again and expecting different results.",
           "attributed_to": "Albert Einstein",
-          "page_date": "2025-08-15",
-          "cited_source": null,
-          "cited_source_date": null
+          "page_date": "2013-10",
+          "cited_source": "Rita Mae Brown's 1983 book \"Sudden Death\"",
+          "cited_source_date": "1983"
         },
         "attributedTo": "Albert Einstein",
         "pageDate": null,
-        "citedSourceDate": null,
-        "date": null
+        "citedSourceDate": "1983",
+        "date": "1983",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00008790000000000001,
+      "costUsd": 0.00009617999999999999,
       "usageKnown": true,
-      "latencyMs": 1945,
-      "url": "https://medium.com/understanding-games/the-definition-of-insanity-667b9aa7b083",
-      "host": "medium.com",
+      "tokens": {
+        "promptTokens": 1267,
+        "completionTokens": 84
+      },
+      "latencyMs": 809,
+      "url": "https://style.mla.org/five-commonly-misattributed-quotations",
+      "host": "style.mla.org",
       "outcome": "evidence",
       "reason": null
     },
@@ -204,33 +225,38 @@
       "type": "node_added",
       "node": {
         "id": "n3",
-        "url": "https://medium.com/understanding-games/the-definition-of-insanity-667b9aa7b083",
-        "host": "medium.com",
-        "title": "The Definition of Insanity",
+        "url": "https://style.mla.org/five-commonly-misattributed-quotations",
+        "host": "style.mla.org",
+        "title": "Five Commonly Misattributed Quotations | MLA Style Center",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "“Insanity is doing the same thing over and over again and expecting different results.”",
-          "attributed_to": "Rita Mae Brown (via character Jane Fulton in the 1983 book _Sudden Death_)",
-          "page_date": "2024-02-29",
-          "cited_source": "Rita Mae Brown, _Sudden Death_ (1983)",
-          "cited_source_date": "1983"
+          "exact_snippet": "The definition of insanity is doing the same thing over and over again and expecting different results.",
+          "attributed_to": "Albert Einstein",
+          "page_date": "1 Feb. 2018",
+          "cited_source": "Narcotics Anonymous literature",
+          "cited_source_date": "around 1980"
         },
-        "attributedTo": "Rita Mae Brown (via character Jane Fulton in the 1983 book _Sudden Death_)",
-        "pageDate": "2024-02-29",
-        "citedSourceDate": "1983",
-        "date": "1983"
+        "attributedTo": "Albert Einstein",
+        "pageDate": "2018",
+        "citedSourceDate": "1980",
+        "date": "1980",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00011219999999999999,
+      "costUsd": 0.00010853999999999999,
       "usageKnown": true,
-      "latencyMs": 2592,
+      "tokens": {
+        "promptTokens": 1477,
+        "completionTokens": 83
+      },
+      "latencyMs": 838,
       "url": "https://www.snopes.com/fact-check/einstein-insanity-quote",
       "host": "snopes.com",
       "outcome": "evidence",
@@ -250,95 +276,52 @@
         "reader": {
           "contains_quote": true,
           "exact_snippet": "Insanity is doing the same thing over and over again and expecting different results.",
-          "attributed_to": "Rita Mae Brown",
-          "page_date": "2024-05-22",
-          "cited_source": "Rita Mae Brown. Sudden Death. Random House Publishing Group, 1984.",
-          "cited_source_date": "1984"
-        },
-        "attributedTo": "Rita Mae Brown",
-        "pageDate": null,
-        "citedSourceDate": "1984",
-        "date": "1984"
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00011418000000000001,
-      "usageKnown": true,
-      "latencyMs": 2208,
-      "url": "https://www.insideaboldmind.com/blog/definition-of-insanity",
-      "host": "insideaboldmind.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n6",
-        "url": "https://www.insideaboldmind.com/blog/definition-of-insanity",
-        "host": "insideaboldmind.com",
-        "title": "Advice Interrupted: \"Definition of Insanity\"",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "> Insanity is doing the same thing over and over and expecting different results.\n— ALBERT EINSTEIN",
-          "attributed_to": "ALBERT EINSTEIN",
-          "page_date": null,
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "ALBERT EINSTEIN",
-        "pageDate": null,
-        "citedSourceDate": null,
-        "date": null
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00009395999999999999,
-      "usageKnown": true,
-      "latencyMs": 1691,
-      "url": "https://krehbielgroup.com/2024/einstein-was-wrong-about-insanity",
-      "host": "krehbielgroup.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n9",
-        "url": "https://krehbielgroup.com/2024/einstein-was-wrong-about-insanity",
-        "host": "krehbielgroup.com",
-        "title": "Einstein was wrong about insanity – The Krehbiel Group, LLC",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "The definition of insanity is doing the same thing over and over and expecting different results",
-          "attributed_to": null,
+          "attributed_to": "Albert Einstein",
           "page_date": "2024",
-          "cited_source": null,
-          "cited_source_date": null
+          "cited_source": "Knoxville News Sentinel, 1981",
+          "cited_source_date": "1981"
         },
-        "attributedTo": null,
-        "pageDate": "2024",
-        "citedSourceDate": null,
-        "date": "2024"
+        "attributedTo": "Albert Einstein",
+        "pageDate": null,
+        "citedSourceDate": "1981",
+        "date": "1981",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00009485999999999998,
+      "costUsd": 0.0000759,
       "usageKnown": true,
-      "latencyMs": 2836,
+      "tokens": {
+        "promptTokens": 913,
+        "completionTokens": 88
+      },
+      "latencyMs": 609,
+      "url": "https://www.youtube.com/watch?v=rKMMCPeiQoc",
+      "host": "youtube.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "escalated",
+      "step": "read",
+      "from": "lightning",
+      "to": "super",
+      "thinking": false,
+      "reason": "the snippet is not on the page",
+      "url": "https://www.youtube.com/watch?v=rKMMCPeiQoc"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00009101999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1065,
+        "completionTokens": 113
+      },
+      "latencyMs": 663,
       "url": "https://chrisguillebeau.com/to-stop-insanity-its-not-just-about-doing-things-differently",
       "host": "chrisguillebeau.com",
       "outcome": "evidence",
@@ -347,7 +330,7 @@
     {
       "type": "node_added",
       "node": {
-        "id": "n7",
+        "id": "n8",
         "url": "https://chrisguillebeau.com/to-stop-insanity-its-not-just-about-doing-things-differently",
         "host": "chrisguillebeau.com",
         "title": "Definition of Insanity: Why Doing Things Differently Isn't Enough | Chris Guillebeau",
@@ -358,25 +341,71 @@
         "reader": {
           "contains_quote": true,
           "exact_snippet": "\"The definition of insanity is doing the same thing over and over and expecting different results.\"",
-          "attributed_to": "Chris Guillebeau (page discusses the quote but does not attribute it to a specific originator in the snippet)",
-          "page_date": "2026 (based on copyright notice ©2026)",
+          "attributed_to": "Chris Guillebeau (page discusses the quote but does not credit a single originator for the saying itself in the excerpt)",
+          "page_date": "2026",
           "cited_source": "Narcotics Anonymous literature from the early 1980s",
           "cited_source_date": "early 1980s"
         },
-        "attributedTo": "Chris Guillebeau (page discusses the quote but does not attribute it to a specific originator in the snippet)",
+        "attributedTo": "Chris Guillebeau (page discusses the quote but does not credit a single originator for the saying itself in the excerpt)",
         "pageDate": "2026",
         "citedSourceDate": null,
-        "date": "2026"
+        "date": "2026",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00011694,
+      "costUsd": 0.00007997999999999999,
       "usageKnown": true,
-      "latencyMs": 2339,
-      "url": "https://cornerstoneofrecovery.com/discovering-the-east-tennessee-ties-to-the-definition-of-insanity",
-      "host": "cornerstoneofrecovery.com",
+      "tokens": {
+        "promptTokens": 977,
+        "completionTokens": 89
+      },
+      "latencyMs": 740,
+      "url": "https://medium.com/understanding-games/the-definition-of-insanity-667b9aa7b083",
+      "host": "medium.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n7",
+        "url": "https://medium.com/understanding-games/the-definition-of-insanity-667b9aa7b083",
+        "host": "medium.com",
+        "title": "The Definition of Insanity",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "\"Insanity is doing the same thing over and over again and expecting different results.\"",
+          "attributed_to": null,
+          "page_date": "2024-02-29",
+          "cited_source": "Sudden Death by Rita Mae Brown (1983)",
+          "cited_source_date": "1983"
+        },
+        "attributedTo": null,
+        "pageDate": "2024-02-29",
+        "citedSourceDate": "1983",
+        "date": "1983",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00007542,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 897,
+        "completionTokens": 90
+      },
+      "latencyMs": 693,
+      "url": "http://www.news.hypercrit.net/2012/11/13/einstein-on-insanity",
+      "host": "news.hypercrit.net",
       "outcome": "evidence",
       "reason": null
     },
@@ -384,33 +413,79 @@
       "type": "node_added",
       "node": {
         "id": "n10",
-        "url": "https://cornerstoneofrecovery.com/discovering-the-east-tennessee-ties-to-the-definition-of-insanity",
-        "host": "cornerstoneofrecovery.com",
-        "title": "Tracing the curious East Tennessee ties to the definition of insanity",
+        "url": "http://www.news.hypercrit.net/2012/11/13/einstein-on-insanity",
+        "host": "news.hypercrit.net",
+        "title": "Einstein probably didn’t say that famous quote about insanity – Becker's Online Journal",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "The definition of insanity is doing the same thing over and over and expecting different results.",
-          "attributed_to": null,
-          "page_date": "October 18, 2019",
-          "cited_source": "amonymifoundation.org (unpublished draft November 1981); George A. Kelly (1955); Max Nordau (1895); Rita Mae Brown (1983); Quote Investigator",
-          "cited_source_date": "1981"
+          "exact_snippet": "Insanity is doing the same thing over and over again, but expecting different results.",
+          "attributed_to": "Rita Mae Brown",
+          "page_date": "2012-11-13",
+          "cited_source": "Narcotics Anonymous \"Basic Text\"",
+          "cited_source_date": "November 1981"
         },
-        "attributedTo": null,
-        "pageDate": "2019",
+        "attributedTo": "Rita Mae Brown",
+        "pageDate": null,
         "citedSourceDate": "1981",
-        "date": "1981"
+        "date": "1981",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00014214,
+      "costUsd": 0.00008106,
       "usageKnown": true,
-      "latencyMs": 3571,
+      "tokens": {
+        "promptTokens": 1075,
+        "completionTokens": 69
+      },
+      "latencyMs": 556,
+      "url": "https://www.goodreads.com/quotes/4203-unfortunately-susan-didn-t-remember-what-jane-fulton-once-said-insanity",
+      "host": "goodreads.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n13",
+        "url": "https://www.goodreads.com/quotes/4203-unfortunately-susan-didn-t-remember-what-jane-fulton-once-said-insanity",
+        "host": "goodreads.com",
+        "title": "Quote by Rita Mae Brown: “Unfortunately, Susan didn't remember what Jane ...”",
+        "check": {
+          "status": "near",
+          "score": 0.9333333333333333
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Insanity is doing the same thin[g], over and over again, but expecting different results.",
+          "attributed_to": "Rita Mae Brown",
+          "page_date": null,
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Rita Mae Brown",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null,
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00014022,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1589,
+        "completionTokens": 187
+      },
+      "latencyMs": 1334,
       "url": "https://professorbuzzkill.com/2017/05/29/einstein-insanity-qnq",
       "host": "professorbuzzkill.com",
       "outcome": "too_long",
@@ -428,11 +503,15 @@
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00013079999999999998,
+      "costUsd": 0.00008688,
       "usageKnown": true,
-      "latencyMs": 1552,
-      "url": "https://www.goodreads.com/author/quotes/23511.Rita_Mae_Brown",
-      "host": "goodreads.com",
+      "tokens": {
+        "promptTokens": 1104,
+        "completionTokens": 86
+      },
+      "latencyMs": 634,
+      "url": "https://grammarphobia.com/blog/2013/10/einstein.html",
+      "host": "grammarphobia.com",
       "outcome": "evidence",
       "reason": null
     },
@@ -440,35 +519,40 @@
       "type": "node_added",
       "node": {
         "id": "n11",
-        "url": "https://www.goodreads.com/author/quotes/23511.Rita_Mae_Brown",
-        "host": "goodreads.com",
-        "title": "Rita Mae Brown Quotes (Author of Rubyfruit Jungle)",
+        "url": "https://grammarphobia.com/blog/2013/10/einstein.html",
+        "host": "grammarphobia.com",
+        "title": "The Grammarphobia Blog: Einstein? It’s all relative",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "Unfortunately, Susan didn't remember what Jane Fulton once said, 'Insanity is doing the same thing, over and over again, but expecting different results.'",
+          "exact_snippet": "Insanity is doing the same thing over and over again, but expecting different results.",
           "attributed_to": "Rita Mae Brown",
-          "page_date": null,
-          "cited_source": "Jane Fulton",
-          "cited_source_date": null
+          "page_date": "October 15, 2013",
+          "cited_source": "Yale Book of Quotations",
+          "cited_source_date": "1983"
         },
         "attributedTo": "Rita Mae Brown",
-        "pageDate": null,
-        "citedSourceDate": null,
-        "date": null
+        "pageDate": "2013",
+        "citedSourceDate": "1983",
+        "date": "1983",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00010158,
+      "costUsd": 0.00008387999999999999,
       "usageKnown": true,
-      "latencyMs": 1415,
-      "url": "https://www.liftenablement.com/blog/when-the-definition-of-insanity-is-insane",
-      "host": "liftenablement.com",
+      "tokens": {
+        "promptTokens": 1146,
+        "completionTokens": 63
+      },
+      "latencyMs": 580,
+      "url": "https://artsandculture.google.com/story/who-really-said-these-5-famous-phrases/JAXh1xsiCEHOqw?hl=en",
+      "host": "artsandculture.google.com",
       "outcome": "evidence",
       "reason": null
     },
@@ -476,69 +560,79 @@
       "type": "node_added",
       "node": {
         "id": "n12",
-        "url": "https://www.liftenablement.com/blog/when-the-definition-of-insanity-is-insane",
-        "host": "liftenablement.com",
-        "title": "When The Definition of Insanity is Insane",
+        "url": "https://artsandculture.google.com/story/who-really-said-these-5-famous-phrases/JAXh1xsiCEHOqw?hl=en",
+        "host": "artsandculture.google.com",
+        "title": "Who Really Said These 5 Famous Phrases? — Google Arts & Culture",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "The definition of insanity is doing the same thing over and over again and expecting a different result.",
-          "attributed_to": "Doug Davidoff",
-          "page_date": "June 2010",
-          "cited_source": "Benjamin Franklin, Albert Einstein and Rita Mae Brown",
+          "exact_snippet": "Insanity is doing the same thing over and over again and expecting different results.",
+          "attributed_to": "Albert Einstein",
+          "page_date": null,
+          "cited_source": null,
           "cited_source_date": null
         },
-        "attributedTo": "Doug Davidoff",
-        "pageDate": "2010",
+        "attributedTo": "Albert Einstein",
+        "pageDate": null,
         "citedSourceDate": null,
-        "date": "2010"
+        "date": null,
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00006492,
+      "tier": "super",
+      "costUsd": 0.000336,
       "usageKnown": true,
-      "latencyMs": 1093,
-      "url": "https://allauthor.com/quotes/256253",
-      "host": "allauthor.com",
+      "tokens": {
+        "promptTokens": 913,
+        "completionTokens": 69
+      },
+      "latencyMs": 816,
+      "url": "https://www.youtube.com/watch?v=rKMMCPeiQoc",
+      "host": "youtube.com",
       "outcome": "evidence",
       "reason": null
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n13",
-        "url": "https://allauthor.com/quotes/256253",
-        "host": "allauthor.com",
-        "title": "Unfortunately Susan didnt remember what Jane... - Quote",
+        "id": "n9",
+        "url": "https://www.youtube.com/watch?v=rKMMCPeiQoc",
+        "host": "youtube.com",
+        "title": "Far Cry 3 - Definition of Insanity Cutscene Gameplay (Xbox 360)",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "Unfortunately Susan didnt remember what Jane Fulton once said Insanity is doing the same thing over and over again but expecting different results.",
-          "attributed_to": "Rita Mae Brown",
-          "page_date": null,
+          "exact_snippet": "Did I ever tell you what the definition of insanity is?",
+          "attributed_to": "Voss",
+          "page_date": "2012-12-01",
           "cited_source": null,
           "cited_source_date": null
         },
-        "attributedTo": "Rita Mae Brown",
-        "pageDate": null,
+        "attributedTo": "Voss",
+        "pageDate": "2012-12-01",
         "citedSourceDate": null,
-        "date": null
+        "date": "2012-12-01",
+        "foundVia": null
       }
     },
     {
       "type": "page_read",
       "tier": "super",
-      "costUsd": 0.0005556,
+      "costUsd": 0.000546,
       "usageKnown": true,
-      "latencyMs": 1066,
+      "tokens": {
+        "promptTokens": 1589,
+        "completionTokens": 77
+      },
+      "latencyMs": 768,
       "url": "https://professorbuzzkill.com/2017/05/29/einstein-insanity-qnq",
       "host": "professorbuzzkill.com",
       "outcome": "evidence",
@@ -547,7 +641,7 @@
     {
       "type": "node_added",
       "node": {
-        "id": "n8",
+        "id": "n6",
         "url": "https://professorbuzzkill.com/2017/05/29/einstein-insanity-qnq",
         "host": "professorbuzzkill.com",
         "title": "Albert Einstein: The definition of insanity is doing the same thing over and over and expecting different results. Professor Buzzkill",
@@ -566,32 +660,178 @@
         "attributedTo": "Albert Einstein",
         "pageDate": "2017-05-29",
         "citedSourceDate": null,
-        "date": "2017-05-29"
+        "date": "2017-05-29",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "traced",
+      "tier": "super",
+      "costUsd": 0.00023339999999999998,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 526,
+        "completionTokens": 84
+      },
+      "latencyMs": 1087,
+      "round": 1,
+      "leads": [
+        {
+          "fromNode": "n3",
+          "work": "Narcotics Anonymous Basic Text",
+          "query": "Narcotics Anonymous Basic Text Insanity is doing the same thing over and over again and expecting different results"
+        }
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "Narcotics Anonymous Basic Text Insanity is doing the same thing over and over again and expecting different results",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 2528
+    },
+    {
+      "type": "pages_ready",
+      "pages": 3,
+      "droppedExcluded": 0,
+      "round": 1
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00006282,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 867,
+        "completionTokens": 45
+      },
+      "latencyMs": 601,
+      "url": "https://books.google.com/books/about/Narcotics_Anonymous.html?id=kkmNCgAAQBAJ",
+      "host": "books.google.com",
+      "outcome": "no_quote",
+      "reason": null,
+      "lookingFor": "Narcotics Anonymous Basic Text"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00006366,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 865,
+        "completionTokens": 49
+      },
+      "latencyMs": 606,
+      "url": "https://books.google.com/books/about/Narcotics_Anonymous_Basic_Text_6th_Editi.html?id=_4RRPAAACAAJ",
+      "host": "books.google.com",
+      "outcome": "no_quote",
+      "reason": null,
+      "lookingFor": "Narcotics Anonymous Basic Text"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.0001143,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1585,
+        "completionTokens": 80
+      },
+      "latencyMs": 644,
+      "url": "https://web.archive.org/web/20180705004258/http://www.salon.com/2013/08/06/the_definition_of_insanity_is_the_most_overused_cliche_of_all_time",
+      "host": "web.archive.org",
+      "outcome": "evidence",
+      "reason": null,
+      "lookingFor": "Narcotics Anonymous Basic Text"
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n14",
+        "url": "https://web.archive.org/web/20180705004258/http://www.salon.com/2013/08/06/the_definition_of_insanity_is_the_most_overused_cliche_of_all_time",
+        "host": "web.archive.org",
+        "title": "“The definition of insanity” is the most overused cliché of all time | Salon.com",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "It's often said that the definition of insanity is doing the same thing over and over and expecting a different result.",
+          "attributed_to": "Albert Einstein",
+          "page_date": "2013-08-06",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Albert Einstein",
+        "pageDate": "2013-08-06",
+        "citedSourceDate": null,
+        "date": "2013-08-06",
+        "foundVia": {
+          "node": "n3",
+          "work": "Narcotics Anonymous Basic Text"
+        }
       }
     },
     {
       "type": "verdict",
       "tier": "super",
-      "costUsd": 0.0012849,
+      "costUsd": 0.0037089,
       "usageKnown": true,
-      "latencyMs": 4914,
+      "tokens": {
+        "promptTokens": 2376,
+        "completionTokens": 3329
+      },
+      "latencyMs": 18410,
       "verdict": {
         "verdict": "misattributed",
-        "earliest_node": "n10",
+        "earliest_node": "n3",
         "earliest_author": null,
-        "earliest_date": "1981-11",
-        "misattribution_node": "n8",
+        "earliest_date": "1980",
+        "misattribution_node": "n5",
         "confidence": "high",
-        "rationale": "The saying first appears in print in Rita Mae Brown's novel _Sudden Death_ (1983) as spoken by the character Jane Fulton, and an unpublished draft from November 1981 referenced by cornerstoneofrecovery.com shows an even earlier occurrence (n10). No node provides a credible contemporary source linking the phrase to Albert Einstein; all attributions to Einstein lack citations (n1, n6, n8) or rely on later web pages that merely repeat the claim. Therefore the credit to Einstein is a misattribution."
+        "rationale": "Multiple sources trace the phrase to Narcotics Anonymous literature circa 1980 and to Rita Mae Brown's 1983 novel \"Sudden Death\", with no evidence Einstein ever said it. Attributions to Einstein appear only from the 1990s onward. Thus the saying is misattributed to him.[n1][n2][n3][n5][n7][n10][n11]",
+        "lineage": [
+          {
+            "node": "n3",
+            "change": "first",
+            "note": "First appearance in Narcotics Anonymous literature (c. 1980)."
+          },
+          {
+            "node": "n10",
+            "change": "credit",
+            "note": "Credited to Rita Mae Brown."
+          },
+          {
+            "node": "n5",
+            "change": "credit",
+            "note": "Credited back to Albert Einstein."
+          },
+          {
+            "node": "n6",
+            "change": "wording",
+            "note": "Wording altered to 'over and over and' (missing 'again')."
+          },
+          {
+            "node": "n14",
+            "change": "wording",
+            "note": "Wording changed to 'Insanity is ... but expecting a different result'."
+          },
+          {
+            "node": "n4",
+            "change": "wording",
+            "note": "Appears unattributed with quoted phrasing."
+          }
+        ]
       },
       "unknownIds": []
     },
     {
       "type": "done",
-      "nebiusUsd": 0.00386226,
-      "tavilyCredits": 5,
+      "nebiusUsd": 0.00722952,
+      "tavilyCredits": 6,
       "unknownCostCalls": 0,
-      "seconds": 25
+      "seconds": 39
     }
   ]
 }
