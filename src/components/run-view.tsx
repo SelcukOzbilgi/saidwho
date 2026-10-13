@@ -41,22 +41,24 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
           <VerdictCard {...run} />
-          {verdict?.lineage && <Lineage steps={verdict.lineage} nodes={run.nodes} />}
           {afterVerdict}
-          <Timeline
-            nodes={run.nodes}
-            marks={{
-              earliest: verdict?.earliest_node ?? null,
-              // Judges sometimes fill this in for other verdicts too; it only means something here.
-              misattribution: verdict?.verdict === "misattributed" ? verdict.misattribution_node : null,
-            }}
-          />
-          {run.nodes.length === 0 && running && (
-            <p className="text-sm text-muted">Pages that carry the quote will show up here as they are checked.</p>
-          )}
         </div>
-        <RunLog log={run.log} follow={running} announce={announce} />
+        <RunLog log={run.log} announce={announce} />
       </div>
+
+      {/* The lineage and the timeline get the page's full width, so their cards don't hide off to the side. */}
+      {verdict?.lineage && <Lineage steps={verdict.lineage} nodes={run.nodes} />}
+      <Timeline
+        nodes={run.nodes}
+        marks={{
+          earliest: verdict?.earliest_node ?? null,
+          // Judges sometimes fill this in for other verdicts too; it only means something here.
+          misattribution: verdict?.verdict === "misattributed" ? verdict.misattribution_node : null,
+        }}
+      />
+      {run.nodes.length === 0 && running && (
+        <p className="text-sm text-muted">Pages that carry the quote will show up here as they are checked.</p>
+      )}
     </div>
   );
 }
