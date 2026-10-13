@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 
 import type { JudgeOutput } from "../agent/schemas";
+import { parseRationale } from "../lib/rationale";
 import { type RunState, verdictWords } from "../lib/run-state";
 import { TierChip } from "./tier-chip";
 
@@ -74,28 +75,31 @@ export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttr
   );
 }
 
-// The judge cites evidence as n3, [n3] or (n3, n5); each id becomes a link to
-// its card. It also writes titles in markdown emphasis, shown here as italics,
-// and sometimes puts the ids themselves in bold.
+// The judge cites evidence as n3, [n3], (n3, n5) or [n1][n2]; each id becomes a
+// link to its card, and ids side by side sit apart. Titles in markdown emphasis
+// show as italics or bold, and its own field names in words; quotes and links
+// show as written. parseRationale() does the reading.
 export function Rationale({ text, confirmed }: { text: string; confirmed: ReadonlySet<string> }) {
-  const plain = text.replace(/\[(n\d+(?:\s*,\s*n\d+)*)\]/g, "$1");
-  return plain.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|\b_[^_\n]+_\b)/g).map((part, i) => {
-    if (/^\*\*.+\*\*$/.test(part)) return <strong key={i}>{cited(part.slice(2, -2), confirmed)}</strong>;
-    if (/^([*_]).+\1$/.test(part)) return <em key={i}>{cited(part.slice(1, -1), confirmed)}</em>;
-    return <Fragment key={i}>{cited(part, confirmed)}</Fragment>;
+  return parseRationale(text).map((part, i) => {
+    const inner =
+      "ids" in part
+        ? part.ids.map((id, j) => (
+            <Fragment key={id}>
+              {j > 0 && " "}
+              <Cite id={id} confirmed={confirmed} />
+            </Fragment>
+          ))
+        : part.text;
+    if (part.style === "strong") return <strong key={i}>{inner}</strong>;
+    if (part.style === "em") return <em key={i}>{inner}</em>;
+    return <Fragment key={i}>{inner}</Fragment>;
   });
-}
-
-function cited(text: string, confirmed: ReadonlySet<string>) {
-  return text
-    .split(/(\bn\d+\b)/g)
-    .map((part, i) => (/^n\d+$/.test(part) ? <Cite key={i} id={part} confirmed={confirmed} /> : part));
 }
 
 function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> }) {
   if (!confirmed.has(id)) {
     return (
-      <span title="Not backed up by a page" className="mx-0.5 rounded bg-bad/15 px-1 font-mono text-xs text-bad line-through">
+      <span title="Not backed up by a page" className="rounded bg-bad/15 px-1 font-mono text-xs text-bad line-through">
         {id}
       </span>
     );
@@ -103,7 +107,7 @@ function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> })
   return (
     <a
       href={`#node-${id}`}
-      className="mx-0.5 rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink no-underline hover:bg-accent/25"
+      className="rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink no-underline hover:bg-accent/25"
     >
       {id}
     </a>
