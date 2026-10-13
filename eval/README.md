@@ -13,9 +13,25 @@ Most answers come from [Quote Investigator](https://quoteinvestigator.com/). The
 
 `pnpm eval` runs all twenty and scores each run: whether the verdict matches, and whether the earliest date it found is within two years of the known one. It runs them the way the app does, then with every step on Nemotron 3 Ultra and with every step on Nemotron 3.5 Lightning, so the results show what the mix of models costs and whether it loses anything. The scores are written to `results.md`. A run that a provider error spoiled isn't scored: a rejected key, no credits left, a refused request, or an outage the run didn't make up for. It runs again the next time, and the eval stops at an error every later run would hit.
 
+Each run's log also records the commit it ran on. When `src/` had changes that weren't committed, the commit gets `-dirty-` and a short hash of those changes, so two different sets of changes on one commit show as different code. The results show it in a Code row, so a score always says which code produced it. Logs from before this show "not recorded".
+
 Not every quote is misattributed. Six of the twenty really were said by the person they're credited to. A tool that calls every famous quote fake would fail those.
 
 Some answers are deliberately not clean. "Gel, gel, ne olursan ol yine gel" is usually credited to Mevlana (Rumi), but scholars say nobody knows who wrote it, so the right answer there is "contested". Saying so is the honest result, not a failure.
+
+## Held-out set
+
+The last round of fixes came from looking at where the agent went wrong on these twenty quotes, so their scores now flatter it. `holdout.jsonl` holds ten more quotes, in the same form, that were picked after those fixes. None of them shaped the code.
+
+Three of the ten really were said by the person they're credited to, five are misattributed, and two have no known source. One is in French and one in German. The answers come from Quote Investigator, the original texts, MIT News, the Lutherhaus Eisenach museum and encyclopedias, and each date and wording was checked against the page itself, as for the first twenty. Quote Investigator, Wikiquote, Wikipedia and the pages each answer comes from are left out of the agent's searches here too.
+
+It's meant to be run rarely, to get a score worth reporting, not while fixing things. Once a fix comes from looking at a held-out failure, the set isn't held out anymore. To run the ten the way the app does:
+
+```bash
+pnpm eval --set holdout --setup cascade
+```
+
+Leave out `--setup` to run all three setups. Held-out runs keep their own logs in `.runs/eval-holdout/` and their own scores in `holdout-results.md`, so they never mix with the main ones, and `pnpm eval --set holdout --report` rebuilds those scores from the logs. A stopped run picks up where it left off and the spending cap applies, as for the main set, and both sets share the search cache.
 
 ## Running the eval on Nebius Serverless AI Jobs
 
@@ -43,4 +59,4 @@ nebius ai job create \
 
 5. Follow it with `nebius ai job logs <job ID> --follow`. The scores are printed at the end, and with the bucket mounted, each run's events are in `eval/` there. The runs that finished are copied there even when the job fails or hits its timeout, and a job started again with the same bucket picks up where the last one stopped. To start over, for example after the code changed, empty `eval/` in the bucket first.
 
-Leave out `--volume` to get only the scores in the log. Set `--env EVAL_ARGS="--setup cascade"` to run only the app's way.
+Leave out `--volume` to get only the scores in the log. Set `--env EVAL_ARGS="--setup cascade"` to run only the app's way, or `--env EVAL_ARGS="--set holdout --setup cascade"` to run the held-out set that way. Its runs and scores go to `eval-holdout/` in the bucket, apart from the main set's. A set the job doesn't know stops it before anything runs.
