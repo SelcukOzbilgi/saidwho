@@ -32,3 +32,7 @@ next-env.d.ts
 # Local tool notes (next dev regenerates these)
 AGENTS.md
 CLAUDE.md
+
+# Local agent memory and settings
+/MEMORY.md
+.claude/
