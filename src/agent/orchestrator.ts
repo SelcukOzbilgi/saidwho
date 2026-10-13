@@ -13,7 +13,7 @@ import type { EvidenceNode, RunEvent } from "./events";
 import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { checkVerdict, retryNote } from "./judge-check";
-import { mayHoldWork } from "./library-pages";
+import { mayHoldWork, namesWork } from "./library-pages";
 import { broaden, cleanQuery, queryKey, shortenQuotedSpans } from "./queries";
 import {
   boundedCompactJudgeOutputSchema,
@@ -121,10 +121,10 @@ const JUDGE_PROMPT =
   "note: one short sentence on what changed there, for example who it is credited to from then on. " +
   "Leave a step out rather than guess, and give an empty list when nothing is dated. " +
   "Cited works, when given, are works the pages cite that were looked for in digital libraries without the saying turning up; " +
-  "checked says what was found. When the search returned no text of the work, that says nothing about what the work holds. " +
+  "checked says what was found. " +
   "A page without the saying may not be the work itself (see the page titles) or only part of it, " +
   "and the work may word the saying differently or in another language. " +
-  "Treat either as weak evidence against the citation, never as proof that the work lacks the saying. This run made the check, not the page that cites the work, " +
+  "Treat that as weak evidence against the citation, never as proof that the work lacks the saying. This run made the check, not the page that cites the work, " +
   "so don't present it as that page's finding. When one bears on the verdict, put its checked sentence in the rationale as it is " +
   "and mark it with the id of the page that cites the work, since cited works have no ids of their own.";
 
@@ -508,10 +508,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // in lead order and then result order.
   const readUrls = new Set(entries.map((e) => e.url));
   const followed = new Set<string>();
-  // Every lead whose search worked, in the order followed, with whether no
-  // result had text that may be the work's (see mayHoldWork) and every result
+  // Every lead whose search worked, in the order followed, with every result
   // the run may use, text or not.
-  const searched: { lead: Lead; noText: boolean; urls: string[] }[] = [];
+  const searched: { lead: Lead; urls: string[] }[] = [];
   // The wording each lead says its work has, searched for or not.
   const leadWordings: string[] = [];
   let nextId = entries.length + 1;
@@ -590,8 +589,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       if (results) {
         const usable = results.filter((r) => !isExcluded(r.url));
         for (const r of usable) if (r.rawContent) keepText(r.url, r.rawContent);
-        const workText = usable.some((r) => r.rawContent && mayHoldWork(r.url, r.title, r.rawContent, lead.work));
-        searched.push({ lead, noText: !workText, urls: usable.map((r) => r.url) });
+        searched.push({ lead, urls: usable.map((r) => r.url) });
       }
       let taken = 0;
       for (const r of results ?? []) {
@@ -614,13 +612,15 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   }
 
   // Leads that didn't turn up with the saying, for the judge, settled once every
-  // reader is done. Any page the lead's search returned rules it out if it got
-  // read, for any lead or before, and its reading wasn't a plain no quote (it
-  // gave a node, even a crossed-out one, or couldn't be read), or if any text the
-  // run got for it has a wording the run knows by the end. The reader sees part
-  // of a long page, and only the first few results, so code checks every text.
-  // Otherwise the lead is listed when its search returned no text that may be
-  // the work's, or when it has such pages read with no quote.
+  // reader is done. A lead is listed only when pages that may hold the work's
+  // text (see mayHoldWork) were read with no quote: a search that returned no
+  // such text says nothing about the work. Any page the lead's search returned
+  // rules it out if it got read, for any lead or before, and its reading wasn't a
+  // plain no quote (it gave a node, even a crossed-out one, or couldn't be read),
+  // or if any text the run got for it has a wording the run knows by the end. The
+  // reader sees part of a long page, and only the first few results, so code
+  // checks every text. A confirmed page on a library site titled after the work
+  // rules it out too: the run already has the work, or part of it, with the saying.
   const quoteWords = normalizeText(quote).split(" ").length;
   // A confirmed snippet counts as a wording only when it's about as long as the
   // quote: a short one ("good men") turns up in unrelated text, and a long one
@@ -638,10 +638,15 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     }),
   ];
   const holdsSaying = (text: string) => knownWordings.some((phrase) => checkSnippet(phrase, text).status !== "not_found");
-  const checked = searched.flatMap(({ lead, noText, urls }) => {
+  const onLibrarySite = (url: string) => {
+    const host = hostOf(url);
+    return LIBRARY_SITES.some((site) => host === site || host.endsWith(`.${site}`));
+  };
+  const haveWork = (work: string) => nodes.some((n) => n.check.status !== "not_found" && onLibrarySite(n.url) && namesWork(n.title, work));
+  const checked = searched.flatMap(({ lead, urls }) => {
     if (urls.some((url) => readUrls.has(url) && !noQuoteUrls.has(url))) return [];
     if (urls.some((url) => (textsOf.get(url) ?? []).some(holdsSaying))) return [];
-    if (noText) return [{ lead, pages: [] }];
+    if (haveWork(lead.work)) return [];
     const pages = (misses.get(lead) ?? []).sort((a, b) => a.order - b.order).map(({ site, title }) => ({ site, title }));
     return pages.length > 0 ? [{ lead, pages }] : [];
   });
@@ -672,10 +677,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     return {
       cited_by: lead.fromNode,
       work: lead.work,
-      checked: pages.length
-        ? `Pages found for ${lead.work} on ${sites} don't have the saying in any wording this run knows.`
-        : `The digital-library search for ${lead.work} returned no text of the work.`,
-      ...(pages.length > 0 && { pages }),
+      checked: `Pages found for ${lead.work} on ${sites} don't have the saying in any wording this run knows.`,
+      pages,
     };
   });
   if (citedWorks.length > 0) {

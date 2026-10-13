@@ -374,13 +374,12 @@ describe("investigate", () => {
       expect(JSON.stringify(events)).not.toContain(SECRET);
     });
 
-    it("tells the judge when the search for a cited work returned no page text", async () => {
+    it("says nothing about a cited work whose search returned no text of it", async () => {
       const { tavily } = tavilyFor((q) => (q === LEAD.query ? [] : [NEWS]));
       const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
-      await run({ nebius, tavily });
-      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
-        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no text of the work.` },
-      ]);
+      const events = await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+      expect(types(events)).not.toContain("cited_works");
     });
 
     it("doesn't count a library's help, search or catalog page against a cited work", async () => {
@@ -399,21 +398,47 @@ describe("investigate", () => {
       expect(entry.pages).toEqual([{ site: "archive.org", title: `Page at ${BOOK}` }]);
     });
 
-    it("says the search found no text of the work when it found only catalog pages and pages too short to hold it", async () => {
+    it("says nothing about a cited work when its search found only catalog and item pages", async () => {
+      // As for Cameron's book in the second eval: an archive.org item page with no text.
       const record = "https://catalog.hathitrust.org/Record/123";
-      const stub = "https://archive.org/details/sudden-death-stub";
-      const { tavily } = tavilyFor(
-        (q) => (q === LEAD.query ? [record, stub] : [NEWS]),
-        (url) => (url === NEWS ? PAGE_TEXT : url === stub ? "Sudden Death : Rita Mae Brown : Free Download, Borrow" : BOOK_WITHOUT),
-      );
+      const item = "https://archive.org/details/informalsociolog0000came";
+      const shell = `Internet Archive Audio Featured Top Images. Bookreader Item Preview. Sudden Death : Rita Mae Brown. ${"Featured Top ".repeat(60)}DOWNLOAD OPTIONS No suitable files to display here.`;
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [record, item] : [NEWS]), (url) => (url === NEWS ? PAGE_TEXT : url === item ? shell : BOOK_WITHOUT));
       const nebius = fakeNebius({
         read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
         trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
       });
-      await run({ nebius, tavily });
-      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
-        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no text of the work.` },
-      ]);
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "page_read" && e.url === item)).toMatchObject({ outcome: "no_quote" });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when a confirmed library page is that work", async () => {
+      // As in the second eval's let-them-eat-cake: the citing page is a Wikisource
+      // page of the Confessions, and the library search found other parts of it.
+      const work = "Les Confessions by Jean-Jacques Rousseau";
+      const livre = "https://fr.wikisource.org/wiki/Les_Confessions_(Rousseau)/Livre_VI";
+      const contents = "https://fr.wikisource.org/wiki/Les_Confessions_(Rousseau)/Livre_I";
+      const lead = { ...LEAD, work, query: "Les Confessions Rousseau" };
+      const tavily: TavilyClient = {
+        extract: async () => {
+          throw new Error("not used");
+        },
+        search: async (query: string) => {
+          const results =
+            query === lead.query
+              ? [{ url: contents, title: "Les Confessions (Rousseau)/Livre I - Wikisource", rawContent: BOOK_WITHOUT }]
+              : [{ url: livre, title: "Les Confessions (Rousseau)/Livre VI - Wikisource", rawContent: PAGE_TEXT }];
+          return { ok: true, latencyMs: 5, data: { results, usage: { credits: 1 } } } as never;
+        },
+      };
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : { ...CITES_BOOK, cited_source: "Les Confessions" }),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [lead] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "page_read" && e.url === contents)).toMatchObject({ outcome: "no_quote", lookingFor: work });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
     });
 
     it("doesn't count a page against the citation when its full text has the saying the reader missed", async () => {
