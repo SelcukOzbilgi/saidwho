@@ -148,11 +148,18 @@ const onLibrarySite = (url: string) => {
   return LIBRARY_SITES.some((site) => host === site || host.endsWith(`.${site}`));
 };
 
+// Where the first round of searches ends: at the first pages_ready, or at the end
+// when a run stopped before one, so all its searches are first-round ones.
+const firstRoundEnd = (events: readonly { type: string }[]): number => {
+  const at = events.findIndex((e) => e.type === "pages_ready");
+  return at === -1 ? events.length : at;
+};
+
 // The text a first-round page's reader saw: the first search result with that page.
 export function firstPageOf(run: SavedRun, url: string, cache: SearchCache): Page | null {
   const started = run.events.find((e) => e.type === "started");
   if (!started || started.type !== "started") return null;
-  const firstPagesAt = run.events.findIndex((e) => e.type === "pages_ready");
+  const firstPagesAt = firstRoundEnd(run.events);
   for (const [i, e] of run.events.entries()) {
     if (e.type !== "searched" || i > firstPagesAt) continue;
     const hit = (cache.results(e.query, started.excludeDomains, false) ?? []).find((r) => r.url === url && r.rawContent);
@@ -177,7 +184,7 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache)
 
   // The searches in the order made: the first round before the first pages_ready,
   // the Genealogist's after, restricted to libraries.
-  const firstPagesAt = events.findIndex((e) => e.type === "pages_ready");
+  const firstPagesAt = firstRoundEnd(events);
   const searches = events.flatMap((e, i) => (e.type === "searched" ? [{ query: e.query, library: i > firstPagesAt }] : []));
   const missing = { pages: 0, leads: 0 };
   const resultsOf = new Map<string, Result[] | null>();

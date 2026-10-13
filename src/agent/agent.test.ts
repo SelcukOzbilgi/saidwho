@@ -344,5 +344,8 @@ describe("keptDates", () => {
     expect(keptDates({ ...reading, cited_source: book, cited_source_date: "2005" }, page, null).citedSourceDate).toBe("2005");
     const friends = { title: "Voltaire", text: "The Friends of Voltaire (1906; reprinted 1913) has it." };
     expect(keptDates({ ...reading, cited_source: "The Friends of Voltaire", cited_source_date: "1906; reprinted 1913" }, friends, null).citedSourceDate).toBe("1906");
+    // An author's initials after the date aren't a calendar mark.
+    const lyrics = { title: "Lyrics", text: "A.H. Bullen, Lyrics from the Song-Books (1890), has it." };
+    expect(keptDates({ ...reading, cited_source: "A.H. Bullen, Lyrics from the Song-Books", cited_source_date: "1890" }, lyrics, null).citedSourceDate).toBe("1890");
   });
 });

@@ -381,7 +381,9 @@ export function keptDates(
 ): { pageDate: string | null; citedSourceDate: string | null } {
   const keep = (raw: string | null, context: string, placed: (date: string) => boolean): string | null => {
     const date = cleanDate(raw === null ? null : oneDate(raw));
-    if (date === null || inOtherCalendar(date.slice(0, 4), `${raw} ${context}`)) return null;
+    // The date and the cited source are checked apart: joined, "1890" and "A.H.
+    // Bullen" would read as a Hijri year.
+    if (date === null || inOtherCalendar(date.slice(0, 4), raw ?? "") || inOtherCalendar(date.slice(0, 4), context)) return null;
     return placed(date) ? date : null;
   };
   return {
