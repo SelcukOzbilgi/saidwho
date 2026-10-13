@@ -362,33 +362,14 @@ export function inOtherCalendar(year: string, text: string): boolean {
   );
 }
 
-// Blogs and news sites put a post's date in its address (/2008/04/ or
-// /2021/2/24/), which is often the only place the page gives it. A page date
-// counts as placed there when the address has its year and month together, and
-// its day too when both give one; a year alone in a path can be anything.
-const URL_DATE = /(?:^|\/)((?:1\d|20)\d{2})[/-](\d{1,2})(?:[/-](\d{1,2}))?(?=[/-]|$)/g;
-export function urlCarriesDate(date: string, url: string): boolean {
-  let path: string;
-  try {
-    path = new URL(url).pathname;
-  } catch {
-    return false;
-  }
-  const [year, month, day] = date.split("-").map(Number);
-  return [...path.matchAll(URL_DATE)].some(([, y, m, d]) => {
-    if (Number(y) !== year || Number(m) < 1 || Number(m) > 12) return false;
-    if (month !== undefined && Number(m) !== month) return false;
-    return day === undefined || d === undefined || Number(d) === day;
-  });
-}
-
 // The reader's dates that the page backs, cleaned: its own date and the date of
 // the source it cites. A date is dropped when it isn't one Common Era date, or
-// when its year doesn't sit where that date would (see keepsPageDate) and, for
-// the page's own date, its address doesn't carry it either.
+// when its year doesn't sit where that date would (see keepsPageDate). A date in
+// a page's address (/2016/06/10/) doesn't count: replaying the Judge with them
+// showed it dating a saying by a 2016 blog post over three pages citing 1990.
 export function keptDates(
   reading: { page_date: string | null; cited_source: string | null; cited_source_date: string | null },
-  page: { title: string; text: string; url?: string },
+  page: { title: string; text: string },
   span: Span | null,
 ): { pageDate: string | null; citedSourceDate: string | null } {
   const keep = (raw: string | null, context: string, placed: (date: string) => boolean): string | null => {
@@ -397,7 +378,7 @@ export function keptDates(
     return placed(date) ? date : null;
   };
   return {
-    pageDate: keep(reading.page_date, "", (date) => keepsPageDate(date, page, span) || (page.url !== undefined && urlCarriesDate(date, page.url))),
+    pageDate: keep(reading.page_date, "", (date) => keepsPageDate(date, page, span)),
     citedSourceDate: keep(reading.cited_source_date, reading.cited_source ?? "", (date) =>
       keepsCitedDate(date, page, span, reading.cited_source),
     ),

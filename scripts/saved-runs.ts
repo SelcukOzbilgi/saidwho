@@ -25,8 +25,7 @@ import { hostOf, LIBRARY_SITES } from "../src/agent/orchestrator";
 import { cleanDate, type PlannerOutput } from "../src/agent/schemas";
 import { carriesSaying, checkSnippet, keepsCitedDate, keepsPageDate, keptDates, matchSnippet, normalizeText, type Span } from "../src/agent/verifier";
 
-// nourl is this code's without page dates taken from a page's address.
-export type Rules = "main" | "new" | "nourl";
+export type Rules = "main" | "new";
 
 type Result = { url: string; title: string; rawContent?: string | null };
 type Page = { title: string; text: string };
@@ -206,8 +205,7 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache)
       match.status !== "not_found" && !carriesSaying(snippet, [quote, ...variants])
         ? { status: "not_found", score: match.score, reason: "not_the_saying" }
         : { status: match.status, score: match.score };
-    const dates =
-      rules === "main" ? mainDates(reading, page, match.span) : keptDates(reading, rules === "new" ? { ...page, url: logged.url } : page, match.span);
+    const dates = rules === "main" ? mainDates(reading, page, match.span) : keptDates(reading, page, match.span);
     return { ...logged, check, ...dates, date: dates.citedSourceDate ?? dates.pageDate };
   });
   const confirmed = rebuilt.filter((n) => n.check.status !== "not_found");

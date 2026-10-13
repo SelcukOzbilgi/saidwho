@@ -14,7 +14,6 @@ import {
   mentionsName,
   normalizeText,
   oneDate,
-  urlCarriesDate,
 } from "./verifier";
 
 const PAGE = `Knoxville News-Sentinel, October 11, 1981. At the Al-Anon meeting a speaker said:
@@ -333,31 +332,5 @@ describe("keptDates", () => {
     expect(keptDates({ ...reading, cited_source: book, cited_source_date: "2005" }, page, null).citedSourceDate).toBe("2005");
     const friends = { title: "Voltaire", text: "The Friends of Voltaire (1906; reprinted 1913) has it." };
     expect(keptDates({ ...reading, cited_source: "The Friends of Voltaire", cited_source_date: "1906; reprinted 1913" }, friends, null).citedSourceDate).toBe("1906");
-  });
-});
-
-describe("urlCarriesDate", () => {
-  it("finds a post's year and month in its address", () => {
-    expect(urlCarriesDate("1997-01", "https://www.wired.com/1997/01/did-gates-really-say-640k-is-enough-for-anyone")).toBe(true);
-    expect(urlCarriesDate("2008-04-29", "https://freakonomics.com/2008/04/our-daily-bleg-does-640k-really-belong-to-bill-gates")).toBe(true);
-    expect(urlCarriesDate("2021-02-24", "https://jenniferlphillips.com/blog/2021/2/24/origin-story-be-the-change")).toBe(true);
-    expect(urlCarriesDate("2023-11-02", "https://www.deseret.com/u-s-world/2023/11/2/23941808/who-said-let-them-eat-cake-marie-antoinette")).toBe(true);
-    expect(urlCarriesDate("2007", "https://news.harvard.edu/gazette/story/2007/09/ulrich-explains-that-well-behaved-women-should-make-history")).toBe(true);
-  });
-
-  it("wants the year and month together, and agreeing with the date", () => {
-    expect(urlCarriesDate("2011-11-28", "https://www.benlinders.com/2011/not-everything-that-can-be-counted-counts")).toBe(false);
-    expect(urlCarriesDate("2008-05-01", "https://freakonomics.com/2008/04/our-daily-bleg")).toBe(false);
-    expect(urlCarriesDate("2021-02-25", "https://jenniferlphillips.com/blog/2021/2/24/origin-story-be-the-change")).toBe(false);
-    expect(urlCarriesDate("1981", "https://news.example.org/1981")).toBe(false);
-    expect(urlCarriesDate("2013-10", "https://www.businessinsider.com/misattributed-quotes-2013-10")).toBe(false);
-    expect(urlCarriesDate("1997-01", "not a url")).toBe(false);
-  });
-
-  it("is how keptDates places a page date the text doesn't show", () => {
-    const page = { title: "Did Gates Really Say 640K is Enough For Anyone? | WIRED", text: "I've said some stupid things and some wrong things, but not that." };
-    const reading = { page_date: "1997-01", cited_source: null, cited_source_date: null };
-    expect(keptDates(reading, page, null).pageDate).toBeNull();
-    expect(keptDates(reading, { ...page, url: "https://www.wired.com/1997/01/did-gates-really-say-640k-is-enough-for-anyone" }, null).pageDate).toBe("1997-01");
   });
 });

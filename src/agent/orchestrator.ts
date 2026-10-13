@@ -419,7 +419,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
           ? { status: "not_found", score: match.score, reason: "not_the_saying" }
           : { status: match.status, score: match.score };
       // Dates are kept only when the page backs them (see keptDates).
-      const { pageDate, citedSourceDate } = keptDates(read.data, { ...page, url }, match.span);
+      const { pageDate, citedSourceDate } = keptDates(read.data, page, match.span);
       const node: EvidenceNode = {
         id,
         url,

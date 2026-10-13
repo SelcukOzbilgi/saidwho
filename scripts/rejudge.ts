@@ -22,7 +22,6 @@
 //   main   main 603995a's prompt, checks and Checker rules
 //   new    this code's
 //   item3  this code's, with the prompt saying a related older idea is no variant
-//   nourl  this code's, without page dates taken from a page's address
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname } from "node:path";
@@ -97,7 +96,6 @@ const VARIANTS: Record<string, Variant> = {
   main: { evidence: "main", prompt: MAIN_JUDGE_PROMPT, checks: false },
   new: { evidence: "new", prompt: JUDGE_PROMPT, checks: true },
   item3: { evidence: "new", prompt: JUDGE_PROMPT.replace("earliest_node: ", `${ITEM3}earliest_node: `), checks: true },
-  nourl: { evidence: "nourl", prompt: JUDGE_PROMPT, checks: true },
 };
 
 const VALUE_FLAGS = new Set(["logs", "cache", "set", "only", "variants", "samples", "judge", "concurrency", "max-usd", "out", "reread"]);
@@ -247,7 +245,7 @@ async function main(): Promise<void> {
           }
           const span = matchSnippet(read.data.exact_snippet ?? "", page.text).span;
           // Each reading through its own Checker, so main's column is main's.
-          const kept = name === "main" ? mainDates(read.data, page, span) : keptDates(read.data, { ...page, url: node.url }, span);
+          const kept = name === "main" ? mainDates(read.data, page, span) : keptDates(read.data, page, span);
           cells.push(`${name}: page_date ${JSON.stringify(read.data.page_date)} cited ${JSON.stringify(read.data.cited_source_date)} -> kept ${kept.pageDate} / ${kept.citedSourceDate}`);
         }
         console.log(`${labelOf(run)}/${caseId} ${nodeId} ${node.host}\n  ${cells.join("\n  ")}`);

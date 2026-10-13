@@ -1339,12 +1339,7 @@ describe("investigate", () => {
     expect(node?.type === "node_added" && node.node).toMatchObject({ pageDate: null, citedSourceDate: "1975", date: "1975" });
   });
 
-  it("keeps a page date its address carries, and never one that names two years", async () => {
-    const filler = Array.from({ length: 400 }, () => "lorem").join(" ");
-    const post = "https://blog.example.org/1981/10/insanity";
-    const { tavily } = tavilyFor(() => [post], () => `${filler} At the meeting a speaker said: "${QUOTE}."`);
-    const dated = await run({ nebius: fakeNebius({ read: () => ({ ...READ, page_date: "1981-10-11" }) }), tavily });
-    expect(dated.find((e) => e.type === "node_added")).toMatchObject({ node: { pageDate: "1981-10-11" } });
+  it("never keeps a page date that names two years", async () => {
     // The lifespan sits at the top, where a page's own date would.
     const brainy = tavilyFor(() => [NEWS], () => `Mahatma Gandhi, October 2, 1869 - January 30, 1948. "${QUOTE}."`);
     const lifespan = await run({ nebius: fakeNebius({ read: () => ({ ...READ, page_date: "October 2, 1869 - January 30, 1948" }) }), tavily: brainy.tavily });
