@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { parseEvalCases } from "./cases";
+import { hostOf } from "../agent/orchestrator";
+import { type EvalCase, parseEvalCases } from "./cases";
 
 const file = fileURLToPath(new URL("../../eval/quotes.jsonl", import.meta.url));
 const cases = parseEvalCases(readFileSync(file, "utf8"));
@@ -34,6 +35,57 @@ describe("eval/quotes.jsonl", () => {
       if (c.earliest.date && c.misattribution_first_seen) {
         expect(c.misattribution_first_seen >= c.earliest.date, c.id).toBe(true);
       }
+    }
+  });
+});
+
+const read = (file: string): EvalCase[] =>
+  parseEvalCases(readFileSync(new URL(`../../eval/${file}`, import.meta.url), "utf8"));
+const holdout = read("holdout.jsonl");
+// Case and punctuation aside, so the same quote typed a little differently is caught too.
+const normalize = (quote: string): string => quote.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+describe("eval/holdout.jsonl", () => {
+  it("has 10 cases with unique ids", () => {
+    expect(holdout).toHaveLength(10);
+    expect(new Set(holdout.map((c) => c.id)).size).toBe(holdout.length);
+  });
+
+  it("shares no id and no quote with the main set, which the example cases come from", () => {
+    const mainIds = new Set(cases.map((c) => c.id));
+    const mainQuotes = new Set(cases.map((c) => normalize(c.quote)));
+    for (const c of holdout) {
+      expect(mainIds.has(c.id), c.id).toBe(false);
+      expect(mainQuotes.has(normalize(c.quote)), c.id).toBe(false);
+    }
+  });
+
+  it("mixes verdicts the way real use does", () => {
+    const count = (v: EvalCase["verdict"]) => holdout.filter((c) => c.verdict === v).length;
+    expect(count("correct")).toBeGreaterThanOrEqual(3);
+    expect(count("misattributed")).toBeGreaterThanOrEqual(4);
+    expect(count("contested") + count("no_known_source")).toBeGreaterThanOrEqual(1);
+    expect(count("misattributed") / holdout.length).toBeLessThanOrEqual(0.6);
+  });
+
+  it("includes quotes outside English", () => {
+    expect(holdout.filter((c) => c.language !== "en").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("dates the misattribution no earlier than the first appearance", () => {
+    for (const c of holdout) {
+      if (c.earliest.date && c.misattribution_first_seen) {
+        expect(c.misattribution_first_seen >= c.earliest.date, c.id).toBe(true);
+      }
+    }
+  });
+
+  it("keeps each answer's own pages out of the search, not whole shared sites", () => {
+    const hosts = holdout.flatMap((c) => c.references.map(hostOf));
+    expect(hosts).not.toContain("invalid-url");
+    // Excluding one of these would take a whole library away from the agent.
+    for (const broad of ["archive.org", "books.google.com", "doi.org", "jstor.org", "hathitrust.org"]) {
+      expect(hosts).not.toContain(broad);
     }
   });
 });
