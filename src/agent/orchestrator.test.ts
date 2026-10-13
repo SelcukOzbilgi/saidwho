@@ -792,6 +792,50 @@ describe("investigate", () => {
     expect(events.at(-2)?.type).toBe("verdict");
   });
 
+  // The second eval's degenerate plans, as Super returned them: insanity-same-thing's
+  // with nothing in it, and well-behaved-women's with two backslashes for queries.
+  const EMPTY_PLAN: PlannerOutput = { variants: [], candidate_authors: [], queries: [], usual_attribution: null };
+  const BACKSLASH_PLAN: PlannerOutput = { variants: [], candidate_authors: ["Laurel Thatcher Ulrich"], queries: ["\\", "\\"], usual_attribution: null };
+
+  it("plans again with thinking off when a plan gives no search besides the exact quote, and uses both", async () => {
+    for (const degenerate of [EMPTY_PLAN, BACKSLASH_PLAN]) {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? degenerate : { ...PLAN, variants: ["Insanity is doing the same thing again"] }) });
+      const events = await run({ nebius, tavily });
+      expect(types(events).slice(0, 5)).toEqual(["started", "planned", "escalated", "planned", "searched"]);
+      expect(events[2]).toMatchObject({ step: "plan", from: "super", to: "super", thinking: false, reason: "the plan gave no search besides the exact quote" });
+      expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
+      expect(events[3]).toMatchObject({
+        variants: ["Insanity is doing the same thing again"],
+        candidateAuthors: [...new Set([...degenerate.candidate_authors, ...PLAN.candidate_authors])],
+        queries: [`"${QUOTE}"`, PLAN.queries[0]],
+      });
+      expect(queries).toEqual([`"${QUOTE}"`, PLAN.queries[0]]);
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    }
+  });
+
+  it("goes on with the first plan when planning again fails", async () => {
+    // Running out of tokens is the model's doing, so the eval scores the run; an
+    // outage left unmade-up-for is the provider's, so it doesn't.
+    for (const [reply, scored] of [["length", true], [null, false]] as const) {
+      const events = await run({ nebius: fakeNebius({ plan: ({ thinking }) => (thinking ? EMPTY_PLAN : reply) }) });
+      expect(types(events).slice(0, 5)).toEqual(["started", "planned", "escalated", "plan_failed", "searched"]);
+      expect(events.at(-2)?.type).toBe("verdict");
+      expect(worthScoring(events)).toBe(scored);
+    }
+  });
+
+  it("plans a third time for no one: a plan given with thinking off stands, and a spent budget stops the second", async () => {
+    const retried = fakeNebius({ plan: ({ thinking }) => (thinking ? "length" : EMPTY_PLAN) });
+    await run({ nebius: retried });
+    expect(retried.calls.filter((c) => c === "plan")).toHaveLength(2);
+    const broke = fakeNebius({ plan: () => EMPTY_PLAN });
+    const events = await run({ nebius: broke, maxUsd: 0.0001 });
+    expect(broke.calls).toEqual(["plan"]);
+    expect(types(events)).toEqual(["started", "planned", "budget_exceeded", "done"]);
+  });
+
   it("searches for the exact quote alone when both plans fail", async () => {
     const tavily = fakeTavily();
     const searched: string[] = [];

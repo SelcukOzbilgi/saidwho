@@ -23,6 +23,7 @@ import {
   genealogistOutputSchema,
   judgeOutputSchema,
   plannerOutputSchema,
+  type PlannerOutput,
   readerOutputSchema,
 } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult } from "./structured";
@@ -256,44 +257,63 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "null when a credit is given or you don't know one.",
     user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language}`,
   };
+  // What plans give the run, shaped and checked, in order: their wordings and
+  // candidates, the usual credit when the visitor gave none, and the searches to
+  // make. The exact phrase always goes first, even if the planner leaves it out
+  // (or returns nothing). Each query is shaped and checked first: a long quoted
+  // span in one is cut to a distinctive part, so a query that is long only
+  // because it quotes a whole passage still goes, and one that can't be a search
+  // is dropped and listed in the planned event.
+  const shape = (plans: readonly PlannerOutput[]) => {
+    const rejectedQueries: string[] = [];
+    const plannedQueries = plans.flatMap((p) => p.queries).flatMap((raw) => {
+      const query = shapeQuery(raw);
+      if (query === null) rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
+      return query === null ? [] : [query];
+    });
+    const queries = [`"${quote}"`, ...plannedQueries]
+      .filter((q, i, all) => all.findIndex((other) => queryKey(other) === queryKey(q)) === i)
+      .slice(0, MAX_QUERIES);
+    // With no name given, the planner's name for the usual credit stands in for it.
+    const found = popularAttribution === null ? (plans.map((p) => cleanName(p.usual_attribution)).find((name) => name !== null) ?? null) : null;
+    return {
+      variants: cleanVariants(plans.flatMap((p) => p.variants)),
+      candidateAuthors: [...new Set(plans.flatMap((p) => p.candidate_authors))],
+      queries,
+      foundAttribution: found,
+      ...(rejectedQueries.length > 0 && { rejectedQueries }),
+    };
+  };
+
   let plan = await callStructured(nebius, { ...planRequest, thinking: true });
+  let triedAgain = false;
   if (!plan.ok) {
     onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
     if (!worthRetrying(plan.cause)) return finish();
     if (mustStop()) return finish();
     onEvent({ type: "escalated", step: "plan", from: models.plan.tier, to: models.plan.tier, thinking: false, reason: plan.reason, url: null });
+    triedAgain = true;
     plan = await callStructured(nebius, { ...planRequest, thinking: false });
     if (!plan.ok) onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
   }
-  const variants = plan.ok ? cleanVariants(plan.data.variants) : [];
-  // With no name given, the planner's name for the usual credit stands in for it.
-  const foundAttribution = popularAttribution === null && plan.ok ? cleanName(plan.data.usual_attribution) : null;
-  const credit = popularAttribution ?? foundAttribution;
-  // The exact phrase always goes first, even if the planner leaves it out (or
-  // returns nothing). The planner's queries are shaped and checked first: a long
-  // quoted span in one is cut to a distinctive part, so a query that is long
-  // only because it quotes a whole passage still goes, and one that can't be a
-  // search is dropped and listed in the planned event.
-  const rejectedQueries: string[] = [];
-  const plannedQueries = (plan.ok ? plan.data.queries : []).flatMap((raw) => {
-    const query = shapeQuery(raw);
-    if (query === null) rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
-    return query === null ? [] : [query];
-  });
-  const queries = [`"${quote}"`, ...plannedQueries]
-    .filter((q, i, all) => all.findIndex((other) => queryKey(other) === queryKey(q)) === i)
-    .slice(0, MAX_QUERIES);
-  if (plan.ok) {
-    onEvent({
-      type: "planned",
-      ...spend(models.plan, plan),
-      variants,
-      candidateAuthors: plan.data.candidate_authors,
-      queries,
-      foundAttribution,
-      ...(rejectedQueries.length > 0 && { rejectedQueries }),
-    });
+  let planned = shape(plan.ok ? [plan.data] : []);
+  if (plan.ok) onEvent({ type: "planned", ...spend(models.plan, plan), ...planned });
+  // A plan that leaves no search besides the exact phrase (no queries, or only
+  // ones that can't be a search) is asked for once more, with thinking off, and
+  // the two plans' searches and wordings are used together.
+  if (plan.ok && !triedAgain && planned.queries.length < 2 && !mustStop()) {
+    const reason = "the plan gave no search besides the exact quote";
+    onEvent({ type: "escalated", step: "plan", from: models.plan.tier, to: models.plan.tier, thinking: false, reason, url: null });
+    const again = await callStructured(nebius, { ...planRequest, thinking: false });
+    if (again.ok) {
+      planned = shape([plan.data, again.data]);
+      onEvent({ type: "planned", ...spend(models.plan, again), ...planned });
+    } else {
+      onEvent({ type: "plan_failed", ...spend(models.plan, again), reason: again.reason });
+    }
   }
+  const { variants, queries, foundAttribution } = planned;
+  const credit = popularAttribution ?? foundAttribution;
 
   // One Tavily search, with page text included so no separate extract call is
   // needed. Reports it and returns the results, or null when it failed.
