@@ -1,3 +1,4 @@
+import { plural } from "../lib/plural";
 import type { Phase, RunState } from "../lib/run-state";
 
 const STEPS: { phase: Phase; label: string }[] = [
@@ -29,10 +30,10 @@ export function Progress({ running, phase, finished, searches, pages, readUrls, 
   const confirmed = nodes.filter((n) => n.check.status !== "not_found").length;
   const detail: Partial<Record<Phase, string>> = {
     searching: searches ? `${searches} done` : undefined,
-    reading: pages !== null ? `${readUrls.length} of ${pages} pages, ${confirmed} confirmed` : undefined,
+    reading: pages !== null ? `${readUrls.length} of ${plural(pages, "page")}, ${confirmed} confirmed` : undefined,
     // A run that never traced (or was saved before the Genealogist) says so once it's past this step.
     tracing: leads.length
-      ? `${leads.length} cited work${leads.length === 1 ? "" : "s"}, ${nodes.filter((n) => n.foundVia).length} pages found`
+      ? `${plural(leads.length, "cited work")}, ${plural(nodes.filter((n) => n.foundVia).length, "page")} found`
       : phase === "judging"
         ? "none followed"
         : undefined,
@@ -74,8 +75,8 @@ function Cost({
     <p className="font-mono text-xs text-muted tabular-nums">
       ${nebiusUsd.toFixed(4)} on Nebius
       {ultraUsd !== null && ultraUsd > 0 && ` (same calls at Ultra prices: $${ultraUsd.toFixed(4)})`}
-      {` · ${tavilyCredits} Tavily credit${tavilyCredits === 1 ? "" : "s"}`}
-      {unknownCostCalls > 0 && ` · ${unknownCostCalls} call${unknownCostCalls === 1 ? "" : "s"} with unknown cost`}
+      {` · ${plural(tavilyCredits, "Tavily credit")}`}
+      {unknownCostCalls > 0 && ` · ${plural(unknownCostCalls, "call")} with unknown cost`}
       {seconds !== null && ` · ${seconds}s`}
     </p>
   );

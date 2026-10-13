@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { ExampleCase } from "../cases/cases";
+import { plural } from "../lib/plural";
 import { verdictWords } from "../lib/run-state";
 import { VERDICT_LOOK } from "./verdict-card";
 
@@ -33,7 +34,7 @@ export function CaseGallery({ cases }: { cases: readonly ExampleCase[] }) {
                 <span className="line-clamp-3 font-serif text-lg leading-snug">“{run.quote}”</span>
                 <span className="text-sm text-muted">Credited to {run.popularAttribution ?? "no one in particular"}</span>
                 <span className="mt-auto pt-2 font-mono text-xs text-muted tabular-nums">
-                  {confirmed} source{confirmed === 1 ? "" : "s"} · ${run.nebiusUsd.toFixed(4)} · {run.seconds}s
+                  {plural(confirmed, "source")} · ${run.nebiusUsd.toFixed(4)} · {run.seconds}s
                 </span>
               </Link>
             </li>

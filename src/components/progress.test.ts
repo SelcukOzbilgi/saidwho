@@ -16,4 +16,20 @@ describe("Progress", () => {
     expect(render(null)).toContain("$0.0041 on Nebius · 5 Tavily credits");
     expect(render(null)).not.toContain("Ultra");
   });
+
+  it("says one page, not one pages", () => {
+    const text = renderToStaticMarkup(
+      createElement(Progress, {
+        ...initialRunState,
+        phase: "judging",
+        pages: 1,
+        readUrls: ["https://a.org"],
+        leads: [{ round: 1, fromNode: "n1", work: "Confessions", query: "q" }],
+        nodes: [],
+        running: false,
+      }),
+    ).replace(/<[^>]+>/g, " ");
+    expect(text).toContain("1 of 1 page, 0 confirmed");
+    expect(text).toContain("1 cited work, 0 pages found");
+  });
 });

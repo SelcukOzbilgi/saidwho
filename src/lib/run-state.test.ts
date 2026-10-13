@@ -53,6 +53,20 @@ describe("reduceRun", () => {
     expect(finished).toMatchObject({ phase: "reading", finished: true, seconds: 9 });
   });
 
+  it("counts in the log without plural slips", () => {
+    const state = run([
+      STARTED,
+      { type: "planned", ...spend, tier: "super", variants: [], candidateAuthors: [], queries: ["q"] },
+      { type: "searched", query: "q", results: 1, credits: 1, latencyMs: 5 },
+      { type: "pages_ready", pages: 1, droppedExcluded: 0 },
+    ]);
+    expect(state.log.map((entry) => entry.text)).toEqual(
+      expect.arrayContaining(["Planned 1 search", "1 result for q", "1 page to read"]),
+    );
+    const more = reduceRun(state, { type: "planned", ...spend, tier: "super", variants: ["a", "b"], candidateAuthors: [], queries: ["q", "r"] });
+    expect(more.log.at(-1)?.text).toBe("Planned 2 searches and 2 other wordings");
+  });
+
   it("takes the planner's name for the usual credit only when none was given", () => {
     // Runs saved before the planner named anyone have no foundAttribution at all.
     const older: RunEvent = { type: "planned", ...spend, tier: "super", variants: [], candidateAuthors: [], queries: ["q"] };
@@ -105,7 +119,7 @@ describe("reduceRun", () => {
     expect(state.log.find((e) => e.text.startsWith("Set aside"))).toMatchObject({
       agent: "Judge",
       tone: "bad",
-      text: "Set aside a verdict (correctly attributed, medium confidence): it cites n9, which were not confirmed",
+      text: "Set aside a verdict (correctly attributed, medium confidence): it cites n9, which was not confirmed",
     });
     expect(state.log.find((e) => e.text.startsWith("Trying again on ultra"))?.tone).toBe("warn");
   });
