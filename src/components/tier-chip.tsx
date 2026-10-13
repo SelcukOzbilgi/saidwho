@@ -1,11 +1,6 @@
+import { MODELS } from "../agent/models";
+import { MODEL_NAME } from "../lib/model-name";
 import type { Tier } from "../lib/run-state";
-
-const MODEL: Record<Tier, string> = {
-  lightning: "Nemotron 3.5 Lightning",
-  nano: "Nemotron Nano",
-  super: "Nemotron 3 Super",
-  ultra: "Nemotron 3 Ultra",
-};
 
 // Ultra only runs when a check fails, so it stands out.
 const LOOK: Record<Tier, string> = {
@@ -15,13 +10,14 @@ const LOOK: Record<Tier, string> = {
   ultra: "border-accent bg-accent/10 text-accent-ink",
 };
 
+// The model's name; hovering shows the id it runs under on Nebius.
 export function TierChip({ tier }: { tier: Tier }) {
   return (
     <span
-      title={MODEL[tier]}
-      className={`inline-flex shrink-0 items-center rounded-full border px-1.5 py-px font-mono text-[10px] uppercase tracking-wide ${LOOK[tier]}`}
+      title={MODELS[tier].id}
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-1.5 py-px font-mono text-[10px] tracking-wide ${LOOK[tier]}`}
     >
-      {tier}
+      {MODEL_NAME[tier]}
     </span>
   );
 }

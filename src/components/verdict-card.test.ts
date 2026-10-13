@@ -24,6 +24,22 @@ describe("Rationale", () => {
     expect(html).not.toContain("#node-n9");
   });
 
+  it("makes glued ids separate chips with a space between, and keeps field names out", () => {
+    const html = render("Earliest_date is null.[n1][n2]", ["n1", "n2"]);
+    expect(html).toContain('href="#node-n1"');
+    expect(html).toContain('href="#node-n2"');
+    expect(html.replace(/<[^>]+>/g, "")).toBe("Earliest date is not given. n1 n2");
+  });
+
+  it("makes one chip for an id cited in and out of bold, with a space before it", () => {
+    const html = render("See **[n3]**[n3].", ["n3"]);
+    expect(html.match(/href="#node-n3"/g)).toHaveLength(1);
+    expect(html).toContain("<strong>");
+    expect(html.replace(/<[^>]+>/g, "")).toBe("See n3.");
+    const two = render("Both **[n3]**[n4] agree.", ["n3", "n4"]);
+    expect(two.replace(/<[^>]+>/g, "")).toBe("Both n3 n4 agree.");
+  });
+
   it("keeps titles in italics", () => {
     expect(render("In _Sudden Death_ (1983)")).toContain("<em>Sudden Death</em>");
   });
@@ -46,7 +62,6 @@ describe("VerdictCard", () => {
           verdict: { tier: "super", output: output(verdict) },
           noVerdict: null,
           stopped: null,
-          finished: true,
           popularAttribution,
           nodes: [],
         }),

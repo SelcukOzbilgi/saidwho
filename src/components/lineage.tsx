@@ -31,7 +31,7 @@ export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes
   return (
     <section aria-label="How the quote changed">
       <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">How it got to the version people share</h2>
-      <ol className="-mx-4 flex flex-col gap-2 overflow-x-auto px-4 pb-2 sm:flex-row sm:items-stretch">
+      <ol className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:gap-y-3">
         {shown.map(({ step, node }, i) => (
           <li key={`${node.id}-${i}`} className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {i > 0 && (

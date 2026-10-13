@@ -4,6 +4,7 @@ import type { RunState } from "../lib/run-state";
 import { Lineage } from "./lineage";
 import { Progress } from "./progress";
 import { RunLog } from "./run-log";
+import { RunSoFar } from "./run-so-far";
 import { Timeline } from "./timeline";
 import { VerdictCard } from "./verdict-card";
 
@@ -14,7 +15,7 @@ type Props = {
   quoteIsHeading?: boolean;
   // Read new log lines aloud; on for a live run, off for a replay.
   announce?: boolean;
-  // Shown under the progress bar.
+  // Shown beside the cost line, under the progress bar.
   note?: ReactNode;
   // Shown under the verdict.
   afterVerdict?: ReactNode;
@@ -36,28 +37,32 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
         </p>
       </header>
 
-      <Progress running={running} {...run} />
-      {note}
+      <Progress running={running} {...run} aside={note} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
-          <VerdictCard {...run} />
-          {verdict?.lineage && <Lineage steps={verdict.lineage} nodes={run.nodes} />}
+          {/* Until there is a verdict, a run under way says where it is instead. Once it
+              ends without one, the card says why; the plan, which only showed
+              progress, goes with the card, and the log keeps it. */}
+          {running && !run.verdict ? <RunSoFar {...run} announce={announce} /> : <VerdictCard {...run} />}
           {afterVerdict}
-          <Timeline
-            nodes={run.nodes}
-            marks={{
-              earliest: verdict?.earliest_node ?? null,
-              // Judges sometimes fill this in for other verdicts too; it only means something here.
-              misattribution: verdict?.verdict === "misattributed" ? verdict.misattribution_node : null,
-            }}
-          />
-          {run.nodes.length === 0 && running && (
-            <p className="text-sm text-muted">Pages that carry the quote will show up here as they are checked.</p>
-          )}
         </div>
-        <RunLog log={run.log} follow={running} announce={announce} />
+        <RunLog log={run.log} announce={announce} />
       </div>
+
+      {/* The lineage and the timeline get the page's full width, so their cards don't hide off to the side. */}
+      {verdict?.lineage && <Lineage steps={verdict.lineage} nodes={run.nodes} />}
+      <Timeline
+        nodes={run.nodes}
+        marks={{
+          earliest: verdict?.earliest_node ?? null,
+          // Judges sometimes fill this in for other verdicts too; it only means something here.
+          misattribution: verdict?.verdict === "misattributed" ? verdict.misattribution_node : null,
+        }}
+      />
+      {run.nodes.length === 0 && running && (
+        <p className="text-sm text-muted">Pages that carry the quote will show up here as they are checked.</p>
+      )}
     </div>
   );
 }

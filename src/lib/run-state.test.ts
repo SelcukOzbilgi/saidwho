@@ -53,6 +53,20 @@ describe("reduceRun", () => {
     expect(finished).toMatchObject({ phase: "reading", finished: true, seconds: 9 });
   });
 
+  it("counts in the log without plural slips", () => {
+    const state = run([
+      STARTED,
+      { type: "planned", ...spend, tier: "super", variants: [], candidateAuthors: [], queries: ["q"] },
+      { type: "searched", query: "q", results: 1, credits: 1, latencyMs: 5 },
+      { type: "pages_ready", pages: 1, droppedExcluded: 0 },
+    ]);
+    expect(state.log.map((entry) => entry.text)).toEqual(
+      expect.arrayContaining(["Planned 1 search", "1 result for q", "1 page to read"]),
+    );
+    const more = reduceRun(state, { type: "planned", ...spend, tier: "super", variants: ["a", "b"], candidateAuthors: [], queries: ["q", "r"] });
+    expect(more.log.at(-1)?.text).toBe("Planned 2 searches and 2 other wordings");
+  });
+
   it("takes the planner's name for the usual credit only when none was given", () => {
     // Runs saved before the planner named anyone have no foundAttribution at all.
     const older: RunEvent = { type: "planned", ...spend, tier: "super", variants: [], candidateAuthors: [], queries: ["q"] };
@@ -105,9 +119,9 @@ describe("reduceRun", () => {
     expect(state.log.find((e) => e.text.startsWith("Set aside"))).toMatchObject({
       agent: "Judge",
       tone: "bad",
-      text: "Set aside a verdict (correctly attributed, medium confidence): it cites n9, which were not confirmed",
+      text: "Set aside a verdict (correctly attributed, medium confidence): it cites n9, which was not confirmed",
     });
-    expect(state.log.find((e) => e.text.startsWith("Trying again on ultra"))?.tone).toBe("warn");
+    expect(state.log.find((e) => e.text.startsWith("Trying again on Nemotron 3 Ultra"))?.tone).toBe("warn");
   });
 
   it("shows no verdict when the only one cites an unconfirmed page, even after the second judge fails", () => {
@@ -138,12 +152,12 @@ describe("reduceRun", () => {
 
   it("says when the judge is asked for a verdict without the lineage", () => {
     const state = run([{ type: "escalated", step: "judge", from: "super", to: "super", thinking: false, reason: "ran out of tokens", url: null, compact: true }]);
-    expect(state.log.at(-1)?.text).toBe("Trying again on super with thinking off, without the lineage: ran out of tokens");
+    expect(state.log.at(-1)?.text).toBe("Trying again on Nemotron 3 Super with thinking off, without the lineage: ran out of tokens");
   });
 
   it("doesn't say thinking is off when a judge on the same model tries again with it on", () => {
     const state = run([{ type: "escalated", step: "judge", from: "super", to: "super", thinking: true, reason: "bad_request: schema", url: null }]);
-    expect(state.log.at(-1)?.text).toBe("Trying again on super: bad_request: schema");
+    expect(state.log.at(-1)?.text).toBe("Trying again on Nemotron 3 Super: bad_request: schema");
   });
 
   it("says why there is no verdict", () => {

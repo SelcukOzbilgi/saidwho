@@ -1,6 +1,8 @@
 import { type EvidenceNode, type RunEvent, verdictStands } from "../agent/events";
 import { estimateCostUsd, MODELS, type TokenUsage } from "../agent/models";
 import type { JudgeOutput } from "../agent/schemas";
+import { MODEL_NAME } from "./model-name";
+import { plural } from "./plural";
 
 // Folds a run's events into what the page shows. Pure, so a live stream and a
 // replay of a saved run give the same screen.
@@ -132,7 +134,8 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         ...(found && { popularAttribution: found, attributionFrom: "planner" as const }),
         log: log(
           "Planner",
-          `Planned ${event.queries.length} searches and ${event.variants.length} other wordings` +
+          `Planned ${plural(event.queries.length, "search", "searches")}` +
+            (event.variants.length ? ` and ${plural(event.variants.length, "other wording")}` : "") +
             (found ? `. No name was given; it's usually credited to ${found}` : ""),
           "neutral",
           event,
@@ -149,7 +152,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       };
     case "escalated": {
       const how =
-        (event.from === event.to && !event.thinking ? `again on ${event.to} with thinking off` : `again on ${event.to}`) +
+        (event.from === event.to && !event.thinking ? `again on ${MODEL_NAME[event.to]} with thinking off` : `again on ${MODEL_NAME[event.to]}`) +
         (event.compact ? ", without the lineage" : "");
       const agent: Agent = event.step === "plan" ? "Planner" : event.step === "read" ? "Reader" : "Judge";
       const page = event.url ? ` (${hostOf(event.url)})` : "";
@@ -164,7 +167,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         noVerdict: null,
         searches: state.phase === "tracing" ? state.searches : state.searches + 1,
         tavilyCredits: state.tavilyCredits + (event.credits ?? 0),
-        log: log("Search", `${event.results} results for ${event.query}`),
+        log: log("Search", `${plural(event.results, "result")} for ${event.query}`),
       };
     case "search_failed":
       return { ...state, phase: state.phase === "tracing" ? "tracing" : "searching", noVerdict: null, log: log("Search", `Search failed (${event.reason}): ${event.query}`, "bad") };
@@ -175,10 +178,10 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         return {
           ...state,
           pages: (state.pages ?? 0) + event.pages,
-          log: log("Genealogist", `${event.pages} new page${event.pages === 1 ? "" : "s"} to read${dropped}`),
+          log: log("Genealogist", `${plural(event.pages, "new page")} to read${dropped}`),
         };
       }
-      return { ...state, phase: "reading", pages: event.pages, log: log("Search", `${event.pages} pages to read${dropped}`) };
+      return { ...state, phase: "reading", pages: event.pages, log: log("Search", `${plural(event.pages, "page")} to read${dropped}`) };
     }
     case "traced": {
       const leads = event.leads.map((lead) => ({ round: event.round, ...lead }));
@@ -226,7 +229,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
           ...spent(event),
           phase: "judging",
           noVerdict: state.verdict ? null : SET_ASIDE,
-          log: log("Judge", `Set aside a verdict (${words}): it cites ${event.unknownIds.join(", ")}, which were not confirmed`, "bad", event),
+          log: log("Judge", `Set aside a verdict (${words}): it cites ${event.unknownIds.join(", ")}, which ${event.unknownIds.length === 1 ? "was" : "were"} not confirmed`, "bad", event),
         };
       }
       // What code changed about the earliest date or page follows the verdict.

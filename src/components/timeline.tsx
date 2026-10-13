@@ -1,10 +1,9 @@
 import type { EvidenceNode } from "../agent/events";
 import { byDate } from "../lib/run-state";
-import { ScrollRow } from "./scroll-row";
 
 type Marks = { earliest: string | null; misattribution: string | null };
 
-// Year columns, oldest on the left; pages with no date go in a last column.
+// One group per year, oldest first; pages with no date go in a last group.
 function columns(nodes: readonly EvidenceNode[]): { label: string; nodes: EvidenceNode[] }[] {
   const out: { label: string; nodes: EvidenceNode[] }[] = [];
   for (const node of byDate(nodes)) {
@@ -16,6 +15,11 @@ function columns(nodes: readonly EvidenceNode[]): { label: string; nodes: Eviden
   return out;
 }
 
+// How many of the timeline's columns a year with 1, 2 or 3+ cards takes, and how
+// its cards sit inside them.
+const SPAN: Record<number, string> = { 1: "", 2: "sm:col-span-2", 3: "sm:col-span-2 lg:col-span-3" };
+const CARDS: Record<number, string> = { 1: "", 2: "sm:grid-cols-2", 3: "sm:grid-cols-2 lg:grid-cols-3" };
+
 export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; marks: Marks }) {
   if (nodes.length === 0) return null;
   const years = columns(nodes);
@@ -24,26 +28,26 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
       <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">
         Where the quote turns up, oldest first
       </h2>
-      {/* On a phone the years stack; from sm up they sit side by side and scroll sideways. */}
-      <ScrollRow label="Evidence by year" hint="Scroll sideways for later years →">
-        <ol className="flex flex-col gap-6 sm:min-w-max sm:flex-row sm:items-start sm:gap-4">
-          {years.map((column) => (
-            <li key={column.label} className="sm:w-72 sm:shrink-0">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="font-serif text-2xl font-semibold tabular-nums">{column.label}</span>
-                <span className="h-px flex-1 bg-line" aria-hidden />
-              </div>
-              <ul className="flex flex-col gap-3">
-                {column.nodes.map((node) => (
-                  <li key={node.id}>
-                    <NodeCard node={node} marks={marks} />
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ol>
-      </ScrollRow>
+      {/* Years read left to right, then down, oldest first. A year takes as many
+          columns as it has cards, up to a full row, so a year with one page shares
+          its row with the next ones instead of leaving the rest of it empty. */}
+      <ol className="grid gap-x-3 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+        {years.map((column) => (
+          <li key={column.label} className={`min-w-0 ${SPAN[Math.min(column.nodes.length, 3)]}`}>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="font-serif text-2xl font-semibold tabular-nums">{column.label}</span>
+              <span className="h-px flex-1 bg-line" aria-hidden />
+            </div>
+            <ul className={`grid gap-3 ${CARDS[Math.min(column.nodes.length, 3)]}`}>
+              {column.nodes.map((node) => (
+                <li key={node.id} className="min-w-0">
+                  <NodeCard node={node} marks={marks} />
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -83,7 +87,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
   return (
     <article
       id={`node-${node.id}`}
-      className={`arrive scroll-mt-24 rounded-xl border bg-card p-4 shadow-sm target:ring-2 target:ring-accent ${ring} ${crossed ? "opacity-60" : ""}`}
+      className={`arrive flex h-full scroll-mt-24 flex-col rounded-xl border bg-card p-4 shadow-sm target:ring-2 target:ring-accent ${ring} ${crossed ? "opacity-60" : ""}`}
     >
       <header className="mb-2 flex items-center gap-2 text-xs text-muted">
         <span className="font-mono">{node.id}</span>
@@ -104,7 +108,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
         </blockquote>
       )}
 
-      <dl className="mt-3 space-y-1 text-xs text-muted">
+      <dl className="mt-3 mb-3 space-y-1 text-xs text-muted">
         {node.attributedTo && (
           <Row label="Credited to">
             <span className="text-foreground">{unmark(node.attributedTo)}</span>
@@ -127,7 +131,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
         )}
       </dl>
 
-      <footer className="mt-3 flex items-center gap-2 border-t border-line pt-2 text-xs">
+      <footer className="mt-auto flex items-center gap-2 border-t border-line pt-2 text-xs">
         <span className={`font-medium ${check.look}`}>
           {check.mark} {check.words}
         </span>
