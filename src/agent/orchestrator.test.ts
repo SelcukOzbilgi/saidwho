@@ -377,13 +377,13 @@ describe("investigate", () => {
         {
           cited_by: "n1",
           work: LEAD.work,
-          checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.`,
+          checked: `The pages this run read for ${LEAD.work} on archive.org don't have the saying; they may be another edition or only part of the work.`,
           pages: [{ site: "archive.org", title: `Page at ${BOOK}` }],
         },
       ]);
       expect(events.find((e) => e.type === "cited_works")).toEqual({
         type: "cited_works",
-        works: [{ citedBy: "n1", work: LEAD.work, checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.` }],
+        works: [{ citedBy: "n1", work: LEAD.work, checked: `The pages this run read for ${LEAD.work} on archive.org don't have the saying; they may be another edition or only part of the work.` }],
       });
       expect(types(events).slice(-3)).toEqual(["cited_works", "verdict", "done"]);
       expect(events.find((e) => e.type === "page_read" && e.url === BOOK)).toMatchObject({ outcome: "no_quote", lookingFor: LEAD.work });
