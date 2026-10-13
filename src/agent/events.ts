@@ -151,6 +151,10 @@ export const runEventSchema = z.discriminatedUnion("type", [
     // What code changed about the verdict's earliest date or page. Runs saved
     // before this check have no key.
     fixes: z.array(z.string()).optional(),
+    // Set on a second judge's verdict that was asked about its earliest date and
+    // gave no supported date earlier than it: the first verdict stays the answer.
+    // Says why.
+    notTaken: z.string().optional(),
   }),
   z.strictObject({ type: z.literal("judge_failed"), ...spendSchema, reason: z.string() }),
   z.strictObject({ type: z.literal("budget_exceeded"), spentUsd: z.number(), maxUsd: z.number() }),
@@ -168,8 +172,9 @@ export type EvidenceNode = z.infer<typeof evidenceNodeSchema>;
 export type RunEvent = z.infer<typeof runEventSchema>;
 export type VerdictEvent = Extract<RunEvent, { type: "verdict" }>;
 
-// A verdict citing anything that isn't a confirmed page is never the run's answer.
-export const verdictStands = (event: VerdictEvent): boolean => event.unknownIds.length === 0;
+// A verdict citing anything that isn't a confirmed page is never the run's answer,
+// and nor is a second judge's that wasn't taken over the first (see notTaken).
+export const verdictStands = (event: VerdictEvent): boolean => event.unknownIds.length === 0 && event.notTaken === undefined;
 
 // The run's answer: the last verdict that stands, or null when none does.
 export const standingVerdict = (events: readonly RunEvent[]): VerdictEvent | null =>

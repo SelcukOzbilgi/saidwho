@@ -5,7 +5,7 @@
 
 import type { NebiusClient } from "../lib/server/providers/nebius";
 import type { EvidenceNode, RunEvent } from "./events";
-import { checkVerdict, retryNote } from "./judge-check";
+import { checkVerdict, citedDateNote, retryNote } from "./judge-check";
 import type { ModelPolicy, ModelSpec, Tier, TokenUsage } from "./models";
 import { boundedCompactJudgeOutputSchema, boundedJudgeOutputSchema, compactJudgeOutputSchema, judgeOutputSchema } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult, worthRetrying } from "./structured";
@@ -28,7 +28,7 @@ export const JUDGE_PROMPT =
   "no_known_source: the credit is unsupported and no other origin is established, even when you know when the saying began to circulate. " +
   "A gap is not evidence: finding no early source supports no_known_source, never misattributed. " +
   "earliest_node: the page with the earliest dated appearance of the saying itself or a variant with the same meaning. " +
-  "earliest_date: that appearance's date, taken from that page's page_date or cited_source_date, as YYYY, YYYY-MM or YYYY-MM-DD, or null. " +
+  "earliest_date: that appearance's date as YYYY, YYYY-MM or YYYY-MM-DD, or null: the page's cited_source_date when it gives one, else its page_date. " +
   "Use when it was published or said in public, not when it was written; mention an earlier writing date in the rationale. " +
   "Leave out passages that only resemble it and dates the page itself doubts (\"supposedly\", \"reportedly\"). " +
   "earliest_author: only the person's name, or null if unknown. misattribution_node: the earliest page crediting the usual name, if different. " +
@@ -94,20 +94,30 @@ export type JudgeStep = {
   spend: <T>(model: ModelSpec, result: StructuredResult<T>) => Spent;
   // True once the run must not start another paid call.
   mustStop: () => boolean;
-  // Another system prompt, for replays that compare prompts.
+  // Another system prompt, and main's checks only (see checkVerdict), for
+  // replays that compare them.
   prompt?: string;
+  checks?: boolean;
 };
 
-export async function judge({ nebius, models, quote, credit, verified, citedWorks, onEvent, spend, mustStop, prompt = JUDGE_PROMPT }: JudgeStep): Promise<void> {
+export async function judge(step: JudgeStep): Promise<void> {
+  const { nebius, models, quote, credit, verified, citedWorks, onEvent, spend, mustStop, prompt = JUDGE_PROMPT, checks = true } = step;
   const baseUser = judgeUser(quote, credit, verified, citedWorks);
   const allowedIds = verified.map((n) => n.id);
 
   // One judge call and how it went. bounded sends the schema with limits; it is
   // dropped only if the provider refuses it. note tells a later judge why the
   // last verdict was set aside.
-  type JudgeAttempt = { model: ModelSpec; thinking: boolean; compact: boolean; bounded: boolean; note: string | null };
-  type JudgeOutcome = { stands: true } | { stands: false; cause: FailureCause | "unsupported"; reason: string; note: string | null };
-  const judgeWith = async ({ model, thinking, compact, bounded, note }: JudgeAttempt): Promise<JudgeOutcome> => {
+  // A verdict that stands can still be worth asking about once more (recheck).
+  // recheck holds what the second judge was asked about: the first verdict's
+  // earliest page, the page's own date it gave, and the earlier date the page cites.
+  type Asked = { node: string; given: string; cited: string };
+  type JudgeAttempt = { model: ModelSpec; thinking: boolean; compact: boolean; bounded: boolean; note: string | null; recheck: Asked | null };
+  type Recheck = { reason: string; note: string; asked: Asked };
+  type JudgeOutcome =
+    | { stands: true; recheck: Recheck | null }
+    | { stands: false; cause: FailureCause | "unsupported"; reason: string; note: string | null };
+  const judgeWith = async ({ model, thinking, compact, bounded, note, recheck }: JudgeAttempt): Promise<JudgeOutcome> => {
     const result = await callStructured(nebius, {
       model,
       thinking,
@@ -133,14 +143,38 @@ export async function judge({ nebius, models, quote, credit, verified, citedWork
       onEvent({ type: "judge_failed", ...judgeSpend, reason });
       return { stands: false, cause: result.cause, reason, note };
     }
-    const { verdict, unknownIds, fixes } = checkVerdict({ lineage: [], ...result.data }, verified);
-    onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds, ...(fixes.length > 0 && { fixes }) });
-    if (unknownIds.length === 0) return { stands: true };
+    const { verdict, unknownIds, fixes, pageDateOverCited } = checkVerdict({ lineage: [], ...result.data }, verified, checks);
+    // The second judge was asked about the date, so its verdict is taken over the
+    // first only when it moves the date earlier, to one the Checker found a page
+    // for: the cited source's, or an older page's, even one that cites an older
+    // source in turn. The same date again, the same page by its own date, a later
+    // date or none at all (a year no page backs is cleared to none) leave the
+    // first verdict as the answer.
+    const moved = (date: string | null, asked: Asked) => date !== null && Number(date.slice(0, 4)) < Number(asked.given.slice(0, 4));
+    const notTaken =
+      recheck !== null && !moved(verdict.earliest_date, recheck)
+        ? `it gives no supported date earlier than the ${recheck.given} it was asked about, on ${recheck.node}, which cites ${recheck.cited}`
+        : undefined;
+    onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds, ...(fixes.length > 0 && { fixes }), ...(notTaken && { notTaken }) });
+    // Either way the run has had its one second judge, so this ends the judging.
+    if (notTaken) return { stands: false, cause: "unsupported", reason: `the second verdict ${notTaken}`, note: null };
+    if (unknownIds.length > 0) {
+      return {
+        stands: false,
+        cause: "unsupported",
+        reason: `the verdict points at ${unknownIds.join(", ")}, not verified evidence`,
+        note: retryNote(unknownIds, allowedIds),
+      };
+    }
+    if (pageDateOverCited === null) return { stands: true, recheck: null };
+    const { node, given, cited } = pageDateOverCited;
     return {
-      stands: false,
-      cause: "unsupported",
-      reason: `the verdict points at ${unknownIds.join(", ")}, not verified evidence`,
-      note: retryNote(unknownIds, allowedIds),
+      stands: true,
+      recheck: {
+        reason: `the verdict dates ${node} by the page's own date ${given}, though ${node} names a source dated ${cited}`,
+        note: citedDateNote(pageDateOverCited),
+        asked: pageDateOverCited,
+      },
     };
   };
 
@@ -148,9 +182,13 @@ export async function judge({ nebius, models, quote, credit, verified, citedWork
   // stop. Running out of tokens is tried again on the same model, first with
   // thinking off and then without the lineage, since a bigger model could run
   // out the same way. A verdict citing pages that aren't confirmed goes to the
-  // second judge once, told what was wrong and which ids it may use. So does a
-  // failed call, unless it would fail the same way again. Low confidence alone
-  // is not a reason: thin evidence is an honest answer.
+  // second judge, told what was wrong and which ids it may use. So
+  // does a failed call, unless it would fail the same way again, and a verdict
+  // that stands but dates its earliest page by the page's own date over an
+  // earlier one it cites. That one stays the answer unless the second judge's
+  // verdict stands and changes the date (see notTaken). There is one second
+  // judge per run, whichever sent it. Low confidence alone is not a reason: thin
+  // evidence is an honest answer.
   let escalated = false;
   const nextAttempt = (tried: JudgeAttempt, outcome: JudgeOutcome & { stands: false }): JudgeAttempt | null => {
     const { cause, note } = outcome;
@@ -161,16 +199,25 @@ export async function judge({ nebius, models, quote, credit, verified, citedWork
     }
     if (escalated || (cause !== "unsupported" && !worthRetrying(cause))) return null;
     escalated = true;
-    return { ...tried, model: models.rejudge, thinking: true, note };
+    return { ...tried, model: models.rejudge, thinking: true, note, recheck: null };
   };
 
   // Every verdict is reported, but only one whose ids all check out stands. When
   // none does, the run has no verdict rather than an unsupported one.
-  let attempt: JudgeAttempt = { model: models.judge, thinking: true, compact: false, bounded: true, note: null };
+  let attempt: JudgeAttempt = { model: models.judge, thinking: true, compact: false, bounded: true, note: null, recheck: null };
   for (let calls = 1; ; calls++) {
     const outcome = await judgeWith(attempt);
-    if (outcome.stands) break;
-    const next = nextAttempt(attempt, outcome);
+    let next: JudgeAttempt | null;
+    let reason: string;
+    if (outcome.stands) {
+      if (outcome.recheck === null || escalated) break;
+      escalated = true;
+      next = { ...attempt, model: models.rejudge, thinking: true, note: outcome.recheck.note, recheck: outcome.recheck.asked };
+      reason = outcome.recheck.reason;
+    } else {
+      next = nextAttempt(attempt, outcome);
+      reason = outcome.reason;
+    }
     if (next === null || calls === MAX_JUDGE_CALLS || mustStop()) break;
     onEvent({
       type: "escalated",
@@ -178,7 +225,7 @@ export async function judge({ nebius, models, quote, credit, verified, citedWork
       from: attempt.model.tier,
       to: next.model.tier,
       thinking: next.thinking,
-      reason: outcome.reason,
+      reason,
       url: null,
       ...(next.compact && { compact: true }),
     });

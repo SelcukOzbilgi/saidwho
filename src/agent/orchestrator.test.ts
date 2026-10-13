@@ -4,6 +4,7 @@ import type { ChatParams, NebiusClient } from "../lib/server/providers/nebius";
 import { worthScoring } from "../eval/score";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema, standingVerdict } from "./events";
+import { MAX_JUDGE_CALLS } from "./judge";
 import { everyStepOn, MODELS, type ModelPolicy } from "./models";
 import { investigate, LIBRARY_SITES } from "./orchestrator";
 import type { GenealogistOutput, JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
@@ -947,6 +948,110 @@ describe("investigate", () => {
       ["ultra", []],
     ]);
     expect(events.at(-3)).toMatchObject({ step: "judge", from: "super", to: "ultra", thinking: true });
+  });
+
+  describe("a verdict that dates its earliest page by the page's own date", () => {
+    // A 2013 page that names the 1981 newspaper, as n9 named P.S. I Love You (1991)
+    // when the second eval's judge dated twenty-years-from-now by n9's 2017.
+    const page = `Posted 2013. From the Knoxville News-Sentinel, 1981: "${QUOTE}."`;
+    const reading = { ...READ, page_date: "2013", cited_source: "Knoxville News-Sentinel", cited_source_date: "1981" };
+    const late: JudgeOutput = { ...VERDICT, earliest_date: "2013", rationale: "A 2013 page has it [n1].", lineage: [] };
+    const tavily = () => tavilyFor(() => [NEWS], () => page).tavily;
+
+    it("asks Ultra once, told about the cited date, and takes Ultra's verdict", async () => {
+      const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? late : VERDICT) });
+      const events = await run({ nebius, tavily: tavily() });
+      expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "verdict", "done"]);
+      expect(events.at(-3)).toMatchObject({
+        step: "judge",
+        from: "super",
+        to: "ultra",
+        reason: "the verdict dates n1 by the page's own date 2013, though n1 names a source dated 1981",
+      });
+      expect(nebius.log.filter((c) => c.name === "verdict").at(-1)?.user).toContain("n1 names a source dated 1981");
+      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { earliest_date: "1981" } });
+    });
+
+    it("keeps the first verdict as the Judge gave it when Ultra gives none", async () => {
+      const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? late : null) });
+      const events = await run({ nebius, tavily: tavily() });
+      expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "judge_failed", "done"]);
+      // Code never takes the cited date for the Judge.
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_date: "2013" } });
+      expect(standingVerdict(events)?.fixes).toBeUndefined();
+    });
+
+    it("keeps the first verdict when Ultra gives the page's date again, whatever label it gives", async () => {
+      // As in the fish-climb-tree replay: Ultra turned a right no_known_source into
+      // misattributed while dating the same page by its own date.
+      const first = { ...late, verdict: "no_known_source" as const };
+      const second = { ...late, verdict: "misattributed" as const, rationale: "A 2013 page has it [n1]; the 1981 newspaper it names is unverified." };
+      const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? first : second) });
+      const events = await run({ nebius, tavily: tavily() });
+      expect(nebius.calls.filter((c) => c === "verdict")).toHaveLength(2);
+      expect(events.filter((e) => e.type === "verdict").at(-1)).toMatchObject({
+        tier: "ultra",
+        notTaken: "it gives no supported date earlier than the 2013 it was asked about, on n1, which cites 1981",
+      });
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { verdict: "no_known_source", earliest_date: "2013" } });
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    });
+
+    it("takes Ultra's verdict when it dates the saying by another, older page, even one citing an older source", async () => {
+      // The first verdict dates n1 by its 2013 though n1 cites 1981; Ultra names n2,
+      // a 1979 page that itself cites a 1950 source.
+      const page = `Posted 2013. From the Knoxville News-Sentinel, 1981: "${QUOTE}."`;
+      const other = "https://news.example.org/1979";
+      const twoPages = tavilyFor(() => [NEWS, other], (url) => (url === other ? `Posted 1979. From the Basic Text, 1950: "${QUOTE}."` : page)).tavily;
+      const elsewhere = { ...late, earliest_node: "n2", earliest_date: "1979", rationale: "A 1979 page has it [n2]." };
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(other) ? { ...READ, page_date: "1979", cited_source: "the Basic Text", cited_source_date: "1950" } : reading),
+        verdict: ({ model }) => (model === MODELS.super.id ? late : elsewhere),
+      });
+      const events = await run({ nebius, tavily: twoPages });
+      expect(events.filter((e) => e.type === "verdict").at(-1)).not.toHaveProperty("notTaken");
+      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { earliest_node: "n2", earliest_date: "1979" } });
+    });
+
+    it("keeps the first verdict when Ultra gives no date, or one no page backs", async () => {
+      // As Codex put it: a no_known_source on n1's 2013, and a misattributed with no date.
+      const first = { ...late, verdict: "no_known_source" as const };
+      for (const date of [null, "1975"]) {
+        const second = { ...late, verdict: "misattributed" as const, earliest_date: date, rationale: "The 1981 newspaper n1 names is the origin [n1]." };
+        const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? first : second) });
+        const events = await run({ nebius, tavily: tavily() });
+        expect(events.filter((e) => e.type === "verdict").at(-1)).toMatchObject({ tier: "ultra", verdict: { earliest_date: null }, notTaken: expect.any(String) });
+        expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { verdict: "no_known_source", earliest_date: "2013" } });
+      }
+    });
+
+    it("keeps the first verdict when Ultra gives the same date from another page", async () => {
+      const page = `Posted 2013. From the Knoxville News-Sentinel, 1981: "${QUOTE}."`;
+      const other = "https://news.example.org/2013";
+      const twoPages = tavilyFor(() => [NEWS, other], (url) => (url === other ? `Posted 2013. "${QUOTE}."` : page)).tavily;
+      const sameDate = { ...late, earliest_node: "n2", earliest_date: "2013", rationale: "A 2013 page has it [n2]." };
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(other) ? { ...READ, page_date: "2013" } : reading),
+        verdict: ({ model }) => (model === MODELS.super.id ? late : sameDate),
+      });
+      const events = await run({ nebius, tavily: twoPages });
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_node: "n1" } });
+    });
+
+    it("never makes more than four judge calls", async () => {
+      // The longest path: Super refuses the bounded schema, its plain verdict
+      // takes the page's date, and Ultra runs out of tokens thinking, then with
+      // thinking off. Super's verdict stays the answer, as the Judge gave it.
+      const nebius = fakeNebius({
+        read: () => reading,
+        verdict: ({ model, schema }) => (model === MODELS.super.id ? (JSON.stringify(schema).includes("maxLength") ? "bad_request" : late) : "length"),
+      });
+      const events = await run({ nebius, tavily: tavily() });
+      const calls = nebius.log.filter((c) => c.name === "verdict").map((c) => `${c.model === MODELS.super.id ? "super" : "ultra"}${c.thinking ? "" : " no thinking"}`);
+      expect(calls).toEqual(["super", "super", "ultra", "ultra no thinking"]);
+      expect(calls).toHaveLength(MAX_JUDGE_CALLS);
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_date: "2013" } });
+    });
   });
 
   it("asks Ultra when a lineage step is on a node that isn't verified", async () => {
