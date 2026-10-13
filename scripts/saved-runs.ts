@@ -93,7 +93,7 @@ export class SearchCache {
 }
 
 // main's dates: kept only where they sit on the page.
-function mainDates(reading: EvidenceNode["reader"], page: Page, span: Span | null) {
+export function mainDates(reading: EvidenceNode["reader"], page: Page, span: Span | null) {
   const keep = (raw: string | null, placed: (date: string) => boolean) => {
     const date = cleanDate(raw);
     return date && placed(date) ? date : null;
@@ -136,6 +136,19 @@ const onLibrarySite = (url: string) => {
   const host = hostOf(url);
   return LIBRARY_SITES.some((site) => host === site || host.endsWith(`.${site}`));
 };
+
+// The text a first-round page's reader saw: the first search result with that page.
+export function firstPageOf(run: SavedRun, url: string, cache: SearchCache): Page | null {
+  const started = run.events.find((e) => e.type === "started");
+  if (!started || started.type !== "started") return null;
+  const firstPagesAt = run.events.findIndex((e) => e.type === "pages_ready");
+  for (const [i, e] of run.events.entries()) {
+    if (e.type !== "searched" || i > firstPagesAt) continue;
+    const hit = (cache.results(e.query, started.excludeDomains, false) ?? []).find((r) => r.url === url && r.rawContent);
+    if (hit) return { title: hit.title, text: hit.rawContent ?? "" };
+  }
+  return null;
+}
 
 export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache): Evidence {
   const { events } = run;
