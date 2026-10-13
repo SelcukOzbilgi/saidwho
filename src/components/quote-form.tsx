@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 
 export type QuoteRequest = {
@@ -38,19 +39,49 @@ export function takeCodeFromLink(
   return fromLink && trialOpen && needsCode ? fromLink : null;
 }
 
-const EXAMPLES = [
+// Quotes to try. One with a finished case opens it, since that run is already
+// there to see for free. One without fills the form, and these are quotes the
+// app got right in the test set, so a first run on one lands well.
+export type Example = { quote: string; popularAttribution: string; language: string; caseId?: string };
+
+export const EXAMPLES: readonly Example[] = [
+  {
+    quote: "I disapprove of what you say, but I will defend to the death your right to say it.",
+    popularAttribution: "Voltaire",
+    language: "en",
+  },
+  {
+    quote: "Twenty years from now you will be more disappointed by the things you didn't do than by the ones you did do.",
+    popularAttribution: "Mark Twain",
+    language: "en",
+  },
+  {
+    quote: "In the future, everyone will be world-famous for 15 minutes.",
+    popularAttribution: "Andy Warhol",
+    language: "en",
+  },
   {
     quote: "Insanity is doing the same thing over and over again and expecting different results.",
     popularAttribution: "Albert Einstein",
     language: "en",
+    caseId: "insanity-same-thing",
   },
-  { quote: "Gel, gel, ne olursan ol yine gel", popularAttribution: "Mevlana (Rumi)", language: "tr" },
+  {
+    quote: "Gel, gel, ne olursan ol yine gel",
+    popularAttribution: "Mevlana (Rumi)",
+    language: "tr",
+    caseId: "gel-ne-olursan-ol",
+  },
   {
     quote: "Never in the field of human conflict was so much owed by so many to so few.",
     popularAttribution: "Winston Churchill",
     language: "en",
+    caseId: "so-much-owed",
   },
 ];
+
+const CHIP = "py-2 underline decoration-line underline-offset-2 hover:text-foreground";
+
 
 const LANGUAGES = [
   ["en", "English"],
@@ -143,8 +174,8 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
           className={`${field} resize-y font-serif text-lg leading-snug`}
         />
         <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-          Try one:
-          {EXAMPLES.map((example) => (
+          Try a new one:
+          {EXAMPLES.filter((example) => !example.caseId).map((example) => (
             <button
               key={example.quote}
               type="button"
@@ -154,11 +185,23 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
                 setPopularAttribution(example.popularAttribution);
                 setLanguage(example.language);
               }}
-              className="py-2 underline decoration-line underline-offset-2 hover:text-foreground disabled:no-underline"
+              className={`${CHIP} disabled:no-underline`}
             >
               {example.popularAttribution}
             </button>
           ))}
+        </p>
+        <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
+          Or see one already run, no keys needed:
+          {EXAMPLES.flatMap((example) =>
+            example.caseId
+              ? [
+                  <Link key={example.quote} href={`/cases/${example.caseId}`} className={CHIP}>
+                    {example.popularAttribution}
+                  </Link>,
+                ]
+              : [],
+          )}
         </p>
       </div>
 

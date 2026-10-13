@@ -2,7 +2,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { accessCodeFromHash, QuoteForm, takeCodeFromLink } from "./quote-form";
+import { readFileSync } from "node:fs";
+
+import { CASES } from "../cases/cases";
+import { parseEvalCases } from "../eval/cases";
+import { accessCodeFromHash, EXAMPLES, QuoteForm, takeCodeFromLink } from "./quote-form";
 
 const render = (trialOpen: boolean, { savesRuns = false, needsCode = false } = {}) =>
   renderToStaticMarkup(
@@ -39,6 +43,35 @@ describe("QuoteForm", () => {
     expect(render(true)).not.toContain("Access code");
     // With the trial off there is nothing to unlock, so no field either.
     expect(render(false, { needsCode: true })).not.toContain("Access code");
+  });
+});
+
+describe("example quotes", () => {
+  const evalCases = parseEvalCases(readFileSync(new URL("../../eval/quotes.jsonl", import.meta.url), "utf8"));
+
+  it("open their finished case when one exists, and fill the form when none does", () => {
+    for (const example of EXAMPLES) {
+      const found = CASES.find((c) => c.run.quote === example.quote);
+      expect(found?.caseId).toBe(example.caseId);
+    }
+    expect(EXAMPLES.some((e) => e.caseId)).toBe(true);
+    expect(EXAMPLES.some((e) => !e.caseId)).toBe(true);
+  });
+
+  it("are test-set quotes, so a run on one can be checked against a known answer", () => {
+    for (const example of EXAMPLES) {
+      const known = evalCases.find((c) => c.quote === example.quote);
+      expect(known?.popular_attribution).toBe(example.popularAttribution);
+      expect(known?.language).toBe(example.language);
+    }
+  });
+
+  it("show as buttons that fill the form, and links to the cases already run", () => {
+    const html = render(false);
+    for (const example of EXAMPLES) {
+      if (example.caseId) expect(html).toContain(`href="/cases/${example.caseId}"`);
+      else expect(html).toMatch(new RegExp(`<button[^>]*type="button"[^>]*>${example.popularAttribution}</button>`));
+    }
   });
 });
 
