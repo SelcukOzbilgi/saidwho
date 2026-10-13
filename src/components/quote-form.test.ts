@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 
 import { CASES } from "../cases/cases";
 import { parseEvalCases } from "../eval/cases";
-import { accessCodeFromHash, EXAMPLES, QuoteForm, takeCodeFromLink } from "./quote-form";
+import { AccessCodeField, accessCodeFromHash, EXAMPLES, initialMode, QuoteForm, takeCodeFromLink } from "./quote-form";
 
 const render = (trialOpen: boolean, { savesRuns = false, needsCode = false } = {}) =>
   renderToStaticMarkup(
@@ -18,8 +18,8 @@ describe("QuoteForm", () => {
     // With the trial off, the keys are what's missing, and the finished cases need none.
     expect(render(false)).toContain("Add both keys above to run it");
     expect(render(true)).toContain("Paste a quote to start.");
-    // With a code needed, the trial starts selected and waits for the code.
-    expect(render(true, { needsCode: true })).toContain("Add the access code above to run it, or use your own keys.");
+    // With a code needed, the form starts on the visitor's own keys.
+    expect(render(true, { needsCode: true })).toContain("Add both keys above to run it");
   });
 
   it("says runs are saved only when they are", () => {
@@ -35,14 +35,26 @@ describe("QuoteForm", () => {
     expect(render(false)).not.toContain("off right now");
   });
 
-  it("shows the access code field only when the server needs a code", () => {
-    const withCode = render(true, { needsCode: true });
-    expect(withCode).toContain("Access code");
-    expect(withCode).toContain("Hackathon judges get the code in the testing instructions.");
-    expect(withCode).toMatch(/<input[^>]*id="[^"]*-code"[^>]*type="password"/);
+  it("starts on the trial only when anyone may use it", () => {
+    expect(initialMode(true, false)).toBe("trial");
+    // Someone with the code arrives through its link, which picks the trial for them.
+    expect(initialMode(true, true)).toBe("byok");
+    expect(initialMode(false, false)).toBe("byok");
+    expect(initialMode(false, true)).toBe("byok");
+    expect(render(true, { needsCode: true })).toMatch(/<input[^>]*type="radio"[^>]*checked=""[^>]*>My own Nebius and Tavily keys/);
+  });
+
+  it("shows no access code field until the trial is picked, and none at all without a code", () => {
+    expect(render(true, { needsCode: true })).not.toContain("Access code");
     expect(render(true)).not.toContain("Access code");
-    // With the trial off there is nothing to unlock, so no field either.
     expect(render(false, { needsCode: true })).not.toContain("Access code");
+  });
+
+  it("asks for the code in a hidden field and says where judges find it", () => {
+    const html = renderToStaticMarkup(createElement(AccessCodeField, { id: "f-code", value: "", onChange: () => {} }));
+    expect(html).toContain("Access code");
+    expect(html).toContain("Hackathon judges get the code in the testing instructions.");
+    expect(html).toMatch(/<input[^>]*id="f-code"[^>]*type="password"/);
   });
 });
 

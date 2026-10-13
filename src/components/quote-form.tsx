@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export type QuoteRequest = {
   quote: string;
@@ -111,6 +111,14 @@ type Props = {
   onStop: () => void;
 };
 
+// The option the form starts on. An open trial costs the visitor nothing, so it
+// comes first. A trial behind a code starts on the visitor's own keys instead:
+// that's the option anyone can use, and an access code field as the first thing
+// a visitor sees reads like a locked door. Someone with the code arrives through
+// its link, which picks the trial for them.
+export const initialMode = (trialOpen: boolean, needsCode: boolean): "trial" | "byok" =>
+  trialOpen && !needsCode ? "trial" : "byok";
+
 // Keys and the access code stay in this component's state: never in the URL,
 // storage or a log.
 export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, onStop }: Props) {
@@ -118,17 +126,27 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
   const [quote, setQuote] = useState("");
   const [popularAttribution, setPopularAttribution] = useState("");
   const [language, setLanguage] = useState("en");
-  const [mode, setMode] = useState<"trial" | "byok">(trialOpen ? "trial" : "byok");
+  const [mode, setMode] = useState<"trial" | "byok">(initialMode(trialOpen, needsCode));
   const [nebiusApiKey, setNebiusApiKey] = useState("");
   const [tavilyApiKey, setTavilyApiKey] = useState("");
   const [accessCode, setAccessCode] = useState("");
+  const form = useRef<HTMLFormElement>(null);
+  const quoteField = useRef<HTMLTextAreaElement>(null);
 
   // A link with the code in it fills the field and picks the trial, on load or
   // when the link is opened in a tab already on this page, which changes only
-  // the hash.
+  // the hash. The form sits below the finished cases, so a code link also moves
+  // the page to it, with the cursor in the quote field: someone who followed
+  // the link came to run a quote.
   useEffect(() => {
     const readLink = () => {
+      const linked = accessCodeFromHash(window.location.hash) !== null;
       const code = takeCodeFromLink(window.location, window.history, { trialOpen, needsCode });
+      if (linked) {
+        const el = form.current;
+        if (el) (el.closest("section") ?? el).scrollIntoView({ block: "start" });
+        quoteField.current?.focus({ preventScroll: true });
+      }
       if (code === null) return;
       setAccessCode(code);
       setMode("trial");
@@ -157,12 +175,13 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
   const field = `${FIELD} px-3 py-2 disabled:opacity-60`;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4" aria-label="Look up a quote">
+    <form ref={form} onSubmit={submit} className="flex flex-col gap-4" aria-label="Look up a quote">
       <div>
         <label htmlFor={`${id}-quote`} className="mb-1 block text-sm font-medium">
           The quote
         </label>
         <textarea
+          ref={quoteField}
           id={`${id}-quote`}
           value={quote}
           onChange={(e) => setQuote(e.target.value)}
@@ -269,15 +288,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
             My own Nebius and Tavily keys
           </label>
         </div>
-        {mode === "trial" && needsCode && (
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <KeyInput id={`${id}-code`} label="Access code" value={accessCode} onChange={setAccessCode} maxLength={200} />
-            <p className="text-xs text-muted sm:col-span-2">
-              Hackathon judges get the code in the testing instructions. No code? Use your own keys, or open a finished
-              case above.
-            </p>
-          </div>
-        )}
+        {mode === "trial" && needsCode && <AccessCodeField id={`${id}-code`} value={accessCode} onChange={setAccessCode} />}
         {mode === "byok" && (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <KeyInput id={`${id}-nebius`} label="Nebius API key" value={nebiusApiKey} onChange={setNebiusApiKey} />
@@ -334,6 +345,18 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
         </p>
       )}
     </form>
+  );
+}
+
+export function AccessCodeField({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <KeyInput id={id} label="Access code" value={value} onChange={onChange} maxLength={200} />
+      <p className="text-xs text-muted sm:col-span-2">
+        Hackathon judges get the code in the testing instructions. No code? Use your own keys, or open a finished case
+        above.
+      </p>
+    </div>
   );
 }
 
