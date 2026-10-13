@@ -4,6 +4,7 @@ import type { RunState } from "../lib/run-state";
 import { Lineage } from "./lineage";
 import { Progress } from "./progress";
 import { RunLog } from "./run-log";
+import { RunSoFar } from "./run-so-far";
 import { Timeline } from "./timeline";
 import { VerdictCard } from "./verdict-card";
 
@@ -40,7 +41,10 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
-          <VerdictCard {...run} />
+          {/* Until there is a verdict, a run under way says where it is instead. Once it
+              ends without one, the card says why; the plan, which only showed
+              progress, goes with the card, and the log keeps it. */}
+          {running && !run.verdict ? <RunSoFar {...run} announce={announce} /> : <VerdictCard {...run} />}
           {afterVerdict}
         </div>
         <RunLog log={run.log} announce={announce} />

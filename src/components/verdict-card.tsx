@@ -22,16 +22,23 @@ export const HEADLINE: Record<JudgeOutput["verdict"], (name: string | null) => s
   no_known_source: () => "No source old enough to settle it",
 };
 
-type Props = Pick<RunState, "verdict" | "noVerdict" | "stopped" | "finished" | "popularAttribution" | "nodes">;
+type Props = Pick<RunState, "verdict" | "noVerdict" | "stopped" | "popularAttribution" | "nodes">;
 
-export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttribution, nodes }: Props) {
+export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, nodes }: Props) {
+  // The run view shows this card only once a run is over or has a verdict, so
+  // without one it always says why.
   if (!verdict) {
-    if (!noVerdict && !finished) return null;
     return (
       <section className="rounded-xl border border-line bg-card p-5">
         <p className="text-xs font-medium uppercase tracking-wider text-muted">No verdict</p>
         <p className="mt-1 text-lg">
-          {noVerdict ? capitalize(noVerdict) : stopped === "budget" ? "The run hit its spending limit first." : "The run ended before a verdict."}
+          {noVerdict
+            ? capitalize(noVerdict)
+            : stopped === "budget"
+              ? "The run hit its spending limit first."
+              : stopped === "aborted"
+                ? "The run was stopped before a verdict."
+                : "The run ended before a verdict."}
         </p>
       </section>
     );

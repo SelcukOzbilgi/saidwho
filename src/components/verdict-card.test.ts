@@ -62,7 +62,6 @@ describe("VerdictCard", () => {
           verdict: { tier: "super", output: output(verdict) },
           noVerdict: null,
           stopped: null,
-          finished: true,
           popularAttribution,
           nodes: [],
         }),
