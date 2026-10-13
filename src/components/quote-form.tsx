@@ -1,13 +1,42 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 export type QuoteRequest = {
   quote: string;
   popularAttribution: string;
   language: string;
-  keys: { mode: "trial" } | { mode: "byok"; nebiusApiKey: string; tavilyApiKey: string };
+  keys: { mode: "trial"; accessCode?: string } | { mode: "byok"; nebiusApiKey: string; tavilyApiKey: string };
 };
+
+// The access code from a link like /#code=..., which fills the field in one
+// click. The part after # never reaches the server or its logs. Null when the
+// link carries no code.
+export function accessCodeFromHash(hash: string): string | null {
+  const match = /^#(?:.*&)?code=([^&]*)/.exec(hash);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]).trim();
+  } catch {
+    return "";
+  }
+}
+
+// What a code link leaves for the form: the code to fill in, or null. Any link
+// with a code in it is cleaned out of the address bar, so the code isn't left
+// in a screenshot, a shared link or the page's history entry. The code is used
+// only when the trial is open and needs one. Takes the page's location and
+// history, so tests can pass stand-ins.
+export function takeCodeFromLink(
+  location: Pick<Location, "hash" | "pathname" | "search">,
+  history: Pick<History, "replaceState">,
+  { trialOpen, needsCode }: { trialOpen: boolean; needsCode: boolean },
+): string | null {
+  const fromLink = accessCodeFromHash(location.hash);
+  if (fromLink === null) return null;
+  history.replaceState(null, "", location.pathname + location.search);
+  return fromLink && trialOpen && needsCode ? fromLink : null;
+}
 
 const EXAMPLES = [
   {
@@ -42,6 +71,8 @@ const FIELD =
 
 type Props = {
   trialOpen: boolean;
+  // Whether a trial run needs an access code. The code itself stays on the server.
+  needsCode: boolean;
   // Whether the server saves runs, so the form says so before one starts.
   savesRuns: boolean;
   running: boolean;
@@ -49,8 +80,9 @@ type Props = {
   onStop: () => void;
 };
 
-// Keys stay in this component's state: never in the URL, storage or a log.
-export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Props) {
+// Keys and the access code stay in this component's state: never in the URL,
+// storage or a log.
+export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, onStop }: Props) {
   const id = useId();
   const [quote, setQuote] = useState("");
   const [popularAttribution, setPopularAttribution] = useState("");
@@ -58,9 +90,26 @@ export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Pr
   const [mode, setMode] = useState<"trial" | "byok">(trialOpen ? "trial" : "byok");
   const [nebiusApiKey, setNebiusApiKey] = useState("");
   const [tavilyApiKey, setTavilyApiKey] = useState("");
+  const [accessCode, setAccessCode] = useState("");
 
+  // A link with the code in it fills the field and picks the trial, on load or
+  // when the link is opened in a tab already on this page, which changes only
+  // the hash.
+  useEffect(() => {
+    const readLink = () => {
+      const code = takeCodeFromLink(window.location, window.history, { trialOpen, needsCode });
+      if (code === null) return;
+      setAccessCode(code);
+      setMode("trial");
+    };
+    readLink();
+    window.addEventListener("hashchange", readLink);
+    return () => window.removeEventListener("hashchange", readLink);
+  }, [trialOpen, needsCode]);
+
+  const codeIn = !needsCode || accessCode.trim() !== "";
   // The name is optional: left blank, the planner says who it's usually credited to.
-  const keysIn = mode === "trial" || (nebiusApiKey.trim() !== "" && tavilyApiKey.trim() !== "");
+  const keysIn = mode === "trial" ? codeIn : nebiusApiKey.trim() !== "" && tavilyApiKey.trim() !== "";
   const ready = quote.trim() !== "" && keysIn;
 
   const submit = (event: React.FormEvent) => {
@@ -70,7 +119,7 @@ export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Pr
       quote,
       popularAttribution,
       language,
-      keys: mode === "trial" ? { mode } : { mode, nebiusApiKey, tavilyApiKey },
+      keys: mode === "trial" ? (needsCode ? { mode, accessCode } : { mode }) : { mode, nebiusApiKey, tavilyApiKey },
     });
   };
 
@@ -160,7 +209,11 @@ export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Pr
               disabled={!trialOpen}
               className="size-4 accent-accent"
             />
-            Free trial{trialOpen ? ", on us" : " (off right now)"}
+            {!trialOpen
+              ? "Free trial (not offered on this site)"
+              : needsCode
+                ? "Free trial, with an access code"
+                : "Free trial, on us"}
           </label>
           <label className="flex items-center gap-2 py-1.5">
             <input
@@ -173,6 +226,15 @@ export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Pr
             My own Nebius and Tavily keys
           </label>
         </div>
+        {mode === "trial" && needsCode && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <KeyInput id={`${id}-code`} label="Access code" value={accessCode} onChange={setAccessCode} maxLength={200} />
+            <p className="text-xs text-muted sm:col-span-2">
+              Hackathon judges get the code in the testing instructions. No code? Use your own keys, or open a finished
+              case below.
+            </p>
+          </div>
+        )}
         {mode === "byok" && (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <KeyInput id={`${id}-nebius`} label="Nebius API key" value={nebiusApiKey} onChange={setNebiusApiKey} />
@@ -208,6 +270,8 @@ export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Pr
           {/* A disabled button says nothing on its own, so this line says what it's waiting for. */}
           {running || ready ? (
             "A run takes up to about three minutes."
+          ) : !keysIn && mode === "trial" ? (
+            "Add the access code above to run it, or use your own keys."
           ) : !keysIn ? (
             <>
               Add both keys above to run it, or{" "}
@@ -230,7 +294,19 @@ export function QuoteForm({ trialOpen, savesRuns, running, onStart, onStop }: Pr
   );
 }
 
-function KeyInput({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
+function KeyInput({
+  id,
+  label,
+  value,
+  onChange,
+  maxLength = 512,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  maxLength?: number;
+}) {
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-medium">
@@ -243,7 +319,7 @@ function KeyInput({ id, label, value, onChange }: { id: string; label: string; v
         onChange={(e) => onChange(e.target.value)}
         autoComplete="off"
         spellCheck={false}
-        maxLength={512}
+        maxLength={maxLength}
         className={`${FIELD} px-3 py-2 font-mono text-sm`}
       />
     </div>

@@ -17,6 +17,8 @@ const PROBLEMS: Record<string, string> = {
   body_too_large: "That's too long to look up.",
   byok_incomplete: "Both keys are needed: one for Nebius and one for Tavily.",
   trial_disabled: "Free trial runs are off right now. Use your own keys instead.",
+  access_code_required: "The free trial needs an access code. Add it above, or use your own keys.",
+  access_code_wrong: "That access code isn't right. Check it and try again, or use your own keys.",
   owner_keys_missing: "Free trial runs are not set up on this server. Use your own keys instead.",
   daily_budget_spent: "Today's free trial budget is spent. Use your own keys, or come back tomorrow.",
   too_many_runs: "That's a lot of runs from your network in the last hour. Try again a little later.",
@@ -52,7 +54,15 @@ type Action = { type: "reset" } | { type: "event"; event: RunEvent };
 const reducer = (state: RunState, action: Action): RunState =>
   action.type === "reset" ? initialRunState : reduceRun(state, action.event);
 
-export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; savesRuns: boolean }) {
+export function Investigation({
+  trialOpen,
+  needsCode,
+  savesRuns,
+}: {
+  trialOpen: boolean;
+  needsCode: boolean;
+  savesRuns: boolean;
+}) {
   const [run, dispatch] = useReducer(reducer, initialRunState);
   const [status, setStatus] = useState<Status>("idle");
   const [problem, setProblem] = useState<string | null>(null);
@@ -147,6 +157,7 @@ export function Investigation({ trialOpen, savesRuns }: { trialOpen: boolean; sa
       <div className="rounded-2xl border border-line bg-card/60 p-5 shadow-sm sm:p-6">
         <QuoteForm
           trialOpen={trialOpen}
+          needsCode={needsCode}
           savesRuns={savesRuns}
           running={running}
           onStart={start}
