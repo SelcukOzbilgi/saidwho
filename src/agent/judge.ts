@@ -24,13 +24,14 @@ export const JUDGE_PROMPT =
   "correct: the credited person's own work or record has it, or sources from their time credit them and nothing credible credits anyone else. " +
   "misattributed: a page shows the saying, or a variant with the same meaning, from a different, independently attested origin. " +
   "A shared theme, a related older idea, a hypothetical, an unsourced credit or a denial alone is not a different origin. " +
-  "contested: credible sources conflict; a rumour or hearsay is not credible. " +
+  "contested: credible sources conflict; rumour, hearsay and the credited person's own later denial are not such a conflict. " +
   "no_known_source: the credit is unsupported and no other origin is established, even when you know when the saying began to circulate. " +
   "A gap is not evidence: finding no early source supports no_known_source, never misattributed. " +
   "earliest_node: the page with the earliest dated appearance of the saying itself or a variant with the same meaning. " +
   "earliest_date: that appearance's date as YYYY, YYYY-MM or YYYY-MM-DD, or null: the page's cited_source_date when it gives one, else its page_date. " +
+  "Dates are Common Era years; leave out one from another calendar. " +
   "Use when it was published or said in public, not when it was written; mention an earlier writing date in the rationale. " +
-  "Leave out passages that only resemble it and dates the page itself doubts (\"supposedly\", \"reportedly\"). " +
+  "Leave out passages that only resemble it, and dates the page itself doubts (\"supposedly\", \"reportedly\") or your rationale doubts. " +
   "earliest_author: only the person's name, or null if unknown. misattribution_node: the earliest page crediting the usual name, if different. " +
   "Id fields take one page id exactly as given, like n3, or null; never brackets, a list or a range. " +
   "rationale: at most five plain sentences. Call the evidence pages or sources, never nodes, and cite page ids in brackets like [n2] for every claim. " +
