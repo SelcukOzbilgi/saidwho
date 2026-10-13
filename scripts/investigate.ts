@@ -5,7 +5,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-import type { EvidenceNode, RunEvent } from "../src/agent/events";
+import { type EvidenceNode, type RunEvent, standingVerdict } from "../src/agent/events";
 import { estimateCostUsd, MODELS } from "../src/agent/models";
 import { ANSWER_SITES, hostOf, investigate } from "../src/agent/orchestrator";
 import { cleanDate } from "../src/agent/schemas";
@@ -117,8 +117,9 @@ async function main(): Promise<void> {
           console.log(`   expected:  ${evalCase.earliest.author ?? "unknown"}, ${evalCase.earliest.date ?? "?"} (${evalCase.earliest.work})`);
           console.log(`   rationale: ${j.rationale}`);
           if (event.unknownIds.length) {
-            console.log(`   UNSUPPORTED verdict points at ids that are not verified nodes: ${event.unknownIds.join(", ")}`);
+            console.log(`   SET ASIDE: the verdict points at ids that are not verified nodes: ${event.unknownIds.join(", ")}`);
           }
+          for (const fix of event.fixes ?? []) console.log(`   checker ${fix}`);
         }
         break;
       case "budget_exceeded":
@@ -183,10 +184,11 @@ async function main(): Promise<void> {
   });
   saveLog(caseId, ranAt, events);
   const last = events.at(-1);
-  // Exit 0 only when the run reached a verdict, or searched and found nothing to judge.
-  // A run whose every search failed found nothing because it looked nowhere.
+  // Exit 0 only when the run reached a verdict that stands, or searched and found
+  // nothing to judge. A run whose every search failed found nothing because it
+  // looked nowhere.
   const searched = events.some((e) => e.type === "searched");
-  const finished = events.some((e) => e.type === "verdict" || (e.type === "judge_skipped" && searched));
+  const finished = standingVerdict(events) !== null || events.some((e) => e.type === "judge_skipped" && searched);
   if (!finished || last?.type !== "done") process.exitCode = 1;
 }
 

@@ -36,7 +36,7 @@ export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttr
     );
   }
 
-  const { output, tier, unknownIds } = verdict;
+  const { output, tier } = verdict;
   const confirmed = new Set(nodes.filter((n) => n.check.status !== "not_found").map((n) => n.id));
 
   return (
@@ -70,11 +70,6 @@ export function VerdictCard({ verdict, noVerdict, stopped, finished, popularAttr
         <Rationale text={output.rationale} confirmed={confirmed} />
       </p>
 
-      {unknownIds.length > 0 && (
-        <p role="alert" className="mt-4 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm">
-          Read this one with care: it leans on {unknownIds.join(", ")}, which no page backed up.
-        </p>
-      )}
     </section>
   );
 }

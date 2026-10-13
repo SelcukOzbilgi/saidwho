@@ -47,6 +47,11 @@ export const genealogistOutputSchema = z.strictObject({
 
 // The most lineage steps a verdict keeps, and the page shows.
 export const MAX_LINEAGE_STEPS = 6;
+// The longest lineage note, rationale and author name a verdict keeps. Code
+// enforces them (see judge-check.ts); the schema sent to the model asks for them too.
+export const MAX_NOTE_CHARS = 300;
+export const MAX_RATIONALE_CHARS = 1_500;
+export const MAX_JUDGE_FIELD_CHARS = 200;
 
 // One step in how the saying got to the form people share: where it first
 // appears, then each place its wording, language or credit changed.
@@ -58,18 +63,40 @@ const lineageStepSchema = z.strictObject({
   note: z.string(),
 });
 
+// The rationale comes first, so the model writes its reasons before the label
+// and the label follows from them.
 export const judgeOutputSchema = z.strictObject({
+  rationale: z.string(),
   verdict: verdictSchema,
+  confidence: z.enum(["low", "medium", "high"]),
   // Node ids such as "n3"; must point at verified evidence.
   earliest_node: z.string().nullable(),
   earliest_author: z.string().nullable(),
   earliest_date: z.string().nullable(),
   misattribution_node: z.string().nullable(),
-  confidence: z.enum(["low", "medium", "high"]),
-  rationale: z.string(),
   // Oldest first.
   lineage: z.array(lineageStepSchema),
 });
+
+// A verdict without the lineage, asked for when a full one ran out of tokens
+// with thinking off, so the lineage can't cost the run its verdict.
+export const compactJudgeOutputSchema = judgeOutputSchema.omit({ lineage: true });
+
+// The same shapes with limits, as sent to the provider: one id per id field,
+// a bounded lineage and bounded text. Outputs are still parsed with the schemas
+// above, so text over a limit is cut in code rather than failing the call.
+const nodeId = z.string().regex(/^n[0-9]+$/);
+const boundedText = (max: number) => z.string().max(max);
+const boundedLineageStep = lineageStepSchema.extend({ node: nodeId, note: boundedText(MAX_NOTE_CHARS) });
+export const boundedJudgeOutputSchema = judgeOutputSchema.extend({
+  rationale: boundedText(MAX_RATIONALE_CHARS),
+  earliest_node: nodeId.nullable(),
+  earliest_author: boundedText(MAX_JUDGE_FIELD_CHARS).nullable(),
+  earliest_date: boundedText(MAX_JUDGE_FIELD_CHARS).nullable(),
+  misattribution_node: nodeId.nullable(),
+  lineage: z.array(boundedLineageStep).max(MAX_LINEAGE_STEPS),
+});
+export const boundedCompactJudgeOutputSchema = boundedJudgeOutputSchema.omit({ lineage: true });
 
 // A verdict as events carry it. Runs saved before the judge traced the lineage
 // have none, so the field is optional here, though the model must always give it.

@@ -1,4 +1,4 @@
-import type { EvidenceNode, RunEvent } from "../agent/events";
+import { type EvidenceNode, type RunEvent, verdictStands } from "../agent/events";
 import { estimateCostUsd, MODELS, type TokenUsage } from "../agent/models";
 import type { JudgeOutput } from "../agent/schemas";
 
@@ -35,8 +35,9 @@ export type RunState = {
   nodes: EvidenceNode[];
   // Works the Genealogist went looking for, in the order it did.
   leads: { round: number; fromNode: string; work: string; query: string }[];
-  // The verdict that stands: the last one, when a second judge ran.
-  verdict: { tier: Tier; output: JudgeOutput; unknownIds: string[] } | null;
+  // The verdict that stands: the last one whose ids all check out. A verdict
+  // citing a page that wasn't confirmed is logged but never shown as the answer.
+  verdict: { tier: Tier; output: JudgeOutput } | null;
   // Why no verdict came, when none did.
   noVerdict: string | null;
   stopped: "budget" | "aborted" | null;
@@ -82,6 +83,9 @@ const VERDICT_WORDS: Record<JudgeOutput["verdict"], string> = {
 };
 
 const usd = (value: number): string => `$${value.toFixed(4)}`;
+const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+// Why there is no verdict when every one the judge gave was set aside.
+const SET_ASIDE = "the Judge's verdict cited pages that weren't confirmed, so it was set aside";
 
 type Spend = { tier: Tier; costUsd: number; usageKnown: boolean; tokens?: TokenUsage };
 
@@ -140,7 +144,9 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         log: log("Planner", `Planning failed: ${event.reason}`, "bad", event),
       };
     case "escalated": {
-      const how = event.from === event.to ? `again on ${event.to} with thinking off` : `again on ${event.to}`;
+      const how =
+        (event.from === event.to && !event.thinking ? `again on ${event.to} with thinking off` : `again on ${event.to}`) +
+        (event.compact ? ", without the lineage" : "");
       const agent: Agent = event.step === "plan" ? "Planner" : event.step === "read" ? "Reader" : "Judge";
       const page = event.url ? ` (${hostOf(event.url)})` : "";
       return { ...state, log: log(agent, `Trying ${how}${page}: ${event.reason}`, "warn") };
@@ -207,19 +213,28 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
     case "judge_skipped":
       return { ...state, phase: "judging", noVerdict: event.reason, log: log("Judge", `No verdict: ${event.reason}`, "warn") };
     case "verdict": {
-      const unsupported = event.unknownIds.length ? `, but it cites ${event.unknownIds.join(", ")}, which were not confirmed` : "";
+      const words = `${VERDICT_WORDS[event.verdict.verdict]}, ${event.verdict.confidence} confidence`;
+      if (!verdictStands(event)) {
+        return {
+          ...state,
+          ...spent(event),
+          phase: "judging",
+          noVerdict: state.verdict ? null : SET_ASIDE,
+          log: log("Judge", `Set aside a verdict (${words}): it cites ${event.unknownIds.join(", ")}, which were not confirmed`, "bad", event),
+        };
+      }
+      // What code changed about the earliest date or page follows the verdict.
+      const entries = log("Judge", `Verdict: ${words}`, "good", event);
+      for (const fix of event.fixes ?? []) {
+        entries.push({ id: entries.length, agent: "Checker", tier: null, text: capitalize(fix), tone: "warn", costUsd: null });
+      }
       return {
         ...state,
         ...spent(event),
         phase: "judging",
-        verdict: { tier: event.tier, output: event.verdict, unknownIds: event.unknownIds },
+        verdict: { tier: event.tier, output: event.verdict },
         noVerdict: null,
-        log: log(
-          "Judge",
-          `Verdict: ${VERDICT_WORDS[event.verdict.verdict]}, ${event.verdict.confidence} confidence${unsupported}`,
-          event.unknownIds.length ? "warn" : "good",
-          event,
-        ),
+        log: entries,
       };
     }
     case "judge_failed":

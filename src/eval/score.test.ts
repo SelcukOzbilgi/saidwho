@@ -44,7 +44,8 @@ describe("scoreRun", () => {
   it("scores the verdict that stands, not the first one", () => {
     const events = [verdict({ verdict: "correct" }, ["n9"]), verdict({ verdict: "misattributed" }), done];
     expect(scoreRun(INSANITY, events)).toMatchObject({ verdict: "misattributed", verdictRight: true, unsupported: false });
-    expect(scoreRun(INSANITY, events.slice(0, 1))).toMatchObject({ verdict: "correct", verdictRight: false, unsupported: true });
+    // A verdict citing an unconfirmed page never stands, so the run has none.
+    expect(scoreRun(INSANITY, events.slice(0, 1))).toMatchObject({ verdict: null, verdictRight: false, earliest: "missing", unsupported: true });
   });
 
   it("tells a date older than the known one from a later one and a missing one", () => {
@@ -156,7 +157,7 @@ describe("summarize", () => {
       runs: 3,
       verdictsRight: 2,
       dated: 2,
-      earliest: { match: 1, older: 1, later: 0, missing: 0 },
+      earliest: { match: 1, older: 0, later: 0, missing: 1 },
       unsupported: 1,
       capped: 0,
       nebiusUsd: 0.012,
