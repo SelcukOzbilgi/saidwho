@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { runEventSchema } from "../agent/events";
+import { codeFingerprintSchema } from "../eval/fingerprint";
 import { initialRunState, reduceRun, type RunState } from "../lib/run-state";
 import beTheChange from "./be-the-change.json";
 import enHakikiMursit from "./en-hakiki-mursit.json";
@@ -21,10 +22,14 @@ import thinkYouCan from "./think-you-can.json";
 const caseLogSchema = z.strictObject({
   caseId: z.string(),
   ranAt: z.iso.datetime(),
+  // Logs pnpm eval writes also say which commit ran; pnpm investigate's don't.
+  code: codeFingerprintSchema.nullable().optional(),
   events: z.array(runEventSchema),
 });
 
 export type ExampleCase = z.infer<typeof caseLogSchema> & { run: RunState };
+
+export const parseCaseLog = (raw: unknown): z.infer<typeof caseLogSchema> => caseLogSchema.parse(raw);
 
 // A log that doesn't parse fails the build rather than showing a broken case.
 export const CASES: readonly ExampleCase[] = [
@@ -39,7 +44,7 @@ export const CASES: readonly ExampleCase[] = [
   fearItself,
   enHakikiMursit,
 ].map((raw) => {
-  const log = caseLogSchema.parse(raw);
+  const log = parseCaseLog(raw);
   return { ...log, run: log.events.reduce(reduceRun, initialRunState) };
 });
 

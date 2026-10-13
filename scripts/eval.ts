@@ -13,6 +13,11 @@
 // would hit, or after three spoiled runs in a row.
 // --report only rebuilds eval/results.md from the logs already there.
 //
+// Each log records the commit the eval ran on and, when src/ had changes that
+// weren't committed, a short hash of them, and the results say which code each
+// setup's scores came from. Logs from before this have no commit and show as not
+// recorded. Without git, or outside a checkout, the commit is null too.
+//
 // Searches are cached in .runs/eval/search-cache/, page text included, which is
 // why it stays out of git. The same query then gets the same pages in every
 // setup, and a search is paid for once. Each run still reports the credits its
@@ -20,11 +25,15 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-import { type RunEvent, runEventSchema } from "../src/agent/events";
+import type { RunEvent } from "../src/agent/events";
 import { CASCADE, everyStepOn, MODELS, type ModelPolicy } from "../src/agent/models";
 import { ANSWER_SITES, hostOf, investigate } from "../src/agent/orchestrator";
 import { type EvalCase, parseEvalCases } from "../src/eval/cases";
+import { type CodeFingerprint, codeLabel, describeCode } from "../src/eval/fingerprint";
+import { codeFingerprint, gitIn } from "../src/eval/git-fingerprint";
+import { readRunLog, type RunLog } from "../src/eval/logs";
 import { renderResults } from "../src/eval/report";
 import { providerTrouble, type RunScore, scoreRun, worthScoring } from "../src/eval/score";
 import { parseServerEnv, requireOwnerKeys } from "../src/lib/server/env-schema";
@@ -47,6 +56,7 @@ const SETUPS: Record<string, { label: string; about: string; models: ModelPolicy
   lightning: { label: "All Lightning", about: "every step on Nemotron 3.5 Lightning.", models: everyStepOn(MODELS.lightning) },
 };
 
+const REPO = fileURLToPath(new URL("../", import.meta.url));
 const RUNS = new URL("../.runs/eval/", import.meta.url);
 const CACHE = new URL("search-cache/", RUNS);
 const logUrl = (setup: string, caseId: string) => new URL(`${setup}/${caseId}.json`, RUNS);
@@ -64,12 +74,7 @@ function writeWhole(url: URL, text: string): void {
   renameSync(tmp, url);
 }
 
-function readLog(setup: string, caseId: string): { ranAt: string; events: RunEvent[] } | null {
-  const url = logUrl(setup, caseId);
-  if (!existsSync(url)) return null;
-  const log = JSON.parse(readFileSync(url, "utf8")) as { ranAt: string; events: unknown[] };
-  return { ranAt: log.ranAt, events: log.events.map((e) => runEventSchema.parse(e)) };
-}
+const readLog = (setup: string, caseId: string): RunLog | null => readRunLog(logUrl(setup, caseId));
 
 // Only searches that worked are kept; a failed one is tried again next time.
 function cachedSearch(tavily: TavilyClient, spent: { credits: number }): TavilyClient {
@@ -102,13 +107,15 @@ function writeResults(cases: readonly EvalCase[], setups: readonly string[]): vo
   const ran = setups
     .map((setup) => {
       const scores: RunScore[] = [];
+      const codes: (CodeFingerprint | null)[] = [];
       for (const c of cases) {
         const log = readLog(setup, c.id);
         if (!log) continue;
         ranAt.push(log.ranAt.slice(0, 10));
+        codes.push(log.code);
         scores.push(scoreRun(c, log.events));
       }
-      return { ...SETUPS[setup], scores };
+      return { ...SETUPS[setup], code: describeCode(codes), scores };
     })
     .filter((p) => p.scores.length > 0);
   const days = [...new Set(ranAt)].sort();
@@ -121,6 +128,8 @@ function writeResults(cases: readonly EvalCase[], setups: readonly string[]): vo
     ...ran.map((p) => `- ${p.label}: ${p.about}`),
     "",
     "Setups that searched for the same query got the same pages, from a shared cache. The Tavily credits are what each setup's searches cost when they were made.",
+    "",
+    `The Code (commit) row gives the commit each setup's runs came from, with a count when they came from more than one. "-dirty-" and a hash mean src/ had changes that weren't committed; runs with the same hash ran the same changes. "${codeLabel(null)}" means the run was logged before the commit was recorded.`,
     "",
     "A ✓ after a verdict means it matches the known answer, and after a year that it's within 2 years of the known earliest date. A year marked (older) is earlier than the known date. That is either a find or a misread date, so those are checked by hand.",
     "",
@@ -144,6 +153,8 @@ async function main(): Promise<void> {
   const env = parseServerEnv(process.env);
   const keys = requireOwnerKeys(env, ["NEBIUS_API_KEY", "TAVILY_API_KEY"]);
   const nebius = createNebiusClient({ apiKey: keys.NEBIUS_API_KEY, baseURL: env.NEBIUS_BASE_URL });
+  const code = codeFingerprint(gitIn(REPO));
+  console.log(`Code: ${codeLabel(code)}`);
   const spent = { credits: 0 };
   const tavily = cachedSearch(createTavilyClient({ apiKey: keys.TAVILY_API_KEY }), spent);
   mkdirSync(CACHE, { recursive: true });
@@ -179,7 +190,7 @@ async function main(): Promise<void> {
         console.log(`${setup.padEnd(10)} ${c.id.padEnd(24)} crashed: ${why}`);
         continue;
       }
-      const log = `${JSON.stringify({ caseId: c.id, ranAt, events }, null, 2)}\n`;
+      const log = `${JSON.stringify({ caseId: c.id, ranAt, code, events }, null, 2)}\n`;
       const score = scoreRun(c, events);
       // Every attempt is paid for, scored or not.
       nebiusUsd += score.nebiusUsd;

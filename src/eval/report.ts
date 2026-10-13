@@ -3,7 +3,8 @@ import { type RunScore, summarize, YEAR_TOLERANCE } from "./score";
 
 // Turns scored runs into eval/results.md: a summary per setup, then one row per quote.
 
-export type PolicyRuns = { label: string; scores: readonly RunScore[] };
+// code says which commit the runs came from (see describeCode in fingerprint.ts).
+export type PolicyRuns = { label: string; code: string; scores: readonly RunScore[] };
 
 const usd = (value: number, digits: number): string => `$${value.toFixed(digits)}`;
 const yearOf = (date: string | null): string => date?.slice(0, 4) ?? "no date";
@@ -31,6 +32,7 @@ export function renderResults(cases: readonly EvalCase[], policies: readonly Pol
     row(["", ...policies.map((p) => p.label)]),
     row(["---", ...policies.map(() => "---")]),
     row(["Quotes run", ...per((s) => String(s.runs))]),
+    row(["Code (commit)", ...policies.map((p) => p.code)]),
     row(["Verdict right", ...per((s) => `${s.verdictsRight} of ${s.runs}`)]),
     row([`Earliest year within ${YEAR_TOLERANCE} years of the known one`, ...per((s) => `${s.earliest.match} of ${s.dated}`)]),
     row(["Earlier than the known date (checked by hand)", ...per((s) => String(s.earliest.older))]),
