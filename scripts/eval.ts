@@ -1,5 +1,11 @@
 // Runs the test set through the agent and scores each run against the known answer.
-// Run: pnpm eval [--setup cascade,ultra,lightning] [--only id,id] [--report]
+// Run: pnpm eval [--set main|holdout] [--setup cascade,ultra,lightning] [--only id,id] [--report]
+// Any other argument stops the eval, so a typo can't run the main set by mistake.
+//
+// --set picks the quotes: main (eval/quotes.jsonl, the default) or holdout
+// (eval/holdout.jsonl, see eval/README.md). Each set has its own logs and its own
+// results file, so the paths below are for main; holdout's logs go to
+// .runs/eval-holdout/ and its scores to eval/holdout-results.md.
 //
 // Each setup runs the same quotes with the same excluded sites as pnpm investigate.
 // A run's events go to .runs/eval/<setup>/<id>.json, in the form src/cases/ keeps
@@ -11,7 +17,7 @@
 // outage it didn't make up for) isn't scored: its events go to <id>.failed.json for
 // a look, and it runs again next time. The eval stops at an error every later run
 // would hit, or after three spoiled runs in a row.
-// --report only rebuilds eval/results.md from the logs already there.
+// --report only rebuilds the set's results file from the logs already there.
 //
 // Each log records the commit the eval ran on and, when src/ had changes that
 // weren't committed, a short hash of them, and the results say which code each
@@ -19,9 +25,9 @@
 // recorded. Without git, or outside a checkout, the commit is null too.
 //
 // Searches are cached in .runs/eval/search-cache/, page text included, which is
-// why it stays out of git. The same query then gets the same pages in every
-// setup, and a search is paid for once. Each run still reports the credits its
-// searches cost when they were made, which is what a live run would spend.
+// why it stays out of git. Both sets share it. The same query then gets the same
+// pages in every setup, and a search is paid for once. Each run still reports the
+// credits its searches cost when they were made, which is what a live run would spend.
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
@@ -30,12 +36,14 @@ import { fileURLToPath } from "node:url";
 import type { RunEvent } from "../src/agent/events";
 import { CASCADE, everyStepOn, MODELS, type ModelPolicy } from "../src/agent/models";
 import { ANSWER_SITES, hostOf, investigate } from "../src/agent/orchestrator";
+import { parseEvalArgs } from "../src/eval/args";
 import { type EvalCase, parseEvalCases } from "../src/eval/cases";
 import { type CodeFingerprint, codeLabel, describeCode } from "../src/eval/fingerprint";
 import { codeFingerprint, gitIn } from "../src/eval/git-fingerprint";
-import { readRunLog, type RunLog } from "../src/eval/logs";
-import { renderResults } from "../src/eval/report";
+import { type LogPaths, logPaths, readRunLog, type RunLog } from "../src/eval/logs";
+import { renderIntro, renderResults } from "../src/eval/report";
 import { providerTrouble, type RunScore, scoreRun, worthScoring } from "../src/eval/score";
+import type { EvalSet } from "../src/eval/sets";
 import { parseServerEnv, requireOwnerKeys } from "../src/lib/server/env-schema";
 import { createNebiusClient } from "../src/lib/server/providers/nebius";
 import { createTavilyClient, type TavilyClient } from "../src/lib/server/providers/tavily";
@@ -57,10 +65,8 @@ const SETUPS: Record<string, { label: string; about: string; models: ModelPolicy
 };
 
 const REPO = fileURLToPath(new URL("../", import.meta.url));
-const RUNS = new URL("../.runs/eval/", import.meta.url);
-const CACHE = new URL("search-cache/", RUNS);
-const logUrl = (setup: string, caseId: string) => new URL(`${setup}/${caseId}.json`, RUNS);
-const failedLogUrl = (setup: string, caseId: string) => new URL(`${setup}/${caseId}.failed.json`, RUNS);
+const RUNS = new URL("../.runs/", import.meta.url);
+const CACHE = new URL("eval/search-cache/", RUNS);
 // Spoiled runs in a row before the eval stops, so an outage doesn't use up the run.
 const MAX_SPOILED_IN_A_ROW = 3;
 
@@ -74,7 +80,7 @@ function writeWhole(url: URL, text: string): void {
   renameSync(tmp, url);
 }
 
-const readLog = (setup: string, caseId: string): RunLog | null => readRunLog(logUrl(setup, caseId));
+const readLog = (paths: LogPaths, setup: string, caseId: string): RunLog | null => readRunLog(paths.log(setup, caseId));
 
 // Only searches that worked are kept; a failed one is tried again next time.
 function cachedSearch(tavily: TavilyClient, spent: { credits: number }): TavilyClient {
@@ -94,22 +100,15 @@ function cachedSearch(tavily: TavilyClient, spent: { credits: number }): TavilyC
   };
 }
 
-function flag(name: string): string[] | null {
-  const i = process.argv.indexOf(`--${name}`);
-  if (i === -1) return null;
-  const values = (process.argv[i + 1] ?? "").split(",").filter(Boolean);
-  if (values.length === 0) throw new Error(`--${name} needs a comma-separated list`);
-  return values;
-}
-
-function writeResults(cases: readonly EvalCase[], setups: readonly string[]): void {
+function writeResults(set: EvalSet, cases: readonly EvalCase[], setups: readonly string[]): void {
+  const paths = logPaths(RUNS, set);
   const ranAt: string[] = [];
   const ran = setups
     .map((setup) => {
       const scores: RunScore[] = [];
       const codes: (CodeFingerprint | null)[] = [];
       for (const c of cases) {
-        const log = readLog(setup, c.id);
+        const log = readLog(paths, setup, c.id);
         if (!log) continue;
         ranAt.push(log.ranAt.slice(0, 10));
         codes.push(log.code);
@@ -118,47 +117,35 @@ function writeResults(cases: readonly EvalCase[], setups: readonly string[]): vo
       return { ...SETUPS[setup], code: describeCode(codes), scores };
     })
     .filter((p) => p.scores.length > 0);
-  const days = [...new Set(ranAt)].sort();
-  const when = days.length === 0 ? "" : days.length === 1 ? ` on ${days[0]}` : ` from ${days[0]} to ${days.at(-1)}`;
-  const intro = [
-    "# Eval results",
-    "",
-    `Written by \`pnpm eval\` from runs made${when}. Each quote in [quotes.jsonl](quotes.jsonl) was run with the sites that already wrote up its answer left out: Quote Investigator, Wikiquote, Wikipedia and the pages the answer comes from.`,
-    "",
-    ...ran.map((p) => `- ${p.label}: ${p.about}`),
-    "",
-    "Setups that searched for the same query got the same pages, from a shared cache. The Tavily credits are what each setup's searches cost when they were made.",
-    "",
-    `The Code (commit) row gives the commit each setup's runs came from, with a count when they came from more than one. "-dirty-" and a hash mean src/ had changes that weren't committed; runs with the same hash ran the same changes. "${codeLabel(null)}" means the run was logged before the commit was recorded.`,
-    "",
-    "A ✓ after a verdict means it matches the known answer, and after a year that it's within 2 years of the known earliest date. A year marked (older) is earlier than the known date. That is either a find or a misread date, so those are checked by hand.",
-    "",
-  ];
-  writeFileSync(new URL("../eval/results.md", import.meta.url), `${intro.join("\n")}\n${renderResults(cases, ran)}`);
-  console.log("Results: eval/results.md");
+  const results = new URL(`../eval/${set.results}`, import.meta.url);
+  writeFileSync(results, `${renderIntro(set, ranAt, ran)}\n${renderResults(cases, ran)}`);
+  console.log(`Results: eval/${set.results}`);
 }
 
 async function main(): Promise<void> {
-  const all = parseEvalCases(readFileSync(new URL("../eval/quotes.jsonl", import.meta.url), "utf8"));
-  const only = flag("only");
+  const args = parseEvalArgs(process.argv.slice(2));
+  const { set } = args;
+  const paths = logPaths(RUNS, set);
+  const all = parseEvalCases(readFileSync(new URL(`../eval/${set.file}`, import.meta.url), "utf8"));
+  const { only } = args;
   const unknownIds = (only ?? []).filter((id) => !all.some((c) => c.id === id));
-  if (unknownIds.length) throw new Error(`no eval case with id ${unknownIds.join(", ")}`);
+  if (unknownIds.length) throw new Error(`no eval case in ${set.file} with id ${unknownIds.join(", ")}`);
   const cases = only ? all.filter((c) => only.includes(c.id)) : all;
-  const setups = flag("setup") ?? Object.keys(SETUPS);
+  const setups = args.setups ?? Object.keys(SETUPS);
   const unknownSetups = setups.filter((s) => !(s in SETUPS));
   if (unknownSetups.length) throw new Error(`no setup called ${unknownSetups.join(", ")}; use ${Object.keys(SETUPS).join(", ")}`);
 
-  if (process.argv.includes("--report")) return writeResults(all, Object.keys(SETUPS));
+  if (args.report) return writeResults(set, all, Object.keys(SETUPS));
 
   const env = parseServerEnv(process.env);
   const keys = requireOwnerKeys(env, ["NEBIUS_API_KEY", "TAVILY_API_KEY"]);
   const nebius = createNebiusClient({ apiKey: keys.NEBIUS_API_KEY, baseURL: env.NEBIUS_BASE_URL });
   const code = codeFingerprint(gitIn(REPO));
-  console.log(`Code: ${codeLabel(code)}`);
+  console.log(`Set: ${set.name} (eval/${set.file})\nCode: ${codeLabel(code)}`);
   const spent = { credits: 0 };
   const tavily = cachedSearch(createTavilyClient({ apiKey: keys.TAVILY_API_KEY }), spent);
   mkdirSync(CACHE, { recursive: true });
-  for (const setup of setups) mkdirSync(new URL(`${setup}/`, RUNS), { recursive: true });
+  for (const setup of setups) mkdirSync(paths.dir(setup), { recursive: true });
 
   let nebiusUsd = 0;
   let failed = 0;
@@ -166,7 +153,7 @@ async function main(): Promise<void> {
   // Quote by quote, every setup in turn, so the setups search on the same day.
   runs: for (const c of cases) {
     for (const setup of setups) {
-      if (readLog(setup, c.id)) continue;
+      if (readLog(paths, setup, c.id)) continue;
       const events: RunEvent[] = [];
       const ranAt = new Date().toISOString();
       try {
@@ -197,7 +184,7 @@ async function main(): Promise<void> {
       if (!worthScoring(events)) {
         failed++;
         spoiledInARow++;
-        writeWhole(failedLogUrl(setup, c.id), log);
+        writeWhole(paths.failed(setup, c.id), log);
         const trouble = providerTrouble(events);
         console.log(`${setup.padEnd(10)} ${c.id.padEnd(24)} not scored, the provider failed (${trouble.kinds.join(", ")}); it runs again next time`);
         if (trouble.lasting || spoiledInARow === MAX_SPOILED_IN_A_ROW) {
@@ -207,8 +194,8 @@ async function main(): Promise<void> {
         continue;
       }
       spoiledInARow = 0;
-      writeWhole(logUrl(setup, c.id), log);
-      rmSync(failedLogUrl(setup, c.id), { force: true });
+      writeWhole(paths.log(setup, c.id), log);
+      rmSync(paths.failed(setup, c.id), { force: true });
       const verdict = score.verdict ? `${score.verdict} ${score.verdictRight ? "✓" : "✗"}` : "no verdict ✗";
       const date = `${score.earliestDate ?? "no date"}${score.earliest === "match" ? " ✓" : score.earliest === "older" ? " (older)" : ""}`;
       console.log(
@@ -218,7 +205,7 @@ async function main(): Promise<void> {
     }
   }
   console.log(`\nThis eval spent $${nebiusUsd.toFixed(4)} of Nebius (estimated) and ${spent.credits} Tavily credits; cached searches cost nothing.`);
-  writeResults(all, Object.keys(SETUPS));
+  writeResults(set, all, Object.keys(SETUPS));
   if (failed) process.exitCode = 1;
 }
 
