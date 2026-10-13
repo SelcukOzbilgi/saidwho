@@ -11,6 +11,7 @@ import { KnownAnswer } from "@/components/known-answer";
 import { SiteFooter } from "@/components/site-footer";
 import { HEADLINE } from "@/components/verdict-card";
 import { parseEvalCases } from "@/eval/cases";
+import { plural } from "@/lib/plural";
 
 // Every case page is built ahead of time, so the test set is read at build time only.
 export const dynamicParams = false;
@@ -66,9 +67,12 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
         </Link>
       </nav>
 
+      {/* The run log's first line names the sites that were left out. */}
       <p className="text-sm text-muted">
-        A finished case, run on {ranOn}.
-        {started && ` Left out of the search, so the trail had to be found elsewhere: ${started.excludeDomains.join(", ")}.`}
+        A recorded run from {ranOn}
+        {started && started.excludeDomains.length > 0
+          ? `, with ${plural(started.excludeDomains.length, "site")} that already ${started.excludeDomains.length === 1 ? "answers" : "answer"} it kept out of the search.`
+          : "."}
       </p>
 
       <CaseReplay

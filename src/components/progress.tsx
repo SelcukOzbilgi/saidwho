@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { plural } from "../lib/plural";
 import type { Phase, RunState } from "../lib/run-state";
 
@@ -23,9 +25,9 @@ type Props = Pick<
   | "unknownCostCalls"
   | "tavilyCredits"
   | "seconds"
-> & { running: boolean };
+> & { running: boolean; aside?: ReactNode };
 
-export function Progress({ running, phase, finished, searches, pages, readUrls, nodes, leads, ...cost }: Props) {
+export function Progress({ running, aside, phase, finished, searches, pages, readUrls, nodes, leads, ...cost }: Props) {
   const at = STEPS.findIndex((step) => step.phase === phase);
   const confirmed = nodes.filter((n) => n.check.status !== "not_found").length;
   const detail: Partial<Record<Phase, string>> = {
@@ -57,7 +59,10 @@ export function Progress({ running, phase, finished, searches, pages, readUrls, 
           );
         })}
       </ol>
-      <Cost {...cost} />
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <Cost {...cost} />
+        {aside}
+      </div>
     </div>
   );
 }

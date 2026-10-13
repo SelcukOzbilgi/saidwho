@@ -14,7 +14,7 @@ type Props = {
   quoteIsHeading?: boolean;
   // Read new log lines aloud; on for a live run, off for a replay.
   announce?: boolean;
-  // Shown under the progress bar.
+  // Shown beside the cost line, under the progress bar.
   note?: ReactNode;
   // Shown under the verdict.
   afterVerdict?: ReactNode;
@@ -36,8 +36,7 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
         </p>
       </header>
 
-      <Progress running={running} {...run} />
-      {note}
+      <Progress running={running} {...run} aside={note} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
