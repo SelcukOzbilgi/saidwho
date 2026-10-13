@@ -199,9 +199,11 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
     case "node_added": {
       const { node } = event;
       const text =
-        node.check.status === "not_found"
-          ? `Crossed out ${node.id}: the reader's sentence is not on ${node.host}`
-          : `Confirmed ${node.id} on ${node.host}${node.check.status === "near" ? " (close match)" : ""}`;
+        node.check.reason === "not_the_saying"
+          ? `Crossed out ${node.id}: the reader's sentence on ${node.host} is not the saying`
+          : node.check.status === "not_found"
+            ? `Crossed out ${node.id}: the reader's sentence is not on ${node.host}`
+            : `Confirmed ${node.id} on ${node.host}${node.check.status === "near" ? " (close match)" : ""}`;
       return {
         ...state,
         nodes: [...state.nodes, node],

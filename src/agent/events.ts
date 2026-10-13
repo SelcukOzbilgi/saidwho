@@ -26,10 +26,17 @@ export const evidenceNodeSchema = z.strictObject({
   url: z.string(),
   host: z.string(),
   title: z.string(),
-  check: z.strictObject({ status: z.enum(["exact", "near", "not_found"]), score: z.number() }),
+  // exact and near are after normalization (see checkSnippet). reason is set
+  // when a snippet that is on the page was crossed out for not being the
+  // saying; runs saved before that check have no key.
+  check: z.strictObject({
+    status: z.enum(["exact", "near", "not_found"]),
+    score: z.number(),
+    reason: z.literal("not_the_saying").optional(),
+  }),
   // What the reader returned, before any claim was checked against the page.
   reader: readerOutputSchema,
-  // Reader claims kept only when the page mentions them (see mentionsName/mentionsYear).
+  // Reader claims kept only when the page backs them (see mentionsName, keepsPageDate, keepsCitedDate).
   attributedTo: z.string().nullable(),
   pageDate: z.string().nullable(),
   citedSourceDate: z.string().nullable(),
@@ -57,6 +64,9 @@ export const runEventSchema = z.discriminatedUnion("type", [
     // The planner's name for the usual credit, only when the visitor gave none;
     // null otherwise. Runs saved before this field have no key.
     foundAttribution: z.string().nullable().optional(),
+    // Queries the planner wrote that can't be a search (see cleanQuery), never
+    // sent. Only when there are some.
+    rejectedQueries: z.array(z.string()).optional(),
   }),
   // A failed plan is tried once more, on Super with thinking off, unless the
   // failure would repeat (a rejected key, no credits, a rate limit, a refused
@@ -102,6 +112,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
     ...spendSchema,
     round: z.number(),
     leads: z.array(z.strictObject({ fromNode: z.string(), work: z.string(), query: z.string() })),
+    // Lead queries that can't be a search, dropped with their leads. Only when there are some.
+    rejectedQueries: z.array(z.string()).optional(),
   }),
   // A failed trace is not tried again: the run already has evidence to judge.
   z.strictObject({ type: z.literal("trace_failed"), ...spendSchema, round: z.number(), reason: z.string() }),

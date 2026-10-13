@@ -14,6 +14,7 @@ import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { checkVerdict, retryNote } from "./judge-check";
 import { mayHoldWork } from "./library-pages";
+import { broaden, cleanQuery, queryKey, shortenQuotedSpans } from "./queries";
 import {
   boundedCompactJudgeOutputSchema,
   boundedJudgeOutputSchema,
@@ -25,7 +26,7 @@ import {
   readerOutputSchema,
 } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult } from "./structured";
-import { checkSnippet, mentionsName, mentionsYear, normalizeText } from "./verifier";
+import { carriesSaying, checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText, type Span } from "./verifier";
 
 // Sites that already wrote up where famous quotes come from. The eval excludes
 // them so the agent has to find the trail itself.
@@ -250,6 +251,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "The search engine does not support operators such as site:, before:, after:, OR or year ranges; write plain queries. " +
       "Start with the saying in double quotes, then queries about its origin and first appearance " +
       "(for example: earliest newspaper, book or speech where it appeared), and one per candidate author. " +
+      "Pages often word a long saying a little differently, so when it is longer than ten words, " +
+      "quote only a distinctive part of six to ten words in those later queries, or leave the quotes off. " +
       "usual_attribution: only when no credit is given, the person the saying is most often credited to, name only; " +
       "null when a credit is given or you don't know one.",
     user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language}`,
@@ -267,9 +270,19 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // With no name given, the planner's name for the usual credit stands in for it.
   const foundAttribution = popularAttribution === null && plan.ok ? cleanName(plan.data.usual_attribution) : null;
   const credit = popularAttribution ?? foundAttribution;
-  // The exact phrase always goes first, even if the planner leaves it out (or returns nothing).
-  const queries = [`"${quote}"`, ...(plan.ok ? plan.data.queries : [])]
-    .filter((q, i, all) => all.findIndex((other) => normalizeText(other) === normalizeText(q)) === i)
+  // The exact phrase always goes first, even if the planner leaves it out (or
+  // returns nothing). The planner's queries are shaped and checked first: a long
+  // quoted span in one is cut to a distinctive part, so a query that is long
+  // only because it quotes a whole passage still goes, and one that can't be a
+  // search is dropped and listed in the planned event.
+  const rejectedQueries: string[] = [];
+  const plannedQueries = (plan.ok ? plan.data.queries : []).flatMap((raw) => {
+    const query = cleanQuery(shortenQuotedSpans(raw));
+    if (query === null) rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
+    return query === null ? [] : [query];
+  });
+  const queries = [`"${quote}"`, ...plannedQueries]
+    .filter((q, i, all) => all.findIndex((other) => queryKey(other) === queryKey(q)) === i)
     .slice(0, MAX_QUERIES);
   if (plan.ok) {
     onEvent({
@@ -279,6 +292,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       candidateAuthors: plan.data.candidate_authors,
       queries,
       foundAttribution,
+      ...(rejectedQueries.length > 0 && { rejectedQueries }),
     });
   }
 
@@ -315,9 +329,17 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     const kept = textsOf.get(url) ?? [];
     if (!kept.includes(text)) textsOf.set(url, [...kept, text]);
   };
-  for (const query of queries) {
+  // Searches run one at a time, so a quoted query that finds nothing is followed
+  // straight away by a looser one (see broaden), once per planned query. It
+  // takes the place of the last planned query, so the run never searches more
+  // than MAX_QUERIES times.
+  const toRun = [...queries];
+  for (let i = 0; i < toRun.length && i < MAX_QUERIES; i++) {
     if (mustStop()) return finish();
+    const query = toRun[i];
     const results = await search(query);
+    const wider = results?.length === 0 && queries.includes(query) ? broaden(query) : null;
+    if (wider && !toRun.some((q) => queryKey(q) === queryKey(wider))) toRun.splice(i + 1, 0, wider);
     // Only full page text counts. `content` is Tavily's short summary, and a snippet
     // checked against a summary was never checked against the page.
     for (const r of results ?? []) {
@@ -371,10 +393,6 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         "Use cited_source only for an earlier work this page itself names as where the saying appeared."
       : "";
     const pageText = `${page.title}\n${page.text}`;
-    const keepDate = (raw: string | null) => {
-      const date = cleanDate(raw);
-      return date && mentionsYear(date, pageText) ? date : null;
-    };
 
     // Whether the last reading found no quote on the page, as opposed to
     // finding one or failing to read it.
@@ -415,15 +433,28 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       }
       const { exact_snippet: snippet, attributed_to: credit } = read.data;
 
-      const citedSourceDate = keepDate(read.data.cited_source_date);
-      const pageDate = keepDate(read.data.page_date);
+      // The snippet must be on the page and must be the saying, not just any
+      // sentence from it ("Finally,"). Either failure crosses the node out.
+      const match = matchSnippet(snippet, page.text);
+      const onSaying = carriesSaying(snippet, phrases);
+      const check: EvidenceNode["check"] =
+        match.status !== "not_found" && !onSaying
+          ? { status: "not_found", score: match.score, reason: "not_the_saying" }
+          : { status: match.status, score: match.score };
+      // Dates are kept only where they sit on the page (see keepsPageDate).
+      const keepDate = (raw: string | null, placed: (date: string, span: Span | null) => boolean) => {
+        const date = cleanDate(raw);
+        return date && placed(date, match.span) ? date : null;
+      };
+      const citedSourceDate = keepDate(read.data.cited_source_date, (date, span) => keepsCitedDate(date, page, span, read.data.cited_source));
+      const pageDate = keepDate(read.data.page_date, (date, span) => keepsPageDate(date, page, span));
       const node: EvidenceNode = {
         id,
         url,
         host,
         // Titles come from the page too, so they get the same cap.
         title: page.title.slice(0, MAX_FIELD_CHARS),
-        check: checkSnippet(snippet, page.text),
+        check,
         reader: read.data,
         attributedTo: credit && mentionsName(credit, pageText) ? credit : null,
         pageDate,
@@ -432,14 +463,20 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         foundVia: lead ? { node: lead.fromNode, work: lead.work } : null,
       };
       report("evidence");
-      return { node, retry: node.check.status === "not_found" ? "the snippet is not on the page" : null };
+      const retry =
+        check.reason === "not_the_saying"
+          ? "the snippet is not the saying"
+          : check.status === "not_found"
+            ? "the snippet is not on the page"
+            : null;
+      return { node, retry };
     };
 
     // Lightning reads every page. Super reads a page again only when Lightning's
     // call failed, or it returned a snippet the Verifier could not find, which is
-    // how a "tidied" quote looks. The second reading's node replaces the first;
-    // when it has none, the first (crossed-out) node stays. Either way a page
-    // gives at most one node.
+    // how a "tidied" quote looks, or one that isn't the saying. The second
+    // reading's node replaces the first; when it has none, the first
+    // (crossed-out) node stays. Either way a page gives at most one node.
     const first = await readWith(models.read);
     let node = first.node;
     if (first.retry && !mustStop(false)) {
@@ -520,21 +557,34 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     }
 
     // Leads go into prompts, events and searches, so they are checked and capped
-    // like reader fields. One pointing at a node it wasn't shown is dropped.
+    // like reader fields. One pointing at a node it wasn't shown is dropped, and
+    // so is one whose query can't be a search (see cleanQuery), which is listed
+    // in the traced event.
     const citingIds = new Set(citing.map((n) => n.id));
     const leads: (Lead & { query: string })[] = [];
+    const rejectedQueries: string[] = [];
     for (const raw of trace.data.leads) {
       const work = raw.work.replace(/\s+/g, " ").trim();
-      const query = raw.query.replace(/\s+/g, " ").trim();
       const wording = raw.wording?.replace(/\s+/g, " ").trim() || null;
-      const tooLong = [work, query, wording ?? ""].some((field) => field.length > MAX_FIELD_CHARS);
-      if (!citingIds.has(raw.from_node) || !work || !query || tooLong || followed.has(normalizeText(work))) continue;
+      const tooLong = [work, wording ?? ""].some((field) => field.length > MAX_FIELD_CHARS);
+      if (!citingIds.has(raw.from_node) || !work || tooLong || followed.has(normalizeText(work))) continue;
+      const query = cleanQuery(shortenQuotedSpans(raw.query));
+      if (query === null) {
+        rejectedQueries.push(raw.query.slice(0, MAX_FIELD_CHARS));
+        continue;
+      }
       followed.add(normalizeText(work));
       leads.push({ fromNode: raw.from_node, work, year: cleanDate(raw.year), query, wording });
       if (wording) leadWordings.push(wording);
       if (leads.length === LEADS_PER_ROUND) break;
     }
-    onEvent({ type: "traced", ...traceSpend, round, leads: leads.map(({ fromNode, work, query }) => ({ fromNode, work, query })) });
+    onEvent({
+      type: "traced",
+      ...traceSpend,
+      round,
+      leads: leads.map(({ fromNode, work, query }) => ({ fromNode, work, query })),
+      ...(rejectedQueries.length > 0 && { rejectedQueries }),
+    });
     if (leads.length === 0) break;
 
     const found: Entry[] = [];

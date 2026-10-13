@@ -61,7 +61,7 @@ const CHECK = {
 
 function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
   const crossed = node.check.status === "not_found";
-  const check = CHECK[node.check.status];
+  const check = node.check.reason === "not_the_saying" ? { ...CHECK.not_found, words: "On the page, but not the saying" } : CHECK[node.check.status];
   const earliest = marks.earliest === node.id;
   const misattribution = marks.misattribution === node.id;
   const ring = earliest ? "border-accent ring-2 ring-accent/30" : misattribution ? "border-bad/60" : "border-line";
