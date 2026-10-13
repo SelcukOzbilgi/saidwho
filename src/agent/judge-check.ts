@@ -162,6 +162,16 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
 
 // What the next judge is told when the last verdict dated its earliest page by
 // the page's own date over the earlier source it cites.
+// Whether one date comes before another. Dates are "1981", "1981-03" or
+// "1981-03-14". Within the same year, only a date at least as precise as the
+// other can come first: "2013-01" before "2013-12", but not "2013" before it.
+export function earlierDate(date: string, than: string): boolean {
+  const year = Number(date.slice(0, 4));
+  const thanYear = Number(than.slice(0, 4));
+  if (year !== thanYear) return year < thanYear;
+  return than.length > 4 && date.length >= than.length && date.slice(0, than.length) < than;
+}
+
 export function citedDateNote({ node, given, cited }: NonNullable<VerdictCheck["pageDateOverCited"]>): string {
   return (
     `Your last verdict gave ${given}, the date of page ${node} itself, as the earliest date, but ${node} names a source dated ${cited}. ` +

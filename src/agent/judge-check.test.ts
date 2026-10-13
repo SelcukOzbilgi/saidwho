@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EvidenceNode } from "./events";
-import { canonicalId, checkVerdict, retryNote } from "./judge-check";
+import { canonicalId, checkVerdict, earlierDate, retryNote } from "./judge-check";
 import { type JudgeOutput, MAX_JUDGE_FIELD_CHARS, MAX_RATIONALE_CHARS } from "./schemas";
 
 const node = (id: string, dates: { pageDate?: string; citedSourceDate?: string } = {}): EvidenceNode => {
@@ -235,5 +235,17 @@ describe("checkVerdict and an earliest page that cites an earlier source", () =>
     const check = checkVerdict(twentyYears, twentyPages, false);
     expect(check).toMatchObject({ fixes: [], pageDateOverCited: null });
     expect(check.verdict.earliest_date).toBe("2017-08-21");
+  });
+});
+
+describe("earlierDate", () => {
+  it("compares whole dates, and within a year only as precisely as both allow", () => {
+    expect(earlierDate("1979", "2013")).toBe(true);
+    expect(earlierDate("2013-01", "2013-12")).toBe(true);
+    expect(earlierDate("2013-01-05", "2013-12")).toBe(true);
+    expect(earlierDate("2013", "2013-12")).toBe(false);
+    expect(earlierDate("2013-12", "2013")).toBe(false);
+    expect(earlierDate("2013", "2013")).toBe(false);
+    expect(earlierDate("2014", "2013-12")).toBe(false);
   });
 });

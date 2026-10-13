@@ -51,11 +51,12 @@ export function namesWork(title: string, work: string): boolean {
   const workVolume = volumeOf(work);
   const titleVolume = volumeOf(title);
   if (workVolume !== null && titleVolume !== null && workVolume !== titleVolume) return false;
-  const name = work.replace(PART, " ");
-  // A year in the name ("Confessions (1782)") dates an edition, so it isn't one of
-  // the words to share; words like "Journal" stay, since "The Journal of
-  // Education" isn't "Jesuit education".
-  const titleWords = [...contentWords(normalizeText(name).split(/ (?:edited )?by /)[0])].filter((word) => !/^\d+$/.test(word));
+  // A year after the title ("Confessions (1782)", "Nature, 1836") dates an
+  // edition, so it isn't one of the words to share. A number in the title itself
+  // stays ("Fahrenheit 451", "1984"), and so do words like "Journal", since "The
+  // Journal of Education" isn't "Jesuit education".
+  const name = work.replace(PART, " ").replace(/\(\s*\d{4}\s*\)|,\s*\d{4}(?=\s|$)/g, " ");
+  const titleWords = [...contentWords(normalizeText(name).split(/ (?:edited )?by /)[0])];
   const have = contentWords(title);
   const shared = titleWords.filter((word) => have.has(word));
   return shared.length >= Math.min(2, titleWords.length) && shared.some((word) => !isGeneric(word));

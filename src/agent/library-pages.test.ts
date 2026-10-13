@@ -69,6 +69,8 @@ describe("namesWork", () => {
     expect(namesWork('Full text of "Confessions"', "Confessions by Jean-Jacques Rousseau")).toBe(true);
     expect(namesWork("Confessions - Wikisource", "Confessions (1782) by Jean-Jacques Rousseau")).toBe(true);
     expect(namesWork("Walden; or, Life in the Woods", "Walden by Henry David Thoreau")).toBe(true);
+    expect(namesWork("Nature - Wikisource", "Nature, 1836 by Ralph Waldo Emerson")).toBe(true);
+    expect(namesWork("Fahrenheit magazine", "Fahrenheit 451 by Ray Bradbury")).toBe(false);
     expect(namesWork("Henry David Thoreau: A Life", "Walden by Henry David Thoreau")).toBe(false);
   });
 

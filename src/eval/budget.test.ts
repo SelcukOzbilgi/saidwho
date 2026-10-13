@@ -72,6 +72,14 @@ describe("capSpend", () => {
     expect(capped.spentUsd()).toBeLessThanOrEqual(0.03);
   });
 
+  it("leaves nothing set aside once every call has settled, so a later call never waits on rounding", async () => {
+    // Codex's case: after six settled calls, float rounding left about 7e-18 set
+    // aside, and a call that fit only what was spent waited for a call that wasn't running.
+    const capped = capSpend(fakeNebius({ prompt_tokens: 500, completion_tokens: 50 }), 1);
+    await Promise.all(Array.from({ length: 6 }, () => capped.client.chat(judgeCall())));
+    expect(capped.committedUsd()).toBe(capped.spentUsd());
+  });
+
   it("refuses a cap that isn't a number of dollars above zero", () => {
     for (const cap of [Number.NaN, 0, -1, Number.POSITIVE_INFINITY]) expect(() => capSpend(fakeNebius(null), cap)).toThrow(/above zero/);
   });

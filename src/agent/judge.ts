@@ -5,7 +5,7 @@
 
 import type { NebiusClient } from "../lib/server/providers/nebius";
 import type { EvidenceNode, RunEvent } from "./events";
-import { checkVerdict, citedDateNote, retryNote } from "./judge-check";
+import { checkVerdict, citedDateNote, earlierDate, retryNote } from "./judge-check";
 import type { ModelPolicy, ModelSpec, Tier, TokenUsage } from "./models";
 import { boundedCompactJudgeOutputSchema, boundedJudgeOutputSchema, compactJudgeOutputSchema, judgeOutputSchema } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult, worthRetrying } from "./structured";
@@ -155,7 +155,7 @@ export async function judge(step: JudgeStep): Promise<void> {
     // source in turn. The same date again, the same page by its own date, a later
     // date or none at all (a year no page backs is cleared to none) leave the
     // first verdict as the answer.
-    const moved = (date: string | null, asked: Asked) => date !== null && Number(date.slice(0, 4)) < Number(asked.given.slice(0, 4));
+    const moved = (date: string | null, asked: Asked) => date !== null && earlierDate(date, asked.given);
     const notTaken =
       recheck !== null && !moved(verdict.earliest_date, recheck)
         ? `it gives no supported date earlier than the ${recheck.given} it was asked about, on ${recheck.node}, which cites ${recheck.cited}`

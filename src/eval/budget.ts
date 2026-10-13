@@ -36,6 +36,8 @@ export function capSpend(inner: NebiusClient, maxUsd: number): CappedNebius {
   if (!Number.isFinite(maxUsd) || maxUsd <= 0) throw new Error(`the spending cap must be a number of dollars above zero, not ${maxUsd}`);
   let spent = 0;
   let reserved = 0;
+  // Calls running now. When none are, nothing is set aside, whatever rounding left.
+  let running = 0;
   let refused = 0;
   // Calls waiting for others to settle, woken each time one does.
   let waiting: (() => void)[] = [];
@@ -45,13 +47,14 @@ export function capSpend(inner: NebiusClient, maxUsd: number): CappedNebius {
     chat: async (params: ChatParams): Promise<ChatResult> => {
       const most = mostItCosts(params);
       while (spent + reserved + most > maxUsd) {
-        if (spent + most > maxUsd || reserved === 0) {
+        if (spent + most > maxUsd || running === 0) {
           refused++;
           return { ok: false, error: { provider: "nebius", kind: "quota", status: null, message: CAP_REACHED }, latencyMs: 0 };
         }
         await settled();
       }
       reserved += most;
+      running++;
       try {
         const result = await inner.chat(params);
         const usage = result.ok ? result.completion.usage : undefined;
@@ -62,7 +65,8 @@ export function capSpend(inner: NebiusClient, maxUsd: number): CappedNebius {
         spent += most;
         throw err;
       } finally {
-        reserved -= most;
+        running--;
+        reserved = running === 0 ? 0 : reserved - most;
         const wake = waiting;
         waiting = [];
         for (const resolve of wake) resolve();
