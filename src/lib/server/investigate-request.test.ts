@@ -59,6 +59,16 @@ describe("parseInvestigateRequest", () => {
     expect(JSON.stringify(parsed)).not.toContain("abc");
   });
 
+  it("takes an access code on a trial request, and rejects one no form could send", async () => {
+    const parsed = await parseInvestigateRequest(post({ ...valid, keys: { mode: "trial", accessCode: " code-123 " } }));
+    expect(parsed.ok && parsed.request.keys).toEqual({ mode: "trial", accessCode: "code-123" });
+    for (const accessCode of ["two words", "x".repeat(201), 42]) {
+      const bad = await parseInvestigateRequest(post({ ...valid, keys: { mode: "trial", accessCode } }));
+      expect(bad).toMatchObject({ ok: false, status: 400, fields: ["keys.accessCode"] });
+      expect(JSON.stringify(bad)).not.toContain("two words");
+    }
+  });
+
   it("lets a blank BYOK key through for resolveRunKeys to report", async () => {
     const parsed = await parseInvestigateRequest(post({ ...valid, keys: { mode: "byok", nebiusApiKey: "  " } }));
     expect(parsed.ok && parsed.request.keys).toEqual({ mode: "byok", nebiusApiKey: "" });

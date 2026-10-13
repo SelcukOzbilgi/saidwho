@@ -12,6 +12,28 @@ describe("parseServerEnv", () => {
     expect(env.RUNS_PER_IP_PER_HOUR).toBe(10);
     expect(env.TRIAL_RUNS_PER_IP_PER_DAY).toBe(3);
     expect(env.NEBIUS_API_KEY).toBeUndefined();
+    expect(env.TRIAL_ACCESS_CODE).toBeUndefined();
+  });
+
+  it("takes a trial access code that survives a link, and names a bad one without echoing it", () => {
+    expect(parseServerEnv({ TRIAL_ACCESS_CODE: " judges-only-code-123 " }).TRIAL_ACCESS_CODE).toBe(
+      "judges-only-code-123",
+    );
+    expect(parseServerEnv({ TRIAL_ACCESS_CODE: "  " }).TRIAL_ACCESS_CODE).toBeUndefined();
+    // Shorter than 20 characters is refused: the hourly count alone can't stop guessing.
+    expect(parseServerEnv({ TRIAL_ACCESS_CODE: "x".repeat(20) }).TRIAL_ACCESS_CODE).toBe("x".repeat(20));
+    expect(parseServerEnv({ TRIAL_ACCESS_CODE: "Ab9_-.~Zz0aB9_-.~Zz0" }).TRIAL_ACCESS_CODE).toBe("Ab9_-.~Zz0aB9_-.~Zz0");
+    // Characters a #code= link could cut short or garble (&, #, %) are refused, and so is anything else outside the set.
+    const linkBreakers = ["judges&only-code-1234", "judges%only-code-1234", "judges#only-code-1234", "judges+only/code=1234"];
+    for (const code of ["short-code1", "nineteen-chars-long", "has-a-space in-it-here", "x".repeat(201), ...linkBreakers]) {
+      try {
+        parseServerEnv({ TRIAL_ACCESS_CODE: code });
+        expect.unreachable();
+      } catch (err) {
+        expect((err as EnvError).variables).toEqual(["TRIAL_ACCESS_CODE"]);
+        expect((err as Error).message).not.toContain(code);
+      }
+    }
   });
 
   it("parses the visitor limits, and refuses ones that can't be counted", () => {

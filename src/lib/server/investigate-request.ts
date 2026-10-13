@@ -30,6 +30,15 @@ const apiKey = z
   .regex(/^[\x21-\x7e]*$/)
   .optional();
 
+// The trial's access code, sent only when the server asks for one, in the body
+// and never the URL. Blank counts as not sent; resolveRunKeys compares it.
+const accessCode = z
+  .string()
+  .trim()
+  .max(200)
+  .regex(/^[\x21-\x7e]*$/)
+  .optional();
+
 export const investigateRequestSchema = z.strictObject({
   quote: text(500),
   popularAttribution: optionalName,
@@ -39,7 +48,7 @@ export const investigateRequestSchema = z.strictObject({
     .default("en"),
   keys: z.discriminatedUnion("mode", [
     z.strictObject({ mode: z.literal("byok"), nebiusApiKey: apiKey, tavilyApiKey: apiKey }),
-    z.strictObject({ mode: z.literal("trial") }),
+    z.strictObject({ mode: z.literal("trial"), accessCode }),
   ]),
 });
 

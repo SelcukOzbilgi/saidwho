@@ -10,7 +10,7 @@ import { parseInvestigateRequest } from "./investigate-request";
 import type { NebiusClient, NebiusClientOptions } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
 import { DAY_SECONDS, HOUR_SECONDS, type Limit, type RateLimiter, secondsLeftInWindow } from "./rate-limit";
-import { resolveRunKeys } from "./run-keys";
+import { accessCodeMatches, resolveRunKeys } from "./run-keys";
 import { newRunId, type RunStore } from "./run-store";
 import { redactSecrets } from "./safe-error";
 import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toRunIdChunk, toSavedChunk, toSseChunk } from "./sse";
@@ -124,8 +124,14 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     // limit can't hold any of the day's budget, however many requests they send.
     // The scarcer trial limit goes first, so a visitor out of trial runs who keeps
     // trying doesn't use up their hourly runs on their own keys too.
-    const limits: Limit[] = [{ name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS }];
-    if (keys.source === "owner") {
+    const runsLimit: Limit = { name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS };
+    const limits: Limit[] = [runsLimit];
+    // A run that needs the access code skips the daily trial limit. That limit
+    // shares an open trial out among strangers; the code's holders are a few
+    // invited people, often several behind one address, who each try a handful
+    // of quotes. The hourly limit still applies to them, and the daily budget
+    // below caps what they can spend together.
+    if (keys.source === "owner" && !keys.withCode) {
       limits.unshift({ name: "trial", max: deps.env.TRIAL_RUNS_PER_IP_PER_DAY, windowSeconds: DAY_SECONDS });
     }
     // A run refused after it was counted gives its counts back, to the window each
@@ -145,7 +151,32 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       );
       return response;
     };
+
+    // The access code is checked only after the attempt is counted against the
+    // visitor's hourly runs. A wrong or missing code keeps that count, unlike the
+    // refusals above, so trying codes is as slow as starting runs, and it never
+    // reaches the daily trial limit or the budget. When the attempt can't be
+    // counted, the code isn't compared at all, so a broken count can't be used
+    // to guess freely. A right code's count is the run's own hourly count.
+    if (keys.withCode) {
+      let windowStart: number | null;
+      try {
+        windowStart = await deps.limiter.hit(visitor, runsLimit);
+      } catch (err: unknown) {
+        logError(`investigate: could not count an access code attempt: ${describe(err, secrets)}`);
+        return fail(503, "limits_unavailable");
+      }
+      if (windowStart === null) {
+        const retryAfter = String(secondsLeftInWindow(runsLimit.windowSeconds));
+        return fail(429, LIMIT_ERRORS.runs, {}, { "Retry-After": retryAfter });
+      }
+      const sent = keyRequest.mode === "trial" ? (keyRequest.accessCode?.trim() ?? "") : "";
+      if (!sent) return fail(403, "access_code_required");
+      if (!accessCodeMatches(sent, deps.env.TRIAL_ACCESS_CODE ?? "")) return fail(403, "access_code_wrong");
+      taken.push({ limit: runsLimit, windowStart });
+    }
     for (const limit of limits) {
+      if (taken.some((t) => t.limit === limit)) continue;
       let windowStart: number | null;
       try {
         windowStart = await deps.limiter.hit(visitor, limit);
