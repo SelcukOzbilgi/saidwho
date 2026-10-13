@@ -26,7 +26,7 @@ import {
   readerOutputSchema,
 } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult } from "./structured";
-import { carriesSaying, checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText, type Span } from "./verifier";
+import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, normalizeText } from "./verifier";
 
 // Sites that already wrote up where famous quotes come from. The eval excludes
 // them so the agent has to find the trail itself.
@@ -441,13 +441,8 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
         match.status !== "not_found" && !onSaying
           ? { status: "not_found", score: match.score, reason: "not_the_saying" }
           : { status: match.status, score: match.score };
-      // Dates are kept only where they sit on the page (see keepsPageDate).
-      const keepDate = (raw: string | null, placed: (date: string, span: Span | null) => boolean) => {
-        const date = cleanDate(raw);
-        return date && placed(date, match.span) ? date : null;
-      };
-      const citedSourceDate = keepDate(read.data.cited_source_date, (date, span) => keepsCitedDate(date, page, span, read.data.cited_source));
-      const pageDate = keepDate(read.data.page_date, (date, span) => keepsPageDate(date, page, span));
+      // Dates are kept only when the page backs them (see keptDates).
+      const { pageDate, citedSourceDate } = keptDates(read.data, page, match.span);
       const node: EvidenceNode = {
         id,
         url,

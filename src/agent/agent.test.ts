@@ -3,7 +3,18 @@ import { describe, expect, it } from "vitest";
 import { selectPassages } from "./passages";
 import { cleanDate, judgeOutputSchema } from "./schemas";
 import { toStrictJsonSchema } from "./structured";
-import { carriesSaying, checkSnippet, keepsCitedDate, keepsPageDate, matchSnippet, mentionsName, normalizeText } from "./verifier";
+import {
+  carriesSaying,
+  checkSnippet,
+  inOtherCalendar,
+  keepsCitedDate,
+  keepsPageDate,
+  keptDates,
+  matchSnippet,
+  mentionsName,
+  normalizeText,
+  oneDate,
+} from "./verifier";
 
 const PAGE = `Knoxville News-Sentinel, October 11, 1981. At the Al-Anon meeting a speaker said:
 “Insanity is doing the same thing over and over again, but expecting different results.”`;
@@ -235,5 +246,91 @@ describe("keepsPageDate and keepsCitedDate", () => {
     expect(keepsCitedDate("1890", { title: "Lanterns", text }, span, "The Old Almanac")).toBe(false);
     expect(keepsCitedDate("1872", { title: "Lanterns", text }, span, null)).toBe(false);
     expect(keepsCitedDate("1872", { title: "Lanterns", text }, null, "1872")).toBe(false);
+  });
+});
+
+// Readers' dates from the first two evals, as the readers wrote them.
+describe("oneDate", () => {
+  it("drops a span, a range or two dates in one field", () => {
+    for (const raw of [
+      "October 2, 1869 - January 30, 1948", // Gandhi's lifespan on BrainyQuote
+      "February 11, 1847 - October 18, 1931", // Edison's
+      "1994-2025", // a copyright line
+      "1770; 1867", // two works' dates
+      "1765-1770", // when Rousseau wrote the Confessions
+      "1990-91", // a range written short
+      "1765–70",
+      "1999–02", // across a century
+    ]) {
+      expect(oneDate(raw)).toBeNull();
+    }
+  });
+
+  it("keeps the first edition's year when a reprint is named", () => {
+    expect(oneDate("1906; reprinted 1913")).toBe("1906");
+    expect(oneDate("1913 reprint of the 1906 edition")).toBe("1906");
+    expect(oneDate("first published 1903, republished 1921")).toBe("1903");
+  });
+
+  it("lets a single date through however it's written", () => {
+    for (const raw of ["2016-06-23T01:04:26-07:00", "Sep 19, 2026 08:05PM", "27/09/2015", "1933-03-04", "October 17, 2023", "1983 (1983 edition)", "2010-11", "1999-02"]) {
+      expect(oneDate(raw)).toBe(raw);
+    }
+  });
+});
+
+describe("inOtherCalendar", () => {
+  it("finds a year in another calendar, named next to it in the date or the cited source", () => {
+    const shams = "kulliyat-e-Shams, Manssor Shafagh, Edited by: Ostad-Jalale-al-deen Homaee, Publisher: Safee-Ali-Shah, 9th ed, 1370 (Persian Solar calendar)";
+    expect(inOtherCalendar("1370", `1370 ${shams}`)).toBe(true);
+    for (const raw of ["1340 AH", "AH 1340", "1403 SH", "1370 Hijri Shamsi", "Hijri 1340", "2563 BE"]) {
+      expect(inOtherCalendar(/\d{4}/.exec(raw)?.[0] ?? "", raw)).toBe(true);
+    }
+  });
+
+  it("keeps a Common Era year that only sits near a calendar's name", () => {
+    expect(inOtherCalendar("2005", "A History of the Hijri Calendar (2005)")).toBe(false);
+    expect(inOtherCalendar("1991", "kulliyat-e-Shams, 9th ed, 1370 (Persian Solar calendar), reprinted 1991")).toBe(false);
+  });
+
+  it("doesn't mistake a title, a time of day or a poet for a calendar", () => {
+    for (const [year, raw] of [
+      ["2026", "Jul 10, 2026 10:45AM"],
+      ["1957", "kulliyat-e-Shams, 1957"],
+      ["1957", "Rumi: The Masnavi, Book 1, 1957"],
+      ["1603", "To be, or not to be (1603)"],
+      ["1925", "Sh. Abdullah, 1925"],
+    ]) {
+      expect(inOtherCalendar(year, raw)).toBe(false);
+    }
+  });
+});
+
+describe("keptDates", () => {
+  const reading = { page_date: null, cited_source: null, cited_source_date: null };
+
+  it("keeps one Common Era date the page backs", () => {
+    const page = { title: "A quote", text: "Posted 27/09/2015. Gel, gel, ne olursan ol yine gel." };
+    expect(keptDates({ ...reading, page_date: "27/09/2015" }, page, null)).toEqual({ pageDate: "2015", citedSourceDate: null });
+  });
+
+  it("drops a lifespan even where a page date would sit", () => {
+    const page = { title: "Mahatma Gandhi Quotes", text: "Mahatma Gandhi Indian - Leader October 2, 1869 - January 30, 1948. You must be the change you wish to see in the world." };
+    expect(keptDates({ ...reading, page_date: "October 2, 1869 - January 30, 1948" }, page, null).pageDate).toBeNull();
+  });
+
+  it("drops a year from another calendar even next to the source's name", () => {
+    const source = "kulliyat-e-Shams, Manssor Shafagh, Edited by: Ostad-Jalale-al-deen Homaee, Publisher: Safee-Ali-Shah, 9th ed, 1370 (Persian Solar calendar)";
+    const page = { title: "A Moment Of Happiness by Mewlana Jalaluddin Rumi", text: `I found the persian version: Page 582, ${source}: Khonak aan dam keh nesheeneem` };
+    expect(keptDates({ ...reading, cited_source: source, cited_source_date: "1370" }, page, null).citedSourceDate).toBeNull();
+    expect(keptDates({ ...reading, cited_source: "kulliyat-e-Shams, 9th ed, 1991", cited_source_date: "1991" }, { ...page, text: "kulliyat-e-Shams, 9th ed, 1991" }, null).citedSourceDate).toBe("1991");
+  });
+
+  it("keeps a Common Era date of a source about another calendar, and a reprint's first year", () => {
+    const book = "A History of the Hijri Calendar (2005)";
+    const page = { title: "Calendars", text: `See ${book}. "Gel, gel, ne olursan ol yine gel."` };
+    expect(keptDates({ ...reading, cited_source: book, cited_source_date: "2005" }, page, null).citedSourceDate).toBe("2005");
+    const friends = { title: "Voltaire", text: "The Friends of Voltaire (1906; reprinted 1913) has it." };
+    expect(keptDates({ ...reading, cited_source: "The Friends of Voltaire", cited_source_date: "1906; reprinted 1913" }, friends, null).citedSourceDate).toBe("1906");
   });
 });
