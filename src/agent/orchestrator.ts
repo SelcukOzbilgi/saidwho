@@ -14,7 +14,7 @@ import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { checkVerdict, retryNote } from "./judge-check";
 import { mayHoldWork, namesWork } from "./library-pages";
-import { broaden, cleanQuery, queryKey, shortenQuotedSpans } from "./queries";
+import { broaden, queryKey, shapeQuery, tidyModelText } from "./queries";
 import {
   boundedCompactJudgeOutputSchema,
   boundedJudgeOutputSchema,
@@ -161,14 +161,13 @@ const cleanName = (raw: string | null): string | null => {
   return name !== "" && name.length <= MAX_NAME_CHARS ? name : null;
 };
 
-// The planner sometimes wraps a wording in stray brackets or quotes ("] Gel, gel[").
-// Variants go into every reader's prompt, so they are trimmed, capped like reader
-// fields, and kept once each.
+// The planner sometimes wraps a wording in stray brackets or quotes ("] Gel, gel["),
+// or leaves markup in it (see tidyModelText). Variants go into every reader's
+// prompt, so they are tidied, trimmed, capped like reader fields, and kept once each.
 const cleanVariants = (raw: readonly string[]): string[] => {
   const out: string[] = [];
   for (const variant of raw) {
-    const text = variant
-      .replace(/\s+/g, " ")
+    const text = tidyModelText(variant)
       .replace(/^[\s[\]{}"'“”‘’«»]+|[\s[\]{}"'“”‘’«»]+$/g, "")
       .trim();
     if (text && text.length <= MAX_FIELD_CHARS && !out.some((v) => normalizeText(v) === normalizeText(text))) out.push(text);
@@ -277,7 +276,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // search is dropped and listed in the planned event.
   const rejectedQueries: string[] = [];
   const plannedQueries = (plan.ok ? plan.data.queries : []).flatMap((raw) => {
-    const query = cleanQuery(shortenQuotedSpans(raw));
+    const query = shapeQuery(raw);
     if (query === null) rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
     return query === null ? [] : [query];
   });
@@ -559,10 +558,10 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     const rejectedQueries: string[] = [];
     for (const raw of trace.data.leads) {
       const work = raw.work.replace(/\s+/g, " ").trim();
-      const wording = raw.wording?.replace(/\s+/g, " ").trim() || null;
+      const wording = (raw.wording && tidyModelText(raw.wording)) || null;
       const tooLong = [work, wording ?? ""].some((field) => field.length > MAX_FIELD_CHARS);
       if (!citingIds.has(raw.from_node) || !work || tooLong || followed.has(normalizeText(work))) continue;
-      const query = cleanQuery(shortenQuotedSpans(raw.query));
+      const query = shapeQuery(raw.query);
       if (query === null) {
         rejectedQueries.push(raw.query.slice(0, MAX_FIELD_CHARS));
         continue;

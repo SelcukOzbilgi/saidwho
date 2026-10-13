@@ -188,6 +188,22 @@ describe("investigate", () => {
     expect(nebius.prompts.get("read_page")).toContain("Variants: Gel, gel | Come, come again");
   });
 
+  it("takes markup the planner left in its wordings and queries off them", async () => {
+    // From the second eval's 640k plan.
+    const plan = {
+      ...PLAN,
+      variants: ["> 640K ought to be enough for anybody.", ':"640K should be enough for everyone.', "640K wouldn\\'t be enough"],
+      queries: ["> earliest newspaper article 640K enough", "> Bill Gates 640K quote origin"],
+    };
+    const { tavily, queries } = tavilyFor(() => [NEWS]);
+    const events = await run({ nebius: fakeNebius({ plan: () => plan }), tavily });
+    expect(events.find((e) => e.type === "planned")).toMatchObject({
+      variants: ["640K ought to be enough for anybody.", "640K should be enough for everyone.", "640K wouldn't be enough"],
+      queries: [`"${QUOTE}"`, "earliest newspaper article 640K enough", "Bill Gates 640K quote origin"],
+    });
+    expect(queries.slice(1)).toEqual(["earliest newspaper article 640K enough", "Bill Gates 640K quote origin"]);
+  });
+
   it("reports each step in order and ends with a verdict", async () => {
     const events = await run();
     expect(types(events)).toEqual([
