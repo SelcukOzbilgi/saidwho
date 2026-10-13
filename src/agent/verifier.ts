@@ -283,12 +283,19 @@ const yearPositions = (pattern: RegExp, pageWords: readonly string[]): number[] 
 const within = (positions: readonly number[], span: Span, words: number): boolean =>
   positions.some((p) => p >= span.start - words && p < span.end + words);
 
+// At the top, a year dates the page when it stands as a date line, not when the
+// page's prose dates something else with it ("first published in 1836", "In
+// 1999, however, a cruise ship designer…"): a year right after "in" doesn't count.
+const PROSE_BEFORE_YEAR = new Set(["in", "en", "im"]);
+
 export function keepsPageDate(date: string, page: { title: string; text: string }, span: Span | null): boolean {
   const pattern = yearPattern(date);
   if (!pattern) return false;
   if (pattern.test(page.title)) return true;
-  const years = yearPositions(pattern, normalizeText(page.text).split(" "));
-  return years.some((p) => p < PAGE_HEAD_WORDS) || (span !== null && within(years, span, NEAR_SNIPPET_WORDS));
+  const pageWords = normalizeText(page.text).split(" ");
+  const years = yearPositions(pattern, pageWords);
+  const dateLine = (p: number) => p < PAGE_HEAD_WORDS && !PROSE_BEFORE_YEAR.has(pageWords[p - 1]);
+  return years.some(dateLine) || (span !== null && within(years, span, NEAR_SNIPPET_WORDS));
 }
 
 export function keepsCitedDate(date: string, page: { title: string; text: string }, span: Span | null, citedSource: string | null): boolean {

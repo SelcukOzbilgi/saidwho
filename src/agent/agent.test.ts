@@ -220,6 +220,18 @@ describe("keepsPageDate and keepsCitedDate", () => {
     expect(keepsPageDate("1906", { title: "Lanterns", text: page }, near.span)).toBe(true);
   });
 
+  it("doesn't take a year the page's opening prose gives something else as the page's date", () => {
+    // emersoncentral.com's Nature page, whose "Emerson Quotes" sidebar has the saying.
+    const emerson = `Nature Summary: "Nature" is an essay by Ralph Waldo Emerson that was first published in 1836. In this work, Emerson reflects on the beauty of nature. ${filler(400)} Emerson Quotes “Do not go where the path may lead, go instead where there is no path and leave a trail.”`;
+    const sidebar = matchSnippet("Do not go where the path may lead, go instead where there is no path and leave a trail.", emerson).span;
+    expect(keepsPageDate("1836", { title: "Nature by Ralph Waldo Emerson | Essay", text: emerson }, sidebar)).toBe(false);
+    const infinify = `Let's talk about faster horses. The first time the faster horses quote attributed to Ford was in 2001. In 1999, however, a cruise ship designer said it. ${filler(400)}`;
+    expect(keepsPageDate("1999", { title: "Faster horses", text: infinify }, null)).toBe(false);
+    // A date line at the top still counts, with or without a month.
+    expect(keepsPageDate("2022", { title: "Women's History", text: `Published in March 2022 by the museum. ${filler(400)}` }, null)).toBe(true);
+    expect(keepsPageDate("1836", { title: "Nature", text: `Nature (1836). ${filler(400)}` }, null)).toBe(true);
+  });
+
   it("drops a page date whose year only turns up elsewhere on the page", () => {
     expect(keepsPageDate("1890", { title: "Lanterns", text }, span)).toBe(false);
     expect(keepsPageDate("1905", { title: "Lanterns", text }, span)).toBe(false);

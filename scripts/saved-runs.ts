@@ -23,7 +23,7 @@ import { type CitedWork, citedWork } from "../src/agent/judge";
 import { mayHoldWork, namesWork } from "../src/agent/library-pages";
 import { hostOf, LIBRARY_SITES } from "../src/agent/orchestrator";
 import { cleanDate, type PlannerOutput } from "../src/agent/schemas";
-import { carriesSaying, checkSnippet, keepsCitedDate, keepsPageDate, keptDates, matchSnippet, normalizeText, type Span } from "../src/agent/verifier";
+import { carriesSaying, checkSnippet, keepsCitedDate, keptDates, matchSnippet, normalizeText, type Span } from "../src/agent/verifier";
 
 export type Rules = "main" | "new";
 
@@ -91,6 +91,18 @@ export class SearchCache {
   }
 }
 
+// main's test for a page's own date, as it was: the year in the title, anywhere
+// in the first 300 words, or within 30 words of the snippet. This code's
+// keepsPageDate has since stopped counting a year in the opening prose.
+function mainKeepsPageDate(date: string, page: Page, span: Span | null): boolean {
+  const year = /^\d{4}/.exec(date)?.[0];
+  if (!year) return false;
+  const pattern = new RegExp(`(^|\\D)${year}(\\D|$)`);
+  if (pattern.test(page.title)) return true;
+  const years = normalizeText(page.text).split(" ").flatMap((word, i) => (pattern.test(word) ? [i] : []));
+  return years.some((p) => p < 300) || (span !== null && years.some((p) => p >= span.start - 30 && p < span.end + 30));
+}
+
 // main's dates: kept only where they sit on the page.
 export function mainDates(reading: EvidenceNode["reader"], page: Page, span: Span | null) {
   const keep = (raw: string | null, placed: (date: string) => boolean) => {
@@ -98,7 +110,7 @@ export function mainDates(reading: EvidenceNode["reader"], page: Page, span: Spa
     return date && placed(date) ? date : null;
   };
   return {
-    pageDate: keep(reading.page_date, (date) => keepsPageDate(date, page, span)),
+    pageDate: keep(reading.page_date, (date) => mainKeepsPageDate(date, page, span)),
     citedSourceDate: keep(reading.cited_source_date, (date) => keepsCitedDate(date, page, span, reading.cited_source)),
   };
 }
