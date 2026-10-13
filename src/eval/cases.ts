@@ -24,7 +24,8 @@ export const verdictSchema = z.enum(["misattributed", "correct", "contested", "n
 export const evalCaseSchema = z.strictObject({
   id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
   quote: z.string().min(1),
-  language: z.enum(["en", "tr"]),
+  // The languages the app's form offers, so every case can also be tried there.
+  language: z.enum(["en", "tr", "de", "fr", "es", "it", "pt", "ru", "ar", "fa"]),
   popular_attribution: z.string().min(1),
   verdict: verdictSchema,
   earliest: z.strictObject({

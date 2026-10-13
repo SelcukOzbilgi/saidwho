@@ -35,13 +35,14 @@ describe("renderResults", () => {
   const markdown = renderResults(cases, [
     {
       label: "Cascade",
+      code: "603995a",
       scores: [
         SCORE,
         { ...SCORE, caseId: "two", verdict: "correct", verdictRight: false, earliestDate: "1960", earliest: "older" },
         { ...SCORE, caseId: "three", verdict: null, verdictRight: false, earliestDate: null, earliest: null, capped: true },
       ],
     },
-    { label: "All Ultra", scores: [{ ...SCORE, nebiusUsd: 0.05, seconds: 90 }] },
+    { label: "All Ultra", code: "603995a-dirty-1a2b3c4d (1), not recorded (1)", scores: [{ ...SCORE, nebiusUsd: 0.05, seconds: 90 }] },
   ]);
   const line = (start: string) => markdown.split("\n").find((l) => l.startsWith(start));
 
@@ -52,6 +53,10 @@ describe("renderResults", () => {
     expect(line("| Nebius cost per quote")).toBe("| Nebius cost per quote | $0.0040 | $0.0500 |");
     expect(line("| Time per quote")).toBe("| Time per quote | 40s | 90s |");
     expect(line("| Stopped at the spending cap")).toBe("| Stopped at the spending cap | 1 | 0 |");
+  });
+
+  it("says which code each setup's runs came from", () => {
+    expect(line("| Code")).toBe("| Code (commit) | 603995a | 603995a-dirty-1a2b3c4d (1), not recorded (1) |");
   });
 
   it("gives each quote its known answer and what each setup said", () => {

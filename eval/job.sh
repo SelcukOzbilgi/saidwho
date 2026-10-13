@@ -8,39 +8,29 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=eval/job-lib.sh
+source eval/job-lib.sh
+
+# EVAL_ARGS passes options on to pnpm eval, such as "--setup cascade". With
+# "--set holdout" the held-out set's runs and scores are kept apart from the
+# main set's, here and in the bucket.
+parse_eval_args
+
 corepack enable
 pnpm install --frozen-lockfile
-
-# A job started again, say after a timeout, picks up the runs the last one
-# copied out, so the quotes already run aren't paid for twice.
-if [ -d /output/eval ]; then
-  mkdir -p .runs/eval
-  for setup in cascade ultra lightning; do
-    if [ -d "/output/eval/$setup" ]; then cp -r "/output/eval/$setup" .runs/eval/; fi
-  done
-fi
+restore_runs
 
 # The runs that finished are paid for, so they are copied out however the job
 # ends: done, failed or stopped.
-copy_out() {
-  if [ ! -d /output ]; then return 0; fi
-  mkdir -p /output/eval
-  if [ -f eval/results.md ]; then cp eval/results.md /output/eval/; fi
-  for setup in cascade ultra lightning; do
-    if [ -d ".runs/eval/$setup" ]; then cp -r ".runs/eval/$setup" /output/eval/; fi
-  done
-  echo "Copied the runs and scores to /output/eval"
-}
 trap copy_out EXIT
 # In the job this shell is process 1, which ignores a stop signal it has no
 # handler for, so a timeout would end it without the copy above.
 trap 'exit 143' TERM
 
 status=0
-# EVAL_ARGS passes options on, such as "--setup cascade". The eval runs in the
-# background so the TERM handler runs while it waits.
-# shellcheck disable=SC2086
-pnpm eval ${EVAL_ARGS:-} &
+# The eval runs in the background so the TERM handler runs while it waits. The
+# odd expansion keeps an empty list from tripping set -u in older bash.
+pnpm eval ${eval_args[@]+"${eval_args[@]}"} &
 wait $! || status=$?
-if [ -f eval/results.md ]; then cat eval/results.md; fi
+if [ -f "eval/$results" ]; then cat "eval/$results"; fi
 exit "$status"
