@@ -14,7 +14,7 @@ export const VERDICT_LOOK: Record<JudgeOutput["verdict"], string> = {
 // name is null only when no one was named: the visitor left it blank and the
 // planner didn't know. With no credit to weigh, the headline only points to the
 // evidence; the earliest trace below says where it leads.
-const HEADLINE: Record<JudgeOutput["verdict"], (name: string | null) => string> = {
+export const HEADLINE: Record<JudgeOutput["verdict"], (name: string | null) => string> = {
   misattributed: (name) => (name ? `${name} probably didn't say it` : "What the sources show"),
   correct: (name) => (name ? `${name} said it` : "What the sources show"),
   contested: (name) => (name ? `Whether ${name} said it is contested` : "Where it comes from is contested"),
@@ -103,7 +103,7 @@ function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> })
   return (
     <a
       href={`#node-${id}`}
-      className="mx-0.5 rounded bg-accent/15 px-1 font-mono text-xs text-accent no-underline hover:bg-accent/25"
+      className="mx-0.5 rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink no-underline hover:bg-accent/25"
     >
       {id}
     </a>

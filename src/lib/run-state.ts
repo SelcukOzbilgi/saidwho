@@ -24,6 +24,8 @@ export type LogEntry = {
 export type RunState = {
   phase: Phase;
   quote: string | null;
+  // The quote's language code, so the page can mark it for screen readers.
+  language: string | null;
   popularAttribution: string | null;
   // Who named it: the visitor, or the planner when the visitor left it blank.
   attributionFrom: "visitor" | "planner" | null;
@@ -55,6 +57,7 @@ export type RunState = {
 export const initialRunState: RunState = {
   phase: "planning",
   quote: null,
+  language: null,
   popularAttribution: null,
   attributionFrom: null,
   plan: null,
@@ -112,6 +115,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       return {
         ...state,
         quote: event.quote,
+        language: event.language,
         popularAttribution: event.popularAttribution,
         attributionFrom: event.popularAttribution === null ? null : "visitor",
         log: log("Run", `Started. Sites that already wrote up answers are left out: ${event.excludeDomains.join(", ")}`),

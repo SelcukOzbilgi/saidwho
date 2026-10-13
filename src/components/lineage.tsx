@@ -3,7 +3,7 @@ import { type LineageStep, MAX_LINEAGE_STEPS } from "../agent/schemas";
 import { Rationale } from "./verdict-card";
 
 const CHANGE: Record<LineageStep["change"], { label: string; look: string }> = {
-  first: { label: "First seen", look: "bg-accent text-white" },
+  first: { label: "First seen", look: "bg-accent text-on-accent" },
   wording: { label: "Wording changes", look: "bg-foreground/10 text-foreground" },
   translation: { label: "In another language", look: "bg-warn/15 text-warn" },
   credit: { label: "Credit changes", look: "bg-bad/15 text-bad" },

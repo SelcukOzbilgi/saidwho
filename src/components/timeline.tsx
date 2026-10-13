@@ -1,5 +1,6 @@
 import type { EvidenceNode } from "../agent/events";
 import { byDate } from "../lib/run-state";
+import { ScrollRow } from "./scroll-row";
 
 type Marks = { earliest: string | null; misattribution: string | null };
 
@@ -17,15 +18,17 @@ function columns(nodes: readonly EvidenceNode[]): { label: string; nodes: Eviden
 
 export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; marks: Marks }) {
   if (nodes.length === 0) return null;
+  const years = columns(nodes);
   return (
     <section aria-label="Evidence timeline">
       <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">
         Where the quote turns up, oldest first
       </h2>
-      <div className="-mx-4 overflow-x-auto px-4 pb-3">
-        <ol className="flex min-w-max gap-4">
-          {columns(nodes).map((column) => (
-            <li key={column.label} className="w-72 shrink-0">
+      {/* On a phone the years stack; from sm up they sit side by side and scroll sideways. */}
+      <ScrollRow label="Evidence by year" hint="Scroll sideways for later years →">
+        <ol className="flex flex-col gap-6 sm:min-w-max sm:flex-row sm:items-start sm:gap-4">
+          {years.map((column) => (
+            <li key={column.label} className="sm:w-72 sm:shrink-0">
               <div className="mb-3 flex items-center gap-2">
                 <span className="font-serif text-2xl font-semibold tabular-nums">{column.label}</span>
                 <span className="h-px flex-1 bg-line" aria-hidden />
@@ -40,7 +43,7 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
             </li>
           ))}
         </ol>
-      </div>
+      </ScrollRow>
     </section>
   );
 }
@@ -49,6 +52,17 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
 // quoted line in page text; the card adds its own marks.
 const unquote = (text: string): string =>
   text.replace(/^[ \t]*>[ \t]?/gm, "").replace(/^["'“”‘’«»„\s]+|["'“”‘’«»„\s]+$/g, "");
+
+// Readers sometimes copy a page's Markdown, so a title shows up as _Sudden Death_.
+// The card shows the words without the marks; the saved text keeps them.
+export const unmark = (text: string): string =>
+  text
+    // As in Markdown, the marked words can't start or end with a space, so "5 * 3 * 2"
+    // stays, and the marks have to sit at a word's edge, so "f**k" and "2*3*4" stay too.
+    .replace(/(^|[^\p{L}\p{N}*])\*\*(\S(?:[^*\n]*\S)?)\*\*(?![\p{L}\p{N}*])/gu, "$1$2")
+    .replace(/(^|[^\p{L}\p{N}_])__(\S(?:[^_\n]*\S)?)__(?![\p{L}\p{N}_])/gu, "$1$2")
+    .replace(/(^|[^\p{L}\p{N}*])\*(\S(?:[^*\n]*\S)?)\*(?![\p{L}\p{N}*])/gu, "$1$2")
+    .replace(/(^|[^\p{L}\p{N}_])_(\S(?:[^_\n]*\S)?)_(?![\p{L}\p{N}_])/gu, "$1$2");
 
 // Links come from search results; only web pages get to be one.
 const webUrl = (url: string): string | undefined => (/^https?:\/\//i.test(url) ? url : undefined);
@@ -79,21 +93,21 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
 
       {(earliest || misattribution) && (
         <p className="mb-2 flex flex-wrap gap-1.5">
-          {earliest && <Badge className="bg-accent text-white">Earliest the judge found</Badge>}
+          {earliest && <Badge className="bg-accent text-on-accent">Earliest the judge found</Badge>}
           {misattribution && <Badge className="bg-bad/15 text-bad">Where the wrong name shows up</Badge>}
         </p>
       )}
 
       {node.reader.exact_snippet && (
         <blockquote className={`font-serif text-[17px] leading-snug ${crossed ? "line-through decoration-bad decoration-2" : ""}`}>
-          “{unquote(node.reader.exact_snippet)}”
+          “{unmark(unquote(node.reader.exact_snippet))}”
         </blockquote>
       )}
 
       <dl className="mt-3 space-y-1 text-xs text-muted">
         {node.attributedTo && (
           <Row label="Credited to">
-            <span className="text-foreground">{node.attributedTo}</span>
+            <span className="text-foreground">{unmark(node.attributedTo)}</span>
           </Row>
         )}
         {node.foundVia && (
@@ -101,12 +115,12 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
             <a href={`#node-${node.foundVia.node}`} className="underline decoration-line underline-offset-2 hover:decoration-foreground">
               {node.foundVia.node}
             </a>
-            , looking for {node.foundVia.work}
+            , looking for {unmark(node.foundVia.work)}
           </Row>
         )}
         {node.reader.cited_source && (
           <Row label="Cites">
-            {node.reader.cited_source}
+            {unmark(node.reader.cited_source)}
             {/* Readers often put the date in the source's name already. */}
             {node.citedSourceDate && !node.reader.cited_source.includes(node.citedSourceDate) ? ` (${node.citedSourceDate})` : ""}
           </Row>
@@ -121,7 +135,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
           href={webUrl(node.url)}
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-auto max-w-[60%] truncate underline decoration-line underline-offset-2 hover:decoration-foreground"
+          className="-my-1.5 ml-auto max-w-[60%] truncate py-1.5 underline decoration-line underline-offset-2 hover:decoration-foreground"
           title={node.title}
         >
           {node.title || node.host}

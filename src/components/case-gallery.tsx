@@ -6,7 +6,7 @@ import { VERDICT_LOOK } from "./verdict-card";
 
 export function CaseGallery({ cases }: { cases: readonly ExampleCase[] }) {
   return (
-    <section aria-labelledby="cases-title">
+    <section id="cases" aria-labelledby="cases-title" className="scroll-mt-6">
       <h2 id="cases-title" className="font-serif text-3xl font-semibold">
         Finished cases
       </h2>

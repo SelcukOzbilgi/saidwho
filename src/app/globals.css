@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-/* Paper and ink, with the banner's marker orange, tick green and cross red. */
+/* Paper and ink, with the banner's marker orange, tick green and cross red.
+   Green, red and amber are set to read as small text on their own tints;
+   the bright orange stays for marks, and --accent-ink is its readable text color. */
 :root {
   --background: #f6f4ef;
   --foreground: #1c1a16;
@@ -8,9 +10,12 @@
   --muted: #6b665c;
   --line: #e2ddd2;
   --accent: #ef7d1a;
-  --good: #3f9d27;
-  --bad: #d8382c;
-  --warn: #c98a07;
+  --accent-ink: #9a4a0a;
+  /* Text on a filled orange badge: dark in both themes, since white fails on orange. */
+  --on-accent: #1c1a16;
+  --good: #236814;
+  --bad: #b0291f;
+  --warn: #7d5400;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,8 +26,9 @@
     --muted: #a39d90;
     --line: #34312a;
     --accent: #f59a45;
+    --accent-ink: #f59a45;
     --good: #6cc24a;
-    --bad: #f0645a;
+    --bad: #f37066;
     --warn: #e5b23a;
   }
 }
@@ -34,6 +40,8 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
   --color-good: var(--good);
   --color-bad: var(--bad);
   --color-warn: var(--warn);

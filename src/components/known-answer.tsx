@@ -1,7 +1,17 @@
 import type { JudgeOutput } from "../agent/schemas";
 import type { EvalCase } from "../eval/cases";
-import { hostOf, verdictWords } from "../lib/run-state";
+import { hostOf } from "../lib/run-state";
 import { VERDICT_LOOK } from "./verdict-card";
+
+// The test set's verdict is about the popular credit, not the saying: a quote
+// with no known source for its famous name can still have an earliest trace, so
+// each label says whose credit it is about.
+const KNOWN_LABEL: Record<JudgeOutput["verdict"], (name: string) => string> = {
+  misattributed: (name) => `Misattributed to ${name}`,
+  correct: (name) => `Correctly credited to ${name}`,
+  contested: (name) => `Credit to ${name} is contested`,
+  no_known_source: (name) => `No known source for ${name}`,
+};
 
 // What the test set records for this quote, set next to what the run found.
 export function KnownAnswer({ known, reached }: { known: EvalCase; reached: JudgeOutput["verdict"] | null }) {
@@ -13,7 +23,7 @@ export function KnownAnswer({ known, reached }: { known: EvalCase; reached: Judg
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-medium uppercase tracking-wider text-muted">The known answer</span>
         <span className={`font-medium uppercase tracking-wider ${VERDICT_LOOK[known.verdict]}`}>
-          {verdictWords(known.verdict)}
+          {KNOWN_LABEL[known.verdict](known.popular_attribution)}
         </span>
         <span className={`ml-auto rounded-full px-2 py-0.5 ${same ? "bg-good/15 text-good" : "bg-warn/15 text-warn"}`}>
           {same ? "Same verdict as this run" : reached ? "This run's verdict differs" : "This run gave no verdict"}

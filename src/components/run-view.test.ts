@@ -37,4 +37,20 @@ describe("RunView", () => {
     );
     expect(render([started(null), planned(null)], false)).toContain("No name was given, and the planner didn't name anyone.");
   });
+
+  it("marks the quote's language, and makes it the heading only when asked", () => {
+    const run = [{ ...started("Mevlana"), language: "tr" } as RunEvent].reduce(reduceRun, initialRunState);
+    const html = (quoteIsHeading: boolean) =>
+      renderToStaticMarkup(createElement(RunView, { run, running: false, quoteIsHeading }));
+    expect(html(true)).toMatch(/<h1 lang="tr"[^>]*>“Be the change/);
+    expect(html(false)).toMatch(/<blockquote lang="tr"/);
+    expect(html(false)).not.toContain("<h1");
+  });
+
+  it("reads log lines aloud only when asked", () => {
+    const run = [started("Mahatma Gandhi")].reduce(reduceRun, initialRunState);
+    const html = (announce: boolean) => renderToStaticMarkup(createElement(RunView, { run, running: true, announce }));
+    expect(html(true)).toContain('aria-live="polite"');
+    expect(html(false)).toContain('aria-live="off"');
+  });
 });

@@ -109,6 +109,7 @@ export function Investigation({ trialOpen }: { trialOpen: boolean }) {
         <RunView
           run={run}
           running={running}
+          announce
           note={
             status === "stopped" && (
               <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>

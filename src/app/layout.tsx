@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import { SITE_URL } from "@/lib/site";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,9 +21,16 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
+const description = "Paste a quote you saw online and trace where it first appeared, with a link to every page it checked.";
+
+// Pages below set their own title and description; the share image comes from
+// opengraph-image.jpg and twitter-image.jpg in this folder.
 export const metadata: Metadata = {
+  metadataBase: SITE_URL,
   title: "Said Who?",
-  description: "Paste a quote you saw online and find out where it first appeared.",
+  description,
+  openGraph: { type: "website", siteName: "Said Who?", title: "Said Who?", description, url: "/" },
+  twitter: { card: "summary_large_image", title: "Said Who?", description },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

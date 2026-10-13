@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { EvidenceNode } from "../agent/events";
-import { Timeline } from "./timeline";
+import { Timeline, unmark } from "./timeline";
 
 const node = (id: string, foundVia: EvidenceNode["foundVia"]): EvidenceNode => ({
   id,
@@ -43,5 +43,25 @@ describe("Timeline", () => {
       createElement(Timeline, { nodes: [{ ...node("n1", null), foundVia: undefined }], marks: { earliest: null, misattribution: null } }),
     );
     expect(text(older)).not.toContain("Found via");
+  });
+});
+
+describe("unmark", () => {
+  it("drops Markdown emphasis marks and keeps the words", () => {
+    expect(unmark("Rita Mae Brown, _Sudden Death_ (1983)")).toBe("Rita Mae Brown, Sudden Death (1983)");
+    expect(unmark("the **same** thing, *over* and __over__")).toBe("the same thing, over and over");
+  });
+
+  it("leaves underscores and stars that aren't emphasis alone", () => {
+    expect(unmark("see snake_case_name and 5 * 3 * 2")).toBe("see snake_case_name and 5 * 3 * 2");
+    expect(unmark("a lone _ mark")).toBe("a lone _ mark");
+  });
+
+  it("leaves marks inside a word alone, so the quote isn't changed", () => {
+    expect(unmark("f**k that and sh**t")).toBe("f**k that and sh**t");
+    expect(unmark("f*ck and sh*t")).toBe("f*ck and sh*t");
+    expect(unmark("2*3*4 = 24")).toBe("2*3*4 = 24");
+    expect(unmark("Kâfir*olsan*")).toBe("Kâfir*olsan*");
+    expect(unmark("İster _Kâfir_ ister Mecusi")).toBe("İster Kâfir ister Mecusi");
   });
 });
