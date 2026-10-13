@@ -56,7 +56,7 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
               {(entry.tier || entry.costUsd !== null) && (
                 <p className="mt-1 flex flex-wrap items-center gap-2">
                   {entry.tier && <TierChip tier={entry.tier} />}
-                  {entry.costUsd !== null && <span className="font-mono text-xs text-muted">${entry.costUsd.toFixed(4)}</span>}
+                  {entry.costUsd !== null && <span className="font-mono text-xs text-muted">{callCost(entry.costUsd)}</span>}
                 </p>
               )}
             </div>
@@ -66,3 +66,6 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
     </section>
   );
 }
+
+// A Lightning call can cost less than the four places shown; "$0.0000" would read as free.
+export const callCost = (usd: number): string => (usd > 0 && usd < 0.00005 ? "<$0.0001" : `$${usd.toFixed(4)}`);
