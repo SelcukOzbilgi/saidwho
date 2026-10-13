@@ -36,7 +36,7 @@ import { callStructured } from "../src/agent/structured";
 import { keptDates, matchSnippet } from "../src/agent/verifier";
 import type { StructuredResult } from "../src/agent/structured";
 import { type EvalCase, parseEvalCases } from "../src/eval/cases";
-import { scoreRun } from "../src/eval/score";
+import { scoreRun, worthScoring } from "../src/eval/score";
 import { parseServerEnv, requireOwnerKeys } from "../src/lib/server/env-schema";
 import { createNebiusClient } from "../src/lib/server/providers/nebius";
 import { redactSecrets } from "../src/lib/server/safe-error";
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
   const only = flag("only")?.split(",") ?? null;
   const runs = loadRuns(dirs).filter((r) => !only || only.includes(r.caseId));
   const variantNames = list("variants", ["main", "new"]);
-  for (const name of variantNames) if (!VARIANTS[name]) throw new Error(`no variant called ${name}; use ${Object.keys(VARIANTS).join(", ")}`);
+  for (const name of variantNames) if (!Object.hasOwn(VARIANTS, name)) throw new Error(`no variant called ${name}; use ${Object.keys(VARIANTS).join(", ")}`);
   const set = pickSet(flag("set") === null ? null : list("set", []));
   const cases = new Map<string, EvalCase>(
     parseEvalCases(readFileSync(new URL(`../eval/${set.file}`, import.meta.url), "utf8")).map((c) => [c.id, c]),
@@ -302,7 +302,9 @@ async function main(): Promise<void> {
     outcomes.push({ label: labelOf(run), caseId: run.caseId, variant, sample, events, usd, cut });
   });
   const cutShort = outcomes.filter((o) => o.cut).length;
-  const scoredOutcomes = outcomes.filter((o) => !o.cut);
+  // A judging the provider kept failing says nothing about the prompt, so it isn't scored either.
+  const troubled = outcomes.filter((o) => !o.cut && !worthScoring(o.events)).length;
+  const scoredOutcomes = outcomes.filter((o) => !o.cut && worthScoring(o.events));
 
   // Per run and variant, then totals.
   const mark = (ok: boolean) => (ok ? "✓" : "✗");
@@ -343,6 +345,7 @@ async function main(): Promise<void> {
       (cutShort > 0 ? `, which reached the $${maxUsd} limit; ${cutShort} judgings cut short by it aren't scored` : "") +
       ".",
   );
+  if (troubled > 0) console.log(`${troubled} judgings the provider kept failing aren't scored.`);
   const out = flag("out");
   if (out) {
     writeFileSync(out, `${JSON.stringify(outcomes, null, 1)}\n`);
