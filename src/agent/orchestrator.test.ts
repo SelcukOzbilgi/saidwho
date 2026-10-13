@@ -140,7 +140,8 @@ function tavilyByQuery(resultsFor: (query: string) => { url: string; text?: stri
 }
 
 const NEWS = "https://news.example.org/1981";
-const BOOK = "https://archive.org/details/sudden-death";
+// A page of the book's text, not its item page (see mayHoldWork).
+const BOOK = "https://archive.org/stream/sudden-death/sudden-death_djvu.txt";
 const BOOK_TEXT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} She said "${QUOTE}." ${SECRET}`;
 const CITES_BOOK: ReaderOutput = { ...READ, cited_source: "Rita Mae Brown, Sudden Death (1983)", cited_source_date: "1983" };
 const LEAD = {
@@ -341,7 +342,7 @@ describe("investigate", () => {
 
     // The book as a library has it, without the saying.
     // Long enough to be a work's text rather than a catalog record.
-    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} ${"Chapter one. ".repeat(100)}${SECRET}`;
+    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} ${"Chapter one. ".repeat(1_000)}${SECRET}`;
     const NO_QUOTE: ReaderOutput = { ...READ, contains_quote: false, exact_snippet: null, page_date: null };
     const citedWorks = (prompt = "") => {
       const at = prompt.indexOf("Cited works:\n");
