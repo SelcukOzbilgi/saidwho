@@ -724,7 +724,7 @@ describe("investigate", () => {
 
     it("starts no trace once the readers use up the budget", async () => {
       const nebius = fakeNebius({ read: () => CITES_BOOK });
-      const events = await run({ nebius, maxUsd: 0.0004 });
+      const events = await run({ nebius, maxUsd: 0.00135 });
       expect(nebius.calls).toEqual(["plan", "read_page"]);
       expect(types(events).slice(-2)).toEqual(["budget_exceeded", "done"]);
     });
@@ -783,7 +783,7 @@ describe("investigate", () => {
 
   it("stops before the judge once the readers use up the budget", async () => {
     const nebius = fakeNebius();
-    const events = await run({ nebius, maxUsd: 0.0004 });
+    const events = await run({ nebius, maxUsd: 0.00135 });
     expect(nebius.calls).toEqual(["plan", "read_page"]);
     expect(types(events).slice(-2)).toEqual(["budget_exceeded", "done"]);
   });
@@ -806,12 +806,12 @@ describe("investigate", () => {
     const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? "length" : PLAN) });
     const events = await run({ nebius });
     expect(types(events).slice(0, 5)).toEqual(["started", "plan_failed", "escalated", "planned", "searched"]);
-    expect(events[2]).toMatchObject({ step: "plan", from: "super", to: "super", thinking: false, reason: "ran out of tokens" });
+    expect(events[2]).toMatchObject({ step: "plan", from: "ultra", to: "ultra", thinking: false, reason: "ran out of tokens" });
     expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
     expect(events.at(-2)?.type).toBe("verdict");
   });
 
-  // The second eval's degenerate plans, as Super returned them: insanity-same-thing's
+  // The second eval's degenerate plans, as Super returned them before the plan moved to Ultra: insanity-same-thing's
   // with nothing in it, and well-behaved-women's with two backslashes for queries.
   const EMPTY_PLAN: PlannerOutput = { variants: [], candidate_authors: [], queries: [], usual_attribution: null };
   const BACKSLASH_PLAN: PlannerOutput = { variants: [], candidate_authors: ["Laurel Thatcher Ulrich"], queries: ["\\", "\\"], usual_attribution: null };
@@ -822,7 +822,7 @@ describe("investigate", () => {
       const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? degenerate : { ...PLAN, variants: ["Insanity is doing the same thing again"] }) });
       const events = await run({ nebius, tavily });
       expect(types(events).slice(0, 5)).toEqual(["started", "planned", "escalated", "planned", "searched"]);
-      expect(events[2]).toMatchObject({ step: "plan", from: "super", to: "super", thinking: false, reason: "the plan gave no search besides the exact quote" });
+      expect(events[2]).toMatchObject({ step: "plan", from: "ultra", to: "ultra", thinking: false, reason: "the plan gave no search besides the exact quote" });
       expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
       expect(events[3]).toMatchObject({
         variants: ["Insanity is doing the same thing again"],
@@ -937,7 +937,7 @@ describe("investigate", () => {
 
   it("keeps the crossed-out node and reads no further once the budget is spent", async () => {
     const nebius = fakeNebius({ read: () => ({ ...READ, exact_snippet: "Einstein said doing the same thing twice is madness itself" }) });
-    const events = await run({ nebius, maxUsd: 0.00045 });
+    const events = await run({ nebius, maxUsd: 0.00136 });
     expect(types(events).slice(-4)).toEqual(["page_read", "node_added", "budget_exceeded", "done"]);
     expect(nebius.calls).toEqual(["plan", "read_page"]);
   });
@@ -1129,7 +1129,7 @@ describe("investigate", () => {
   it("does not ask Ultra about a verdict that stands, even with low confidence", async () => {
     const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, confidence: "low" }) });
     await run({ nebius });
-    expect(nebius.log.map((c) => c.model)).not.toContain(MODELS.ultra.id);
+    expect(nebius.log.filter((c) => c.name === "verdict").map((c) => c.model)).not.toContain(MODELS.ultra.id);
   });
 
   it("judges again with thinking off when thinking uses up the tokens", async () => {
@@ -1242,7 +1242,7 @@ describe("investigate", () => {
   it("does not ask Ultra once the budget is spent", async () => {
     const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, rationale: "See [n9]." }) });
     // Plan, one read and the first verdict fit; nothing after them does.
-    const events = await run({ nebius, maxUsd: 0.0008 });
+    const events = await run({ nebius, maxUsd: 0.0017 });
     expect(types(events).slice(-3)).toEqual(["verdict", "budget_exceeded", "done"]);
     expect(nebius.calls).toEqual(["plan", "read_page", "verdict"]);
   });

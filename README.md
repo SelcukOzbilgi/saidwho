@@ -69,7 +69,7 @@ Under the steps, the page shows what the run cost on Nebius and what the same ca
 
 | Job | Model or service |
 |-----|---------|
-| Planner | NVIDIA Nemotron 3 Super |
+| Planner | NVIDIA Nemotron 3 Ultra |
 | Readers | NVIDIA Nemotron 3.5 Lightning, and Nemotron 3 Super for a page read again |
 | Judge | NVIDIA Nemotron 3 Super, and Nemotron 3 Ultra when a verdict fails a check |
 | Search and page text | Tavily |

@@ -36,8 +36,11 @@ export type ModelPolicy = {
   readonly rejudge: ModelSpec;
 };
 
+// The plan is one call, so it runs on Ultra: in the first two evals Super's
+// plans came back empty or full of markup 7 times in 34 and never named Muriel
+// Strode for leave-a-trail, and Ultra's did neither, for about $0.003 a run more.
 export const CASCADE: ModelPolicy = {
-  plan: MODELS.super,
+  plan: MODELS.ultra,
   read: MODELS.lightning,
   reread: MODELS.super,
   trace: MODELS.super,

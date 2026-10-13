@@ -63,7 +63,7 @@ const SETUPS: Record<string, { label: string; about: string; models: ModelPolicy
   cascade: {
     label: "Cascade",
     about:
-      "the app as it runs. Lightning reads each page, Super plans, follows citations and judges, " +
+      "the app as it runs. Ultra plans, Lightning reads each page, Super follows citations and judges, " +
       "and a step whose check fails is tried again on a bigger model.",
     models: CASCADE,
   },

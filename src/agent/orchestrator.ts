@@ -1,5 +1,5 @@
 // One investigation, start to finish:
-// Planner (Super) -> Tavily search -> Readers (Lightning) -> Verifier (code)
+// Planner (Ultra) -> Tavily search -> Readers (Lightning) -> Verifier (code)
 // -> Genealogist (Super picks cited works, Tavily finds them, Readers and Verifier check them, up to two rounds)
 // -> Judge (Super, then Ultra if needed; see judge.ts).
 // A step whose check fails is tried once more, on a bigger model or with thinking off.
