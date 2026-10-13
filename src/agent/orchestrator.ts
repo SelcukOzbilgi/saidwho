@@ -101,6 +101,9 @@ export type InvestigationOptions = {
   maxUsd?: number;
   // Which model each step uses; the cascade unless the eval says otherwise.
   models?: ModelPolicy;
+  // A saved run's plan to use instead of asking the planner, so the eval can
+  // run the rest again on the same searches (they come from its cache).
+  plan?: PlannerOutput;
 };
 
 // A name from the model goes into prompts and onto the page, so it gets the
@@ -145,7 +148,7 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
   return out;
 }
 
-export async function investigate({ nebius, tavily, input, onEvent, signal, maxUsd, models = CASCADE }: InvestigationOptions): Promise<void> {
+export async function investigate({ nebius, tavily, input, onEvent, signal, maxUsd, models = CASCADE, plan: savedPlan }: InvestigationOptions): Promise<void> {
   const { quote, popularAttribution, language } = input;
   const excluded = [...new Set(input.excludeDomains)];
   const started = performance.now();
@@ -233,31 +236,38 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     };
   };
 
-  let plan = await callStructured(nebius, { ...planRequest, thinking: true });
-  let triedAgain = false;
-  if (!plan.ok) {
-    onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
-    if (!worthRetrying(plan.cause)) return finish();
-    if (mustStop()) return finish();
-    onEvent({ type: "escalated", step: "plan", from: models.plan.tier, to: models.plan.tier, thinking: false, reason: plan.reason, url: null });
-    triedAgain = true;
-    plan = await callStructured(nebius, { ...planRequest, thinking: false });
-    if (!plan.ok) onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
-  }
-  let planned = shape(plan.ok ? [plan.data] : []);
-  if (plan.ok) onEvent({ type: "planned", ...spend(models.plan, plan), ...planned });
-  // A plan that leaves no search besides the exact phrase (no queries, or only
-  // ones that can't be a search) is asked for once more, with thinking off, and
-  // the two plans' searches and wordings are used together.
-  if (plan.ok && !triedAgain && planned.queries.length < 2 && !mustStop()) {
-    const reason = "the plan gave no search besides the exact quote";
-    onEvent({ type: "escalated", step: "plan", from: models.plan.tier, to: models.plan.tier, thinking: false, reason, url: null });
-    const again = await callStructured(nebius, { ...planRequest, thinking: false });
-    if (again.ok) {
-      planned = shape([plan.data, again.data]);
-      onEvent({ type: "planned", ...spend(models.plan, again), ...planned });
-    } else {
-      onEvent({ type: "plan_failed", ...spend(models.plan, again), reason: again.reason });
+  let planned: ReturnType<typeof shape>;
+  if (savedPlan) {
+    planned = shape([savedPlan]);
+    const free = { tier: models.plan.tier, costUsd: 0, usageKnown: true, tokens: { promptTokens: 0, completionTokens: 0 }, latencyMs: 0 };
+    onEvent({ type: "planned", ...free, ...planned, replayed: true });
+  } else {
+    let plan = await callStructured(nebius, { ...planRequest, thinking: true });
+    let triedAgain = false;
+    if (!plan.ok) {
+      onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
+      if (!worthRetrying(plan.cause)) return finish();
+      if (mustStop()) return finish();
+      onEvent({ type: "escalated", step: "plan", from: models.plan.tier, to: models.plan.tier, thinking: false, reason: plan.reason, url: null });
+      triedAgain = true;
+      plan = await callStructured(nebius, { ...planRequest, thinking: false });
+      if (!plan.ok) onEvent({ type: "plan_failed", ...spend(models.plan, plan), reason: plan.reason });
+    }
+    planned = shape(plan.ok ? [plan.data] : []);
+    if (plan.ok) onEvent({ type: "planned", ...spend(models.plan, plan), ...planned });
+    // A plan that leaves no search besides the exact phrase (no queries, or only
+    // ones that can't be a search) is asked for once more, with thinking off, and
+    // the two plans' searches and wordings are used together.
+    if (plan.ok && !triedAgain && planned.queries.length < 2 && !mustStop()) {
+      const reason = "the plan gave no search besides the exact quote";
+      onEvent({ type: "escalated", step: "plan", from: models.plan.tier, to: models.plan.tier, thinking: false, reason, url: null });
+      const again = await callStructured(nebius, { ...planRequest, thinking: false });
+      if (again.ok) {
+        planned = shape([plan.data, again.data]);
+        onEvent({ type: "planned", ...spend(models.plan, again), ...planned });
+      } else {
+        onEvent({ type: "plan_failed", ...spend(models.plan, again), reason: again.reason });
+      }
     }
   }
   const { variants, queries, foundAttribution } = planned;

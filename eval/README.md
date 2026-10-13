@@ -33,6 +33,8 @@ pnpm eval --set holdout --setup cascade
 
 Leave out `--setup` to run all three setups. Held-out runs keep their own logs in `.runs/eval-holdout/` and their own scores in `holdout-results.md`, so they never mix with the main ones, and `pnpm eval --set holdout --report` rebuilds those scores from the logs. A stopped run picks up where it left off and the spending cap applies, as for the main set, and both sets share the search cache.
 
+To check a fix on the same searches as an earlier run, `--replay-plan <runs dir>` takes each quote's plan from that run's log instead of asking the Planner, so the first searches come from the cache. It cuts the search bill but doesn't zero it: the Genealogist still writes its own library searches from what the Readers find, and any the cache doesn't have cost Tavily credits.
+
 ## Running the eval on Nebius Serverless AI Jobs
 
 The full eval takes about an hour, so it can run as a [Serverless AI job](https://docs.nebius.com/serverless/jobs/manage) instead of on a laptop. The job uses the public Node.js image, clones this repo and runs [`job.sh`](job.sh), so there's no image to build.

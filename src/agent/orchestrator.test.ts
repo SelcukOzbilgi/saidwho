@@ -163,6 +163,7 @@ async function run(
     signal?: AbortSignal;
     name?: string | null;
     models?: ModelPolicy;
+    plan?: PlannerOutput;
   } = {},
 ) {
   const events: RunEvent[] = [];
@@ -173,6 +174,7 @@ async function run(
     maxUsd: options.maxUsd,
     signal: options.signal,
     models: options.models,
+    plan: options.plan,
     onEvent: (event) => events.push(event),
   });
   return events;
@@ -203,6 +205,22 @@ describe("investigate", () => {
       queries: [`"${QUOTE}"`, "earliest newspaper article 640K enough", "Bill Gates 640K quote origin"],
     });
     expect(queries.slice(1)).toEqual(["earliest newspaper article 640K enough", "Bill Gates 640K quote origin"]);
+  });
+
+  it("uses a saved plan instead of asking the planner, and says so", async () => {
+    const saved: PlannerOutput = { ...PLAN, queries: ["insanity quote earliest newspaper"], variants: ["Insanity is doing the same thing again"] };
+    const { tavily, queries } = tavilyFor(() => [NEWS]);
+    const nebius = fakeNebius();
+    const events = await run({ nebius, tavily, plan: saved });
+    expect(nebius.calls).not.toContain("plan");
+    expect(events.find((e) => e.type === "planned")).toMatchObject({
+      replayed: true,
+      costUsd: 0,
+      queries: [`"${QUOTE}"`, "insanity quote earliest newspaper"],
+      variants: ["Insanity is doing the same thing again"],
+    });
+    expect(queries).toEqual([`"${QUOTE}"`, "insanity quote earliest newspaper"]);
+    for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
   });
 
   it("reports each step in order and ends with a verdict", async () => {
