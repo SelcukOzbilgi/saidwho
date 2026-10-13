@@ -43,17 +43,18 @@ export function Progress({ running, aside, phase, finished, searches, pages, rea
 
   return (
     <div className="flex flex-col gap-3">
-      <ol className="grid grid-cols-5 gap-2" aria-label="Progress">
+      {/* On a phone five columns are too narrow for their words, so each step is a line. */}
+      <ol className="flex flex-col gap-1.5 sm:grid sm:grid-cols-5 sm:gap-2" aria-label="Progress">
         {STEPS.map((step, i) => {
           // A run that ended early, stopped or broke leaves its last step unfinished.
           const ended = finished && phase === "judging";
           const state = i < at || (i === at && ended) ? "done" : i === at && running ? "now" : "later";
           return (
-            <li key={step.phase} aria-current={state === "now" ? "step" : undefined}>
+            <li key={step.phase} aria-current={state === "now" ? "step" : undefined} className="flex items-center gap-2 sm:block">
               <div
-                className={`h-1 rounded-full ${state === "done" ? "bg-foreground" : state === "now" ? "motion-safe:animate-pulse bg-accent" : "bg-line"}`}
+                className={`h-1 w-6 shrink-0 rounded-full sm:w-auto ${state === "done" ? "bg-foreground" : state === "now" ? "motion-safe:animate-pulse bg-accent" : "bg-line"}`}
               />
-              <p className={`mt-1.5 text-xs font-medium ${state === "later" ? "text-muted" : ""}`}>{step.label}</p>
+              <p className={`text-xs font-medium sm:mt-1.5 ${state === "later" ? "text-muted" : ""}`}>{step.label}</p>
               {detail[step.phase] && <p className="text-[11px] text-muted tabular-nums">{detail[step.phase]}</p>}
             </li>
           );
