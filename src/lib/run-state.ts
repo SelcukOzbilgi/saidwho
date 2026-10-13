@@ -1,6 +1,7 @@
 import { type EvidenceNode, type RunEvent, verdictStands } from "../agent/events";
 import { estimateCostUsd, MODELS, type TokenUsage } from "../agent/models";
 import type { JudgeOutput } from "../agent/schemas";
+import { MODEL_NAME } from "./model-name";
 import { plural } from "./plural";
 
 // Folds a run's events into what the page shows. Pure, so a live stream and a
@@ -151,7 +152,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       };
     case "escalated": {
       const how =
-        (event.from === event.to && !event.thinking ? `again on ${event.to} with thinking off` : `again on ${event.to}`) +
+        (event.from === event.to && !event.thinking ? `again on ${MODEL_NAME[event.to]} with thinking off` : `again on ${MODEL_NAME[event.to]}`) +
         (event.compact ? ", without the lineage" : "");
       const agent: Agent = event.step === "plan" ? "Planner" : event.step === "read" ? "Reader" : "Judge";
       const page = event.url ? ` (${hostOf(event.url)})` : "";

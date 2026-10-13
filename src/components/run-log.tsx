@@ -32,12 +32,17 @@ export function RunLog({ log, follow, announce }: { log: readonly LogEntry[]; fo
         {log.map((entry) => (
           <li key={entry.id} className="arrive flex items-start gap-2 py-1.5">
             <span className={`mt-1.5 size-2 shrink-0 rounded-full ${DOT[entry.tone]}`} aria-hidden />
-            <span className="w-16 shrink-0 font-medium">{entry.agent}</span>
-            <span className="min-w-0 flex-1 break-words text-foreground/85">{entry.text}</span>
-            {entry.tier && <TierChip tier={entry.tier} />}
-            {entry.costUsd !== null && (
-              <span className="w-14 shrink-0 text-right font-mono text-xs text-muted">${entry.costUsd.toFixed(4)}</span>
-            )}
+            <span className="w-24 shrink-0 font-medium">{entry.agent}</span>
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-foreground/85">{entry.text}</p>
+              {/* The model's full name doesn't fit beside the text, so it and the cost go under it. */}
+              {(entry.tier || entry.costUsd !== null) && (
+                <p className="mt-1 flex flex-wrap items-center gap-2">
+                  {entry.tier && <TierChip tier={entry.tier} />}
+                  {entry.costUsd !== null && <span className="font-mono text-xs text-muted">${entry.costUsd.toFixed(4)}</span>}
+                </p>
+              )}
+            </div>
           </li>
         ))}
       </ol>

@@ -121,7 +121,7 @@ describe("reduceRun", () => {
       tone: "bad",
       text: "Set aside a verdict (correctly attributed, medium confidence): it cites n9, which was not confirmed",
     });
-    expect(state.log.find((e) => e.text.startsWith("Trying again on ultra"))?.tone).toBe("warn");
+    expect(state.log.find((e) => e.text.startsWith("Trying again on Nemotron 3 Ultra"))?.tone).toBe("warn");
   });
 
   it("shows no verdict when the only one cites an unconfirmed page, even after the second judge fails", () => {
@@ -152,12 +152,12 @@ describe("reduceRun", () => {
 
   it("says when the judge is asked for a verdict without the lineage", () => {
     const state = run([{ type: "escalated", step: "judge", from: "super", to: "super", thinking: false, reason: "ran out of tokens", url: null, compact: true }]);
-    expect(state.log.at(-1)?.text).toBe("Trying again on super with thinking off, without the lineage: ran out of tokens");
+    expect(state.log.at(-1)?.text).toBe("Trying again on Nemotron 3 Super with thinking off, without the lineage: ran out of tokens");
   });
 
   it("doesn't say thinking is off when a judge on the same model tries again with it on", () => {
     const state = run([{ type: "escalated", step: "judge", from: "super", to: "super", thinking: true, reason: "bad_request: schema", url: null }]);
-    expect(state.log.at(-1)?.text).toBe("Trying again on super: bad_request: schema");
+    expect(state.log.at(-1)?.text).toBe("Trying again on Nemotron 3 Super: bad_request: schema");
   });
 
   it("says why there is no verdict", () => {
