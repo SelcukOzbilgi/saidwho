@@ -26,6 +26,14 @@ export const serverEnvSchema = z.object({
   LIVE_RUNS_ENABLED: flag,
   TRIAL_RUNS_ENABLED: flag,
   DAILY_BUDGET_USD: z.preprocess(blankToUndefined, z.coerce.number().min(0).max(100).default(0)),
+
+  // Where runs are saved, so each one gets a public link. Both unset means runs
+  // aren't saved. The secret key bypasses row level security: server only. It
+  // has to be a secret key (sb_secret_...), which goes in the apikey header; an
+  // older service_role JWT would need a Bearer header too, and every call
+  // would be refused.
+  SUPABASE_URL: z.preprocess(blankToUndefined, z.url({ protocol: /^https$/ }).optional()),
+  SUPABASE_SECRET_KEY: z.preprocess(blankToUndefined, z.string().trim().startsWith("sb_secret_").optional()),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

@@ -29,6 +29,20 @@ describe("parseServerEnv", () => {
     expect(() => parseServerEnv({ NEBIUS_BASE_URL: "http://example.com/v1/" })).toThrow(EnvError);
   });
 
+  it("takes only a Supabase secret key, not an older service_role JWT", () => {
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.c2lnbmF0dXJl"; // gitleaks:allow
+    try {
+      parseServerEnv({ SUPABASE_SECRET_KEY: jwt });
+      expect.unreachable();
+    } catch (err) {
+      expect((err as EnvError).variables).toEqual(["SUPABASE_SECRET_KEY"]);
+      expect((err as Error).message).not.toContain(jwt);
+    }
+    expect(parseServerEnv({ SUPABASE_SECRET_KEY: " sb_secret_for-tests-only " }).SUPABASE_SECRET_KEY).toBe(
+      "sb_secret_for-tests-only",
+    );
+  });
+
   it("names the bad variable but never echoes its value", () => {
     const secretLooking = "not-a-flag-sk-1234567890abcdef";
     try {

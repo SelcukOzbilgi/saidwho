@@ -1,10 +1,16 @@
 import { type RunEvent, runEventSchema } from "../agent/events";
+import { isRunId } from "./run-id";
 
 // Reads the server-sent events of POST /api/investigate in the browser. The
 // route takes a POST body (keys never go in a URL), so EventSource is out and
 // the frames are parsed here by hand.
 
-export type StreamItem = { kind: "event"; event: RunEvent } | { kind: "run_failed" };
+// run carries the id the run will be saved under; saved says it now is.
+export type StreamItem =
+  | { kind: "event"; event: RunEvent }
+  | { kind: "run_failed" }
+  | { kind: "run"; id: string }
+  | { kind: "saved"; id: string };
 
 // One SSE frame: its event name (if any) and its data lines joined by "\n".
 type Frame = { event: string | null; data: string };
@@ -51,6 +57,11 @@ export async function* readRunStream(body: ReadableStream<Uint8Array>): AsyncGen
         try {
           json = JSON.parse(frame.data);
         } catch {
+          continue;
+        }
+        if (frame.event === "run" || frame.event === "saved") {
+          const id = (json as { id?: unknown } | null)?.id;
+          if (typeof id === "string" && isRunId(id)) yield frame.event === "run" ? { kind: "run", id } : { kind: "saved", id };
           continue;
         }
         const parsed = runEventSchema.safeParse(json);
