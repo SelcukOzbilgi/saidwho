@@ -1,0 +1,147 @@
+// @vitest-environment happy-dom
+
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { EXAMPLES, QuoteForm } from "./quote-form";
+
+// The form mounted in a page, so clicks and links go through React as they do
+// in a browser. The rest of the suite renders markup on the node environment.
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+type Options = { trialOpen?: boolean; needsCode?: boolean; running?: boolean };
+
+let root: Root | null = null;
+let container: HTMLElement | null = null;
+
+async function mount({ trialOpen = false, needsCode = false, running = false }: Options = {}) {
+  // Inside the "Run your own" section, as on the home page.
+  const section = document.createElement("section");
+  section.id = "run";
+  container = document.createElement("div");
+  section.append(container);
+  document.body.append(section);
+  root = createRoot(container);
+  await act(async () => {
+    root!.render(createElement(QuoteForm, { trialOpen, needsCode, savesRuns: false, running, onStart: () => {}, onStop: () => {} }));
+  });
+  return { section, form: container.querySelector("form")! };
+}
+
+const field = <T extends Element>(selector: string) => container!.querySelector<T>(selector)!;
+const quoteField = () => field<HTMLTextAreaElement>("textarea");
+const nameField = () => field<HTMLInputElement>('input[id$="-name"]');
+const languageField = () => field<HTMLSelectElement>("select");
+const fillChip = (name: string) =>
+  [...container!.querySelectorAll<HTMLButtonElement>('button[type="button"]')].find((b) => b.textContent === name)!;
+
+beforeEach(() => {
+  window.history.replaceState(null, "", "/");
+});
+
+afterEach(async () => {
+  await act(async () => root?.unmount());
+  root = null;
+  document.body.replaceChildren();
+  vi.restoreAllMocks();
+});
+
+describe("QuoteForm in a page: example chips", () => {
+  it("fills the quote, the name and the language from each chip without a finished case", async () => {
+    await mount();
+    for (const example of EXAMPLES.filter((e) => !e.caseId)) {
+      // Start from another language, so a chip that leaves it alone is caught.
+      await act(async () => {
+        languageField().value = "tr";
+        languageField().dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(languageField().value).toBe("tr");
+      await act(async () => fillChip(example.popularAttribution).click());
+      expect(quoteField().value).toBe(example.quote);
+      expect(nameField().value).toBe(example.popularAttribution);
+      expect(languageField().value).toBe(example.language);
+    }
+  });
+
+  it("turns off the fill chips while a run is going", async () => {
+    await mount({ running: true });
+    for (const example of EXAMPLES.filter((e) => !e.caseId)) {
+      expect(fillChip(example.popularAttribution).disabled).toBe(true);
+    }
+  });
+});
+
+describe("QuoteForm in a page: arriving through an access code link", () => {
+  const CODE = "judges-only-code-123";
+  const codeField = () => container!.querySelector<HTMLInputElement>('input[id$="-code"]');
+  const radio = (label: string) =>
+    [...container!.querySelectorAll("label")].find((l) => l.textContent?.includes(label))!.querySelector("input")!;
+
+  // Where the page scrolled to, as the element scrollIntoView was called on.
+  const watchScroll = () => {
+    const scrolled: Element[] = [];
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (this: Element) {
+      scrolled.push(this);
+    });
+    return scrolled;
+  };
+
+  const expectReadyToRun = (section: HTMLElement, scrolled: Element[]) => {
+    expect(radio("Free trial, with an access code").checked).toBe(true);
+    expect(codeField()?.value).toBe(CODE);
+    expect(document.activeElement).toBe(quoteField());
+    expect(scrolled).toEqual([section]);
+    expect(window.location.hash).toBe("");
+    expect(window.location.pathname + window.location.search).toBe("/?ref=devpost");
+  };
+
+  it("picks the trial, fills the code, moves to the form and cleans the address on load", async () => {
+    window.history.replaceState(null, "", `/?ref=devpost#code=${CODE}`);
+    const scrolled = watchScroll();
+    const { section } = await mount({ trialOpen: true, needsCode: true });
+    expectReadyToRun(section, scrolled);
+  });
+
+  it("does the same when the link is opened in a tab already on the page", async () => {
+    window.history.replaceState(null, "", "/?ref=devpost");
+    const scrolled = watchScroll();
+    const { section } = await mount({ trialOpen: true, needsCode: true });
+    expect(radio("My own Nebius and Tavily keys").checked).toBe(true);
+    expect(scrolled).toEqual([]);
+    await act(async () => {
+      window.history.replaceState(null, "", `/?ref=devpost#code=${CODE}`);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expectReadyToRun(section, scrolled);
+  });
+
+  it("still moves to the form and cleans the address, but fills nothing, when the trial is off or needs no code", async () => {
+    for (const [state, keysRadio] of [
+      [{ trialOpen: false, needsCode: true }, "My own Nebius and Tavily keys"],
+      [{ trialOpen: true, needsCode: false }, "Free trial, on us"],
+    ] as const) {
+      window.history.replaceState(null, "", `/?ref=devpost#code=${CODE}`);
+      const scrolled = watchScroll();
+      const { section } = await mount(state);
+      expect(codeField()).toBeNull();
+      expect(radio(keysRadio).checked).toBe(true);
+      expect(scrolled).toEqual([section]);
+      expect(document.activeElement).toBe(quoteField());
+      expect(window.location.hash).toBe("");
+      await act(async () => root?.unmount());
+      root = null;
+      document.body.replaceChildren();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("leaves the page where it is without a code in the link", async () => {
+    window.history.replaceState(null, "", "/#cases");
+    const scrolled = watchScroll();
+    await mount({ trialOpen: true, needsCode: true });
+    expect(scrolled).toEqual([]);
+    expect(document.activeElement).not.toBe(quoteField());
+    expect(window.location.hash).toBe("#cases");
+  });
+});

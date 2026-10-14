@@ -5,11 +5,11 @@ import { plural } from "../lib/plural";
 import { verdictWords } from "../lib/run-state";
 import { VERDICT_LOOK } from "./verdict-card";
 
-export function CaseGallery({ cases }: { cases: readonly ExampleCase[] }) {
+export function CaseGallery({ cases, title = "Finished cases" }: { cases: readonly ExampleCase[]; title?: string }) {
   return (
     <section id="cases" aria-labelledby="cases-title" className="scroll-mt-6">
       <h2 id="cases-title" className="font-serif text-3xl font-semibold">
-        Finished cases
+        {title}
       </h2>
       <p className="mt-2 max-w-2xl text-muted">
         Real runs, saved as they happened. Open one to see every step and how it compares to the known answer, or
