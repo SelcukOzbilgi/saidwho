@@ -32,7 +32,7 @@ Sometimes the honest answer is "people disagree" or "nothing old enough turned u
 
 The home page lists ten finished investigations. Each is a quote from the [test set](eval/), run once and saved as it happened. Each case has its own page, such as [/cases/insanity-same-thing](https://saidwho.vercel.app/cases/insanity-same-thing), where you can replay the run and see the known answer next to what Said Who? concluded.
 
-These ten come from the first full eval, run on October 12 (see below). Said Who? reaches the same verdict as the known answer in seven of the ten, though the earliest source it finds isn't always the one on record. The other three are kept on purpose, and their pages say that the verdict differs.
+Eight of the ten come from the first full eval, run on October 12, and the Henry Ford and Churchill cases from the third, on October 14 (see below). Said Who? reaches the same verdict as the known answer in eight of the ten, though the earliest source it finds isn't always the one on record. The other two are kept on purpose, and their pages say that the verdict differs.
 
 | Quote | Usually credited to | Known answer | Said Who?'s verdict |
 |---|---|---|---|
@@ -44,7 +44,7 @@ These ten come from the first full eval, run on October 12 (see below). Said Who
 | "The only thing we have to fear is fear itself." | Franklin D. Roosevelt | said it | said it |
 | "Gel, gel, ne olursan ol yine gel" | Mevlana (Rumi) | contested | contested |
 | "If I had asked people what they wanted..." | Henry Ford | no known source | misattributed |
-| "Whether you think you can, or you think you can't..." | Henry Ford | said it | misattributed |
+| "Whether you think you can, or you think you can't..." | Henry Ford | said it | said it |
 | "Hayatta en hakiki mürşit ilimdir." | Mustafa Kemal Atatürk | said it | no known source |
 
 Most runs took 22 to 39 seconds. Two took three and four minutes, because Nebius answered slowly for part of that afternoon and one planning call had to be tried again. Each cost less than a cent in model use.
@@ -81,7 +81,22 @@ The Nemotron models are served by [Nebius Token Factory](https://nebius.com/serv
 
 ## How well it does
 
-`pnpm eval` runs all twenty quotes in the test set three ways, with Quote Investigator, Wikiquote, Wikipedia and each answer's own pages left out of the search. The first full run, on October 12 at commit `baf49da`:
+`pnpm eval` runs the twenty quotes in the test set, with Quote Investigator, Wikiquote, Wikipedia and each answer's own pages left out of the search. A held-out set of ten more quotes was picked after the fixes that came from the test set's misses, so none of them shaped the code.
+
+The third run, on October 14 at commit `a53fccf`, with the app's mix of models:
+
+| | Test set | Held-out set |
+|---|---|---|
+| Verdict matches the known answer | 13 of 20 | 10 of 10 |
+| Earliest year within two years of the known one | 10 of 19 | 6 of 10 |
+| Nebius cost per quote | $0.0076 | $0.0070 |
+| Time per quote | 44 s | 37 s |
+
+On the test set that is no better than the first run, which got 14 of 20. Four quotes went from wrong to right, among them Muriel Strode's "leave a trail" and Henry Ford's "Whether you think you can", and five went from right to wrong. With thinking on, the Planner and the Judge sample at a temperature of 0.6, and two runs of the same quote share only a few searches, so one run per quote can't tell a fix from chance. The fixes were also measured by judging the saved evidence of both earlier runs again, three times each: right dates went from 70 to 100 of 192, and right verdicts from 136 to 141 of 204. All ten held-out verdicts match, but ten quotes is a small sample. Scores quote by quote are in [eval/results.md](eval/results.md) and [eval/holdout-results.md](eval/holdout-results.md).
+
+A quote costs about 70% more than on October 12, mostly because the Planner moved from Nemotron 3 Super to Ultra. In the earlier runs Super returned a broken plan 7 times in 34, with stray markup in its searches or nothing usable to search, and Ultra's 34 plans had none.
+
+The first full run, on October 12 at commit `baf49da`, ran the test set three ways:
 
 | | The app's mix | Every step on Ultra | Every step on Lightning |
 |---|---|---|---|
@@ -90,15 +105,15 @@ The Nemotron models are served by [Nebius Token Factory](https://nebius.com/serv
 | Nebius cost per quote | $0.0045 | $0.0426 | $0.0048 |
 | Time per quote | 51 s | 36 s | 69 s |
 
-The app's mix of models gets as many verdicts right as running every step on Ultra, at about a tenth of the cost. Ultra finds the earliest date more often. The whole eval cost $1.04 of Nebius and 344 Tavily credits, counting the one run done again. Every score, quote by quote, is in [eval/results.md](eval/results.md). One run with the app's mix was spoiled when Nebius timed out and a planned search was refused, so it was run again on its own.
+There, the app's mix got as many verdicts right as every step on Ultra, at about a tenth of the cost, and Ultra found the earliest date more often. Its scores are in [eval/results-2026-10-12.md](eval/results-2026-10-12.md).
 
-What the misses show:
+What the third run's misses show:
 
-- **Older dates aren't earlier finds.** Ten runs gave a date earlier than the known one. Each was checked against the page it came from, and none is an earlier printing of the saying. Five are older passages with a related idea, such as John Stuart Mill's 1867 line about good men who "look on and do nothing". Three are the year Rousseau wrote the "brioche" passage instead of the year it was published, 1782. For Bill Gates's "640K", one is the year of a story the page itself doubts, and the other, 1945, belongs to a different quote on the same page.
-- **The Judge sometimes reads a gap as an answer.** When it can't find the early source, it sometimes calls a quote misattributed instead of saying there's no known source. It also sometimes treats a library search that turned up nothing as proof that a book lacks the saying. None of the three setups found the 1947 Reader's Digest credit for Henry Ford's "Whether you think you can", and two of them called it misattributed. Once, it judged whether Laurel Thatcher Ulrich wrote "Well-behaved women seldom make history" instead of whether the usual credit to Marilyn Monroe or Eleanor Roosevelt was right.
-- **Two answers sit on a fine line.** For "faster horses" and the fish that can't climb a tree, the test set says there's no known source: the earliest versions either imagine what Ford might have said or already credit Einstein. All three setups called both misattributed. The Judge's instructions don't draw that line yet.
-- **Quoting the whole saying in a search often finds nothing.** Searches that put the full quote in quotation marks came back empty 26 times in 167, against 3 times in 113 for searches without quotes. With every step on Lightning, all five searches for "Twenty years from now you will be more disappointed..." quoted the full 22 words, all five came back empty, and that run had no verdict.
-- **The smaller and larger models slip in different ways.** With every step on Lightning, 7 verdicts wrote their page ids in the wrong form, such as `[n8]` for `n8`, so the app flagged them as citing pages it couldn't find. Every page they meant had been checked, and the app showed those verdicts with a warning. With every step on Ultra, the Judge used up its 8,000-token budget twice on Edison's "Genius is one percent inspiration", so that run has no verdict.
+- **An older idea is taken for the saying.** For "Be the change you wish to see in the world", the Judge found Gandhi's 1913 line "If we could change ourselves, the tendencies in the world would also change" and called the credit to Gandhi right. For Roosevelt's "The only thing we have to fear is fear itself", it found Francis Bacon's "Nothing is terrible except fear itself" and called the credit wrong. Both are related ideas in other words, not earlier printings of the saying.
+- **Older dates are mostly related passages.** Six dates came out earlier than the known one. Two are the related ideas above, Gandhi's 1913 and Bacon's 1605. John Stuart Mill's 1867 line about good men who "look on and do nothing" is a related passage too, and 1765 is the year Rousseau wrote the "brioche" passage, which was published in 1782. For Bill Gates's "640K", 1981 is the year a page says he said it, not the date of anything printed then; the Checker keeps a year written next to the saying. For Warhol, a 2019 page cites a 1965 article by Henry Geldzahler, which the run didn't find.
+- **The Judge can be too strict.** For Edison's "Genius is one percent inspiration", it had a 1903 Harper's credit to Edison, from his own lifetime, and still said there was no known source. For "Hayatta en hakiki mürşit ilimdir", it set the 1924 credit to Atatürk aside because the run didn't find the cited works' text.
+- **Disputes get missed.** For "Gel, gel, ne olursan ol" and Warhol's "fifteen minutes of fame", the test set says the credit is contested. The Judge called the first unsourced and the second right.
+- **"Faster horses" still sits on a fine line.** The test set says there's no known source, since the earliest versions imagine what Ford might have said. The app's mix called it misattributed in all three runs.
 
 What the eval showed about Tavily and Token Factory themselves is in [FEEDBACK.md](FEEDBACK.md).
 
@@ -115,6 +130,7 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] A [public demo](https://saidwho.vercel.app)
 - [x] Following the older sources a page names, to look for something earlier still
 - [x] An eval of the whole test set, run three ways, with [the results](eval/results.md)
+- [x] A held-out set of ten quotes that played no part in the fixes, with [its results](eval/holdout-results.md)
 
 Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
 
