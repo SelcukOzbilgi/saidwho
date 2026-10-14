@@ -29,7 +29,12 @@ export default async function Home() {
         </p>
       </header>
 
-      <Investigation trialOpen={trialOpen} savesRuns={runStoreFromEnv(env) !== null} />
+      <Investigation
+        trialOpen={trialOpen}
+        // Only whether a code is needed; the code never leaves the server.
+        needsCode={Boolean(env.TRIAL_ACCESS_CODE)}
+        savesRuns={runStoreFromEnv(env) !== null}
+      />
 
       <CaseGallery cases={CASES} />
 

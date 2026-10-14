@@ -15,7 +15,15 @@ import {
 import type { NebiusClient } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
 import { createMemoryLimiter, type Limit, type RateLimiter } from "./rate-limit";
+import { accessCodeMatches } from "./run-keys";
 import type { RunStore } from "./run-store";
+
+// The real comparison, watched, so a test can tell whether a code was compared at all.
+vi.mock("./run-keys", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./run-keys")>();
+  return { ...actual, accessCodeMatches: vi.fn(actual.accessCodeMatches) };
+});
+const compared = vi.mocked(accessCodeMatches);
 
 const NEBIUS_KEY = "fake-visitor-nebius-key";
 const TAVILY_KEY = "fake-visitor-tavily-key";
@@ -580,5 +588,181 @@ describe("POST /api/investigate", () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "invalid_request", fields: ["quote"] });
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("POST /api/investigate with an access code", () => {
+  const CODE = "judges-only-code-123";
+  const codeEnv = { ...ownerEnv, TRIAL_ACCESS_CODE: CODE };
+  const withCode = (accessCode?: string) => body({ mode: "trial", ...(accessCode === undefined ? {} : { accessCode }) });
+
+  it("runs a trial on owner keys for the right code, counted by the hour only", async () => {
+    const ledger = createDailyLedger(1);
+    const { limiter, hits } = spyLimiter();
+    const { handler, calls, createNebius } = setup({ envVars: codeEnv, ledger, limiter });
+    const res = await handler(post(withCode(` ${CODE} `)));
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(createNebius).toHaveBeenCalledWith(expect.objectContaining({ apiKey: "owner-nebius" }));
+    expect(calls[0].maxUsd).toBe(TRIAL_MAX_USD);
+    expect(names(hits)).toEqual(["runs"]);
+    expect(ledger.spentTodayUsd()).toBeCloseTo(0.004 + 5 * 0.008);
+  });
+
+  it("lets a code holder past the daily trial limit, while the budget still caps the day", async () => {
+    const { handler, calls } = setup({
+      envVars: { ...codeEnv, TRIAL_RUNS_PER_IP_PER_DAY: "1" },
+      // Room for two reservations at once; each run settles at much less.
+      ledger: createDailyLedger(2 * TRIAL_RESERVE_USD),
+    });
+    for (let i = 0; i < 3; i++) {
+      const res = await handler(post(withCode(CODE)));
+      expect(res.status).toBe(200);
+      await res.text();
+    }
+    expect(calls).toHaveLength(3);
+
+    const spent = setup({ envVars: codeEnv, ledger: createDailyLedger(0) });
+    const res = await spent.handler(post(withCode(CODE)));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+  });
+
+  it("refuses a wrong code, keeps its hourly count and never touches the trial limit or budget", async () => {
+    const ledger = createDailyLedger(1);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { limiter, hits, unhits } = spyLimiter();
+    const { handler, calls } = setup({ envVars: codeEnv, ledger, limiter });
+    const res = await handler(post(withCode("judges-only-code-124")));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "access_code_wrong" });
+    expect(names(hits)).toEqual(["runs"]);
+    expect(unhits).toEqual([]);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("asks for the code when none is sent, and counts that like a wrong one", async () => {
+    for (const request of [withCode(), withCode("   ")]) {
+      const ledger = createDailyLedger(1);
+      const reserve = vi.spyOn(ledger, "reserve");
+      const { limiter, hits, unhits } = spyLimiter();
+      const { handler, calls } = setup({ envVars: codeEnv, ledger, limiter });
+      const res = await handler(post(request));
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "access_code_required" });
+      expect(names(hits)).toEqual(["runs"]);
+      expect(unhits).toEqual([]);
+      expect(reserve).not.toHaveBeenCalled();
+      expect(calls).toHaveLength(0);
+    }
+  });
+
+  it("makes guessing as slow as the hourly limit, and then refuses even the right code", async () => {
+    const { handler, calls } = setup({
+      envVars: { ...codeEnv, RUNS_PER_IP_PER_HOUR: "2" },
+      ledger: createDailyLedger(1),
+    });
+    for (let i = 0; i < 2; i++) expect((await handler(post(withCode(`guess-number-${i}-abc`)))).status).toBe(403);
+    const third = await handler(post(withCode("guess-number-2-abc")));
+    expect(third.status).toBe(429);
+    expect(await third.json()).toEqual({ error: "too_many_runs" });
+    expect(Number(third.headers.get("retry-after"))).toBeLessThanOrEqual(3600);
+    expect((await handler(post(withCode(CODE)))).status).toBe(429);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses every code attempt it can't count, wrong or right, without comparing it", async () => {
+    for (const sent of ["judges-only-code-124", CODE]) {
+      compared.mockClear();
+      const ledger = createDailyLedger(1);
+      const reserve = vi.spyOn(ledger, "reserve");
+      const { limiter, hits } = spyLimiter(async () => Promise.reject(new Error("hit_rate_limit failed with 503")));
+      const { handler, calls, logError } = setup({ envVars: codeEnv, ledger, limiter });
+      const res = await handler(post(withCode(sent)));
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ error: "limits_unavailable" });
+      expect(names(hits)).toEqual(["runs"]);
+      expect(reserve).not.toHaveBeenCalled();
+      expect(calls).toHaveLength(0);
+      expect(logError.mock.calls[0][0]).toContain("could not count an access code attempt");
+      expect(compared).not.toHaveBeenCalled();
+    }
+  });
+
+  it("compares a code only once its attempt is counted, and not at all when the count refuses it", async () => {
+    for (const sent of ["judges-only-code-124", CODE]) {
+      compared.mockClear();
+      const { limiter } = spyLimiter(async () => false);
+      const res = await setup({ envVars: codeEnv, ledger: createDailyLedger(1), limiter }).handler(post(withCode(sent)));
+      expect(res.status).toBe(429);
+      expect(compared).not.toHaveBeenCalled();
+    }
+    for (const [sent, status] of [
+      ["judges-only-code-124", 403],
+      [CODE, 200],
+    ] as const) {
+      compared.mockClear();
+      const res = await setup({ envVars: codeEnv, ledger: createDailyLedger(1) }).handler(post(withCode(sent)));
+      expect(res.status).toBe(status);
+      await res.text();
+      expect(compared).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("counts a right code's run once against the hourly limit, and gives it back if the budget refuses", async () => {
+    const { limiter, hits, unhits } = spyLimiter();
+    const res = await setup({ envVars: codeEnv, ledger: createDailyLedger(0), limiter }).handler(post(withCode(CODE)));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+    expect(names(hits)).toEqual(["runs"]);
+    expect(unhits).toEqual(hits);
+  });
+
+  it("gives a code holder their full hourly runs, with the real limiter", async () => {
+    const { handler, calls } = setup({
+      envVars: { ...codeEnv, RUNS_PER_IP_PER_HOUR: "2" },
+      ledger: createDailyLedger(1),
+    });
+    for (let i = 0; i < 2; i++) {
+      const res = await handler(post(withCode(CODE)));
+      expect(res.status).toBe(200);
+      await res.text();
+    }
+    expect((await handler(post(withCode(CODE)))).status).toBe(429);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("never sends the code back, whatever the answer", async () => {
+    const { handler } = setup({ envVars: codeEnv, ledger: createDailyLedger(1) });
+    for (const sent of [undefined, "judges-only-code-124", CODE]) {
+      const res = await handler(post(withCode(sent)));
+      expect(await res.text()).not.toContain(CODE);
+    }
+  });
+
+  it("leaves BYOK runs alone", async () => {
+    const { handler, calls } = setup({ envVars: codeEnv });
+    const res = await handler(post(byok));
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("says the trial is off before it says anything about the code", async () => {
+    const { handler } = setup({ envVars: { ...codeEnv, TRIAL_RUNS_ENABLED: "false" } });
+    const res = await handler(post(withCode("judges-only-code-124")));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "trial_disabled" });
+  });
+
+  it("behaves as before when no code is set: a sent code is ignored and the daily trial limit applies", async () => {
+    const { limiter, hits } = spyLimiter();
+    const { handler, calls } = setup({ envVars: ownerEnv, ledger: createDailyLedger(1), limiter });
+    const res = await handler(post(withCode("anything-at-all-123")));
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(names(hits)).toEqual(["runs", "trial"]);
+    expect(calls).toHaveLength(1);
   });
 });
