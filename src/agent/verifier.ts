@@ -2,6 +2,8 @@
 // sounds right, so every snippet it returns is checked against the page text the
 // snippet supposedly came from. Anything not found there is rejected.
 
+import { cleanDate } from "./schemas";
+
 // "exact" means the snippet's words appear on the page in order once both are
 // normalized (case, accents, punctuation), not character for character.
 export type SnippetCheck = {
@@ -281,12 +283,19 @@ const yearPositions = (pattern: RegExp, pageWords: readonly string[]): number[] 
 const within = (positions: readonly number[], span: Span, words: number): boolean =>
   positions.some((p) => p >= span.start - words && p < span.end + words);
 
+// At the top, a year dates the page when it stands as a date line, not when the
+// page's prose dates something else with it ("first published in 1836", "In
+// 1999, however, a cruise ship designer…"): a year right after "in" doesn't count.
+const PROSE_BEFORE_YEAR = new Set(["in", "en", "im"]);
+
 export function keepsPageDate(date: string, page: { title: string; text: string }, span: Span | null): boolean {
   const pattern = yearPattern(date);
   if (!pattern) return false;
   if (pattern.test(page.title)) return true;
-  const years = yearPositions(pattern, normalizeText(page.text).split(" "));
-  return years.some((p) => p < PAGE_HEAD_WORDS) || (span !== null && within(years, span, NEAR_SNIPPET_WORDS));
+  const pageWords = normalizeText(page.text).split(" ");
+  const years = yearPositions(pattern, pageWords);
+  const dateLine = (p: number) => p < PAGE_HEAD_WORDS && !PROSE_BEFORE_YEAR.has(pageWords[p - 1]);
+  return years.some(dateLine) || (span !== null && within(years, span, NEAR_SNIPPET_WORDS));
 }
 
 export function keepsCitedDate(date: string, page: { title: string; text: string }, span: Span | null, citedSource: string | null): boolean {
@@ -316,4 +325,71 @@ export function keepsCitedDate(date: string, page: { title: string; text: string
     if (years[next] <= i + NEAR_SOURCE_WORDS) return true;
   }
   return false;
+}
+
+// A date field holds one date. One that names two years is a span, such as a
+// lifespan ("October 2, 1869 - January 30, 1948"), a range ("1994-2025",
+// "1990-91") or two dates in one ("1770; 1867"), so it gives no date to keep.
+// A reprint is the exception: "1906; reprinted 1913" dates the 1906 work, so the
+// earliest year is kept. Returns the date text to clean, or null.
+const YEAR = /(?<!\d)(?:1\d{3}|20\d{2})(?!\d)/g;
+// A range that gives only the last two digits of its end ("1990-91", "1765–70",
+// "1999–02" across a century). "2010-11" or "1999-02" with a hyphen is a month,
+// as readers write dates, unless the end is past 12; a full date ("1933-03-04")
+// is never a range.
+const SHORT_RANGE = /(?<!\d)(?:1\d|20)(\d{2})\s*([-–—/])\s*(\d{2})(?![\d/–—-])/;
+const REPRINT = /\b(?:reprint(?:ed|s)?|repr\.|republished|reissued|new edition|first published|originally published)/i;
+
+export function oneDate(raw: string): string | null {
+  const years = [...new Set(raw.match(YEAR))].map(Number);
+  const short = SHORT_RANGE.exec(raw);
+  const shortRange = short !== null && (short[2] !== "-" || Number(short[3]) > 12);
+  if (years.length <= 1 && !shortRange) return raw;
+  if (years.length > 1 && REPRINT.test(raw)) return String(Math.min(...years));
+  return null;
+}
+
+// A year counted in another calendar isn't a Common Era year: a reader that copies
+// "1370 (Persian Solar calendar)" means about 1991. Only the year itself counts:
+// the calendar has to be named right next to it, in the date or in the source the
+// reader cites, so a CE date of a book about the Hijri calendar stays. The short
+// marks (AH, SH, BE) count only in capitals, since "be" or "Sh." mean other things.
+const CALENDAR_NAMES =
+  "hijri|hijra|hegira|hicri|jalali|shamsi|solar hijri|persian solar|persian calendar|solar calendar|islamic calendar|lunar calendar|hebrew calendar|jewish calendar|buddhist era|rumi takvim";
+const CALENDAR_MARKS = String.raw`AH|SH|BE|A\.H\.|S\.H\.|B\.E\.`;
+
+export function inOtherCalendar(year: string, text: string): boolean {
+  const at = String.raw`(?<!\d)${year}(?!\d)`;
+  const between = String.raw`\s*[(\[,]?\s*`;
+  return (
+    new RegExp(`${at}${between}(?:${CALENDAR_NAMES})\\b`, "i").test(text) ||
+    new RegExp(String.raw`\b(?:hijri|hicri|shamsi|jalali)\s+${at}`, "i").test(text) ||
+    new RegExp(`${at}${between}(?:${CALENDAR_MARKS})(?![\\p{L}\\d])`, "u").test(text) ||
+    new RegExp(`(?<![\\p{L}\\d])(?:${CALENDAR_MARKS})\\s*${at}`, "u").test(text)
+  );
+}
+
+// The reader's dates that the page backs, cleaned: its own date and the date of
+// the source it cites. A date is dropped when it isn't one Common Era date, or
+// when its year doesn't sit where that date would (see keepsPageDate). A date in
+// a page's address (/2016/06/10/) doesn't count: replaying the Judge with them
+// showed it dating a saying by a 2016 blog post over three pages citing 1990.
+export function keptDates(
+  reading: { page_date: string | null; cited_source: string | null; cited_source_date: string | null },
+  page: { title: string; text: string },
+  span: Span | null,
+): { pageDate: string | null; citedSourceDate: string | null } {
+  const keep = (raw: string | null, context: string, placed: (date: string) => boolean): string | null => {
+    const date = cleanDate(raw === null ? null : oneDate(raw));
+    // The date and the cited source are checked apart: joined, "1890" and "A.H.
+    // Bullen" would read as a Hijri year.
+    if (date === null || inOtherCalendar(date.slice(0, 4), raw ?? "") || inOtherCalendar(date.slice(0, 4), context)) return null;
+    return placed(date) ? date : null;
+  };
+  return {
+    pageDate: keep(reading.page_date, "", (date) => keepsPageDate(date, page, span)),
+    citedSourceDate: keep(reading.cited_source_date, reading.cited_source ?? "", (date) =>
+      keepsCitedDate(date, page, span, reading.cited_source),
+    ),
+  };
 }

@@ -22,6 +22,11 @@ export type StructuredRequest<S extends z.ZodType> = {
 // (often all of it spent thinking), or output that is not valid JSON for the schema.
 export type FailureCause = ErrorKind | "out_of_tokens" | "bad_output";
 
+// Failures a second attempt can fix. A rejected key, an empty account, a rate
+// limit or a request the provider refuses would fail the same way again.
+export const worthRetrying = (cause: FailureCause): boolean =>
+  !["auth", "quota", "rate_limit", "bad_request", "not_found"].includes(cause);
+
 // usageKnown is false when the provider reported no token usage, or the call
 // failed in a way that may still be billed (a timeout). costUsd then undercounts.
 // tokens are the provider's counts, null when it reported none.

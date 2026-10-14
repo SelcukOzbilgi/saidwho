@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EvidenceNode } from "./events";
-import { canonicalId, checkVerdict, retryNote } from "./judge-check";
+import { canonicalId, checkVerdict, earlierDate, retryNote } from "./judge-check";
 import { type JudgeOutput, MAX_JUDGE_FIELD_CHARS, MAX_RATIONALE_CHARS } from "./schemas";
 
 const node = (id: string, dates: { pageDate?: string; citedSourceDate?: string } = {}): EvidenceNode => {
@@ -58,7 +58,7 @@ describe("canonicalId", () => {
 
 describe("checkVerdict", () => {
   it("lets a clean verdict through unchanged", () => {
-    expect(checkVerdict(VERDICT, PAGES)).toEqual({ verdict: VERDICT, unknownIds: [], fixes: [] });
+    expect(checkVerdict(VERDICT, PAGES)).toEqual({ verdict: VERDICT, unknownIds: [], fixes: [], pageDateOverCited: null });
   });
 
   it("tidies wrapped ids in the id fields and the lineage", () => {
@@ -162,5 +162,90 @@ describe("retryNote", () => {
         "Cite only these page ids, written exactly like this: n1, n2. " +
         'Each id field takes one id or null (not the string "null"), never brackets, a list or a range.',
     );
+  });
+});
+
+// The second eval's cascade verdicts that dated the right page by the wrong one of
+// its dates, with the pages as the Checker kept them.
+describe("checkVerdict and an earliest page that cites an earlier source", () => {
+  const n9 = { ...node("n9", { pageDate: "2017-08-21", citedSourceDate: "1991" }), host: "medium.com", title: "“Twenty years from now you will be more disappointed by the things that you didn’t do than by the…" };
+  const twentyYears: JudgeOutput = {
+    rationale:
+      "The saying appears on many modern pages, but none provide a contemporaneous source linking it to Mark Twain. [n1][n2][n3] " +
+      "The earliest dated appearance is on a 2017 page that attributes the quote to H. Jackson Brown Jr. [n9] " +
+      "Without evidence of Twain's authorship or an alternative origin, the usual credit lacks support and no other origin is proven.",
+    verdict: "no_known_source",
+    confidence: "medium",
+    earliest_node: "n9",
+    earliest_author: "H. Jackson Brown Jr.",
+    earliest_date: "2017-08-21",
+    misattribution_node: null,
+    lineage: [],
+  };
+  const twentyPages = [node("n1"), node("n2", { pageDate: "2020-12-29" }), node("n3", { pageDate: "2024" }), n9];
+
+  it("flags it without taking the cited date, which the Judge may have turned down", () => {
+    const check = checkVerdict(twentyYears, twentyPages);
+    expect(check.verdict.earliest_date).toBe("2017-08-21");
+    expect(check.fixes).toEqual([]);
+    expect(check.pageDateOverCited).toEqual({ node: "n9", given: "2017-08-21", cited: "1991" });
+  });
+
+  it("never takes a cited older work's date the Judge's rationale passed over", () => {
+    // The second eval's fish-climb-tree replay: a right no_known_source on n7's own
+    // 2013, where n7 names a 1940 fable that isn't the saying.
+    const n7 = { ...node("n7", { pageDate: "2013", citedSourceDate: "1940" }), title: "Einstein: Don't Judge a Fish by its Ability to Climb a Tree!" };
+    const fish: JudgeOutput = {
+      ...twentyYears,
+      rationale:
+        "The earliest dated appearance of the quote is from 2013 (n7), which attributes it to Einstein but offers no earlier source. " +
+        "No credible source shows Einstein himself used the saying, nor does any verifiable pre-2013 source contain it.",
+      earliest_node: "n7",
+      earliest_author: "Albert Einstein",
+      earliest_date: "2013",
+    };
+    const check = checkVerdict(fish, [n7]);
+    expect(check.verdict.earliest_date).toBe("2013");
+    expect(check.pageDateOverCited).toEqual({ node: "n7", given: "2013", cited: "1940" });
+  });
+
+  it("leaves the date to the Judge when the rationale weighs the cited year, and still asks", () => {
+    const n1 = node("n1", { pageDate: "2023", citedSourceDate: "1963" });
+    const notEverything: JudgeOutput = {
+      ...twentyYears,
+      rationale:
+        "The earliest dated appearance of the exact saying is on page n1 (2023), which attributes it to Albert Einstein but offers no verifiable source. " +
+        "Other pages attribute the saying to William Bruce Cameron, yet they rely only on unsourced credits or a cited 1963 book [n5].",
+      earliest_node: "n1",
+      earliest_author: "Albert Einstein",
+      earliest_date: "2023",
+    };
+    const check = checkVerdict(notEverything, [n1, node("n5", { pageDate: "2024-12-12", citedSourceDate: "1963" })]);
+    expect(check.verdict.earliest_date).toBe("2023");
+    expect(check.fixes).toEqual([]);
+    expect(check.pageDateOverCited).toEqual({ node: "n1", given: "2023", cited: "1963" });
+  });
+
+  it("says nothing when the date given is the cited one, or the page cites nothing earlier", () => {
+    expect(checkVerdict({ ...twentyYears, earliest_date: "1991" }, twentyPages).pageDateOverCited).toBeNull();
+    expect(checkVerdict({ ...twentyYears, earliest_node: "n2", earliest_date: "2020-12-29" }, twentyPages).pageDateOverCited).toBeNull();
+  });
+
+  it("leaves main's checks alone when the guards are off", () => {
+    const check = checkVerdict(twentyYears, twentyPages, false);
+    expect(check).toMatchObject({ fixes: [], pageDateOverCited: null });
+    expect(check.verdict.earliest_date).toBe("2017-08-21");
+  });
+});
+
+describe("earlierDate", () => {
+  it("compares whole dates, and within a year only as precisely as both allow", () => {
+    expect(earlierDate("1979", "2013")).toBe(true);
+    expect(earlierDate("2013-01", "2013-12")).toBe(true);
+    expect(earlierDate("2013-01-05", "2013-12")).toBe(true);
+    expect(earlierDate("2013", "2013-12")).toBe(false);
+    expect(earlierDate("2013-12", "2013")).toBe(false);
+    expect(earlierDate("2013", "2013")).toBe(false);
+    expect(earlierDate("2014", "2013-12")).toBe(false);
   });
 });

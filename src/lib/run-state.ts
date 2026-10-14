@@ -223,6 +223,16 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       return { ...state, phase: "judging", noVerdict: event.reason, log: log("Judge", `No verdict: ${event.reason}`, "warn") };
     case "verdict": {
       const words = `${VERDICT_WORDS[event.verdict.verdict]}, ${event.verdict.confidence} confidence`;
+      // A second judge's verdict that didn't change the date it was asked about
+      // leaves the first one as the answer.
+      if (event.notTaken !== undefined) {
+        return {
+          ...state,
+          ...spent(event),
+          phase: "judging",
+          log: log("Judge", `Kept the first verdict over this one (${words}): ${event.notTaken}`, "warn", event),
+        };
+      }
       if (!verdictStands(event)) {
         return {
           ...state,

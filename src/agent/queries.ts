@@ -24,6 +24,18 @@ export function cleanQuery(raw: string): string | null {
 
 export const isValidQuery = (raw: string): boolean => cleanQuery(raw) !== null;
 
+// Models writing JSON sometimes leave markup inside a string: a markdown quote
+// mark ("> 640K is enough for all users."), a colon left over from a label
+// (':"Twenty years from now…'), or escaped quotes (didn\'t, or
+// \"Well-behaved women seldom make history\"). It comes off before a query or
+// a wording is used.
+export const tidyModelText = (raw: string): string =>
+  raw
+    .replace(/\\+(["'])/g, "$1")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s>:]+/, "")
+    .trim();
+
 // Two queries are the same search when they differ only in case, accents or
 // punctuation outside the quotes, so a quoted and an unquoted query stay apart.
 export const queryKey = (query: string): string => query.split('"').map(normalizeText).join('"');
@@ -60,6 +72,10 @@ export function shortenQuotedSpans(query: string): string {
     return /\p{L}/u.test(fragment) ? `"${fragment}"` : whole;
   });
 }
+
+// A query a model wrote, tidied, with long quoted spans cut down, and checked:
+// null when it can't be a search (see cleanQuery).
+export const shapeQuery = (raw: string): string | null => cleanQuery(shortenQuotedSpans(tidyModelText(raw)));
 
 // What to search next when a query with quotes found nothing: the same query
 // with long quoted spans cut to a fragment, or, when none is long, with the

@@ -11,7 +11,7 @@ import { EVAL_SETS } from "./sets";
 
 describe("parseEvalArgs", () => {
   it("runs the main set, every setup and every quote by default", () => {
-    expect(parseEvalArgs([])).toEqual({ set: EVAL_SETS.main, only: null, setups: null, report: false });
+    expect(parseEvalArgs([])).toEqual({ set: EVAL_SETS.main, only: null, setups: null, report: false, replayPlan: null });
   });
 
   it("reads each list, in any order", () => {
@@ -20,6 +20,7 @@ describe("parseEvalArgs", () => {
       only: ["be-yourself"],
       setups: ["cascade", "ultra"],
       report: true,
+      replayPlan: null,
     });
     expect(parseEvalArgs(["--", "--set", "holdout"]).set).toBe(EVAL_SETS.holdout);
   });
@@ -28,6 +29,20 @@ describe("parseEvalArgs", () => {
     expect(() => parseEvalArgs(["--set=holdout"])).toThrow(/unknown argument --set=holdout/);
     expect(() => parseEvalArgs(["--sets", "holdout"])).toThrow(/unknown argument --sets/);
     expect(() => parseEvalArgs(["--set", "holdout", "cascade"])).toThrow(/unknown argument cascade/);
+  });
+
+  it("takes one runs directory to replay plans from, with any set", () => {
+    expect(parseEvalArgs(["--set", "holdout", "--replay-plan", ".runs/eval-holdout", "--setup", "cascade"])).toMatchObject({
+      set: EVAL_SETS.holdout,
+      replayPlan: ".runs/eval-holdout",
+      setups: ["cascade"],
+    });
+    expect(() => parseEvalArgs(["--replay-plan"])).toThrow(/needs a runs directory/);
+    expect(() => parseEvalArgs(["--replay-plan", ""])).toThrow(/needs a runs directory/);
+    expect(() => parseEvalArgs(["--replay-plan", "  "])).toThrow(/needs a runs directory/);
+    expect(() => parseEvalArgs(["--replay-plan", "--setup", "cascade"])).toThrow(/needs a runs directory/);
+    expect(() => parseEvalArgs(["--replay-plan", "a", "--replay-plan", "b"])).toThrow(/given twice/);
+    expect(() => parseEvalArgs(["--replay-plans", "a"])).toThrow(/unknown argument --replay-plans/);
   });
 
   it("stops at a list that is missing, empty, repeated or names more than one set", () => {

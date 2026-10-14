@@ -124,6 +124,29 @@ describe("reduceRun", () => {
     expect(state.log.find((e) => e.text.startsWith("Trying again on Nemotron 3 Ultra"))?.tone).toBe("warn");
   });
 
+  it("keeps the first verdict when the second judge's wasn't taken over it", () => {
+    const state = run([
+      STARTED,
+      { type: "verdict", ...spend, tier: "super", verdict: verdict("no_known_source"), unknownIds: [] },
+      { type: "escalated", step: "judge", from: "super", to: "ultra", thinking: true, reason: "the verdict dates n7 by the page's own date", url: null },
+      {
+        type: "verdict",
+        ...spend,
+        tier: "ultra",
+        verdict: verdict("misattributed"),
+        unknownIds: [],
+        notTaken: "it dates n7 by the page's own date 2013 again, over the 1940 that page cites",
+      },
+    ]);
+    expect(state.verdict).toMatchObject({ tier: "super", output: { verdict: "no_known_source" } });
+    expect(state.noVerdict).toBeNull();
+    expect(state.log.at(-1)).toMatchObject({
+      agent: "Judge",
+      tone: "warn",
+      text: "Kept the first verdict over this one (misattributed, medium confidence): it dates n7 by the page's own date 2013 again, over the 1940 that page cites",
+    });
+  });
+
   it("shows no verdict when the only one cites an unconfirmed page, even after the second judge fails", () => {
     const setAside = run([{ type: "verdict", ...spend, tier: "super", verdict: verdict("contested"), unknownIds: ["n9"] }]);
     expect(setAside.verdict).toBeNull();

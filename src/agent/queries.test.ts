@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { broaden, cleanQuery, isValidQuery, queryKey, shortenQuotedSpans } from "./queries";
+import { broaden, cleanQuery, isValidQuery, queryKey, shapeQuery, shortenQuotedSpans, tidyModelText } from "./queries";
 
 describe("cleanQuery", () => {
   it("collapses whitespace and keeps real queries in any language", () => {
@@ -64,5 +64,27 @@ describe("queryKey", () => {
   it("treats case and punctuation as the same search, but not quotes", () => {
     expect(queryKey('"Burns brightest," origin')).toBe(queryKey('"burns brightest" Origin'));
     expect(queryKey('"burns brightest" origin')).not.toBe(queryKey("burns brightest origin"));
+  });
+});
+
+// Strings the planner wrote in the evals, as they were stored.
+describe("tidyModelText and shapeQuery", () => {
+  it("takes markdown quote marks, stray colons and escapes off what a model wrote", () => {
+    expect(tidyModelText("> 640K is enough for all users.")).toBe("640K is enough for all users.");
+    expect(tidyModelText(':"Twenty years from now you will be more disappointed by the things you didn\\\'t do than by the ones you did do.')).toBe(
+      '"Twenty years from now you will be more disappointed by the things you didn\'t do than by the ones you did do.',
+    );
+    expect(tidyModelText("Twenty years from now you will regret more the things you didn\\'t do than the things you did.")).toBe(
+      "Twenty years from now you will regret more the things you didn't do than the things you did.",
+    );
+  });
+
+  it("shapes a planned query from what the planner wrote", () => {
+    expect(shapeQuery("> earliest newspaper article 640K enough")).toBe("earliest newspaper article 640K enough");
+    expect(shapeQuery('\\"Well-behaved women seldom make history\\" Laurel Thatcher Ulrich')).toBe('"Well-behaved women seldom make history" Laurel Thatcher Ulrich');
+    expect(shapeQuery("\\")).toBeNull();
+    expect(shapeQuery('"Do not go where the path may lead, go instead where there is no path and leave a trail." origin')).toBe(
+      '"not go where the path may lead, go" origin',
+    );
   });
 });

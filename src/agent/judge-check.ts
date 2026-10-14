@@ -57,10 +57,15 @@ export type VerdictCheck = {
   unknownIds: string[];
   // What code changed about the earliest date, for the log.
   fixes: string[];
+  // Set when the verdict dates its earliest page by the page's own date though
+  // that page names an earlier source with a date: the cited date is when the
+  // saying appeared, unless the Judge had a reason. The run asks again, once.
+  pageDateOverCited: { node: string; given: string; cited: string } | null;
 };
 
-// verified: the confirmed pages the Judge was shown, in page order.
-export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]): VerdictCheck {
+// verified: the confirmed pages the Judge was shown, in page order. guards off
+// gives main's checks before these were added, for replays that compare them.
+export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[], guards = true): VerdictCheck {
   const byId = new Map(verified.map((n) => [n.id, n]));
   const unknown = new Set<string>();
   const pointer = (value: string | null): string | null => {
@@ -127,6 +132,18 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
     }
   }
 
+  // The earliest page names an earlier source with a date, and the verdict gives
+  // the page's own, later date. Code never takes the cited date itself: the
+  // Judge may have turned that source down (an older fable, a related text), so
+  // only a second judge, told about it, can change the date.
+  let pageDateOverCited: VerdictCheck["pageDateOverCited"] = null;
+  const earliest = earliestNode !== null ? byId.get(earliestNode) : undefined;
+  const citedYear = yearOf(earliest?.citedSourceDate ?? null);
+  const givenYear = yearOf(earliestDate);
+  if (guards && earliest?.citedSourceDate && earliestDate && citedYear && givenYear && citedYear < givenYear) {
+    pageDateOverCited = { node: earliest.id, given: earliestDate, cited: earliest.citedSourceDate };
+  }
+
   return {
     verdict: {
       ...raw,
@@ -139,7 +156,27 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
     },
     unknownIds: [...unknown],
     fixes,
+    pageDateOverCited,
   };
+}
+
+// What the next judge is told when the last verdict dated its earliest page by
+// the page's own date over the earlier source it cites.
+// Whether one date comes before another. Dates are "1981", "1981-03" or
+// "1981-03-14". Within the same year, only a date at least as precise as the
+// other can come first: "2013-01" before "2013-12", but not "2013" before it.
+export function earlierDate(date: string, than: string): boolean {
+  const year = Number(date.slice(0, 4));
+  const thanYear = Number(than.slice(0, 4));
+  if (year !== thanYear) return year < thanYear;
+  return than.length > 4 && date.length >= than.length && date.slice(0, than.length) < than;
+}
+
+export function citedDateNote({ node, given, cited }: NonNullable<VerdictCheck["pageDateOverCited"]>): string {
+  return (
+    `Your last verdict gave ${given}, the date of page ${node} itself, as the earliest date, but ${node} names a source dated ${cited}. ` +
+    `Use ${cited}, name another page, or say in the rationale why ${cited} is not when the saying appeared.`
+  );
 }
 
 // What the next judge is told when a verdict can't stand.

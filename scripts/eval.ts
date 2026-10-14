@@ -1,5 +1,5 @@
 // Runs the test set through the agent and scores each run against the known answer.
-// Run: pnpm eval [--set main|holdout] [--setup cascade,ultra,lightning] [--only id,id] [--report]
+// Run: pnpm eval [--set main|holdout] [--setup cascade,ultra,lightning] [--only id,id] [--replay-plan <runs dir>] [--report]
 // Any other argument stops the eval, so a typo can't run the main set by mistake.
 //
 // --set picks the quotes: main (eval/quotes.jsonl, the default) or holdout
@@ -18,6 +18,12 @@
 // a look, and it runs again next time. The eval stops at an error every later run
 // would hit, or after three spoiled runs in a row.
 // --report only rebuilds the set's results file from the logs already there.
+// --replay-plan takes each run's plan from <runs dir>/<setup>/<id>.json instead
+// of asking the planner, so its first searches come from the cache (see
+// loggedPlan). It cuts search spend but doesn't end it: the Genealogist still
+// writes its library searches from what the readers find, and one the cache
+// doesn't have costs Tavily credits. For the held-out set, point it at a
+// held-out runs dir, such as .runs/eval-holdout.
 //
 // Each log records the commit the eval ran on and, when src/ had changes that
 // weren't committed, a short hash of them, and the results say which code each
@@ -48,6 +54,7 @@ import { parseServerEnv, requireOwnerKeys } from "../src/lib/server/env-schema";
 import { createNebiusClient } from "../src/lib/server/providers/nebius";
 import { createTavilyClient, type TavilyClient } from "../src/lib/server/providers/tavily";
 import { redactSecrets } from "../src/lib/server/safe-error";
+import { loggedPlan } from "./saved-runs";
 
 // A runaway run stops here instead of draining the key.
 const MAX_USD = 0.5;
@@ -56,7 +63,7 @@ const SETUPS: Record<string, { label: string; about: string; models: ModelPolicy
   cascade: {
     label: "Cascade",
     about:
-      "the app as it runs. Lightning reads each page, Super plans, follows citations and judges, " +
+      "the app as it runs. Ultra plans, Lightning reads each page, Super follows citations and judges, " +
       "and a step whose check fails is tried again on a bigger model.",
     models: CASCADE,
   },
@@ -124,7 +131,7 @@ function writeResults(set: EvalSet, cases: readonly EvalCase[], setups: readonly
 
 async function main(): Promise<void> {
   const args = parseEvalArgs(process.argv.slice(2));
-  const { set } = args;
+  const { set, replayPlan } = args;
   const paths = logPaths(RUNS, set);
   const all = parseEvalCases(readFileSync(new URL(`../eval/${set.file}`, import.meta.url), "utf8"));
   const { only } = args;
@@ -168,6 +175,7 @@ async function main(): Promise<void> {
           },
           maxUsd: MAX_USD,
           models: SETUPS[setup].models,
+          ...(replayPlan !== null && { plan: loggedPlan(replayPlan, setup, c.id) }),
           onEvent: (event) => events.push(event),
         });
       } catch (err: unknown) {

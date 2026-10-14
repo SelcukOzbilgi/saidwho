@@ -119,6 +119,7 @@ async function main(): Promise<void> {
           if (event.unknownIds.length) {
             console.log(`   SET ASIDE: the verdict points at ids that are not verified nodes: ${event.unknownIds.join(", ")}`);
           }
+          if (event.notTaken) console.log(`   NOT TAKEN over the first verdict: ${event.notTaken}`);
           for (const fix of event.fixes ?? []) console.log(`   checker ${fix}`);
         }
         break;

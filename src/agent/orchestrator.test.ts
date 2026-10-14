@@ -4,6 +4,7 @@ import type { ChatParams, NebiusClient } from "../lib/server/providers/nebius";
 import { worthScoring } from "../eval/score";
 import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema, standingVerdict } from "./events";
+import { MAX_JUDGE_CALLS } from "./judge";
 import { everyStepOn, MODELS, type ModelPolicy } from "./models";
 import { investigate, LIBRARY_SITES } from "./orchestrator";
 import type { GenealogistOutput, JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
@@ -140,7 +141,8 @@ function tavilyByQuery(resultsFor: (query: string) => { url: string; text?: stri
 }
 
 const NEWS = "https://news.example.org/1981";
-const BOOK = "https://archive.org/details/sudden-death";
+// A page of the book's text, not its item page (see mayHoldWork).
+const BOOK = "https://archive.org/stream/sudden-death/sudden-death_djvu.txt";
 const BOOK_TEXT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} She said "${QUOTE}." ${SECRET}`;
 const CITES_BOOK: ReaderOutput = { ...READ, cited_source: "Rita Mae Brown, Sudden Death (1983)", cited_source_date: "1983" };
 const LEAD = {
@@ -161,6 +163,7 @@ async function run(
     signal?: AbortSignal;
     name?: string | null;
     models?: ModelPolicy;
+    plan?: PlannerOutput;
   } = {},
 ) {
   const events: RunEvent[] = [];
@@ -171,6 +174,7 @@ async function run(
     maxUsd: options.maxUsd,
     signal: options.signal,
     models: options.models,
+    plan: options.plan,
     onEvent: (event) => events.push(event),
   });
   return events;
@@ -185,6 +189,38 @@ describe("investigate", () => {
     const events = await run({ nebius });
     expect(events.find((e) => e.type === "planned")).toMatchObject({ variants: ["Gel, gel", "Come, come again"] });
     expect(nebius.prompts.get("read_page")).toContain("Variants: Gel, gel | Come, come again");
+  });
+
+  it("takes markup the planner left in its wordings and queries off them", async () => {
+    // From the second eval's 640k plan.
+    const plan = {
+      ...PLAN,
+      variants: ["> 640K ought to be enough for anybody.", ':"640K should be enough for everyone.', "640K wouldn\\'t be enough"],
+      queries: ["> earliest newspaper article 640K enough", "> Bill Gates 640K quote origin"],
+    };
+    const { tavily, queries } = tavilyFor(() => [NEWS]);
+    const events = await run({ nebius: fakeNebius({ plan: () => plan }), tavily });
+    expect(events.find((e) => e.type === "planned")).toMatchObject({
+      variants: ["640K ought to be enough for anybody.", "640K should be enough for everyone.", "640K wouldn't be enough"],
+      queries: [`"${QUOTE}"`, "earliest newspaper article 640K enough", "Bill Gates 640K quote origin"],
+    });
+    expect(queries.slice(1)).toEqual(["earliest newspaper article 640K enough", "Bill Gates 640K quote origin"]);
+  });
+
+  it("uses a saved plan instead of asking the planner, and says so", async () => {
+    const saved: PlannerOutput = { ...PLAN, queries: ["insanity quote earliest newspaper"], variants: ["Insanity is doing the same thing again"] };
+    const { tavily, queries } = tavilyFor(() => [NEWS]);
+    const nebius = fakeNebius();
+    const events = await run({ nebius, tavily, plan: saved });
+    expect(nebius.calls).not.toContain("plan");
+    expect(events.find((e) => e.type === "planned")).toMatchObject({
+      replayed: true,
+      costUsd: 0,
+      queries: [`"${QUOTE}"`, "insanity quote earliest newspaper"],
+      variants: ["Insanity is doing the same thing again"],
+    });
+    expect(queries).toEqual([`"${QUOTE}"`, "insanity quote earliest newspaper"]);
+    for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
   });
 
   it("reports each step in order and ends with a verdict", async () => {
@@ -341,7 +377,7 @@ describe("investigate", () => {
 
     // The book as a library has it, without the saying.
     // Long enough to be a work's text rather than a catalog record.
-    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} ${"Chapter one. ".repeat(100)}${SECRET}`;
+    const BOOK_WITHOUT = `Sudden Death, a novel by Rita Mae Brown. New York: Bantam, 1983. ${SECRET} ${"Chapter one. ".repeat(1_000)}${SECRET}`;
     const NO_QUOTE: ReaderOutput = { ...READ, contains_quote: false, exact_snippet: null, page_date: null };
     const citedWorks = (prompt = "") => {
       const at = prompt.indexOf("Cited works:\n");
@@ -359,13 +395,13 @@ describe("investigate", () => {
         {
           cited_by: "n1",
           work: LEAD.work,
-          checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.`,
+          checked: `The pages this run read for ${LEAD.work} on archive.org don't have the saying; they may be another edition or only part of the work.`,
           pages: [{ site: "archive.org", title: `Page at ${BOOK}` }],
         },
       ]);
       expect(events.find((e) => e.type === "cited_works")).toEqual({
         type: "cited_works",
-        works: [{ citedBy: "n1", work: LEAD.work, checked: `Pages found for ${LEAD.work} on archive.org don't have the saying in any wording this run knows.` }],
+        works: [{ citedBy: "n1", work: LEAD.work, checked: `The pages this run read for ${LEAD.work} on archive.org don't have the saying; they may be another edition or only part of the work.` }],
       });
       expect(types(events).slice(-3)).toEqual(["cited_works", "verdict", "done"]);
       expect(events.find((e) => e.type === "page_read" && e.url === BOOK)).toMatchObject({ outcome: "no_quote", lookingFor: LEAD.work });
@@ -373,13 +409,12 @@ describe("investigate", () => {
       expect(JSON.stringify(events)).not.toContain(SECRET);
     });
 
-    it("tells the judge when the search for a cited work returned no page text", async () => {
+    it("says nothing about a cited work whose search returned no text of it", async () => {
       const { tavily } = tavilyFor((q) => (q === LEAD.query ? [] : [NEWS]));
       const nebius = fakeNebius({ read: () => CITES_BOOK, trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }) });
-      await run({ nebius, tavily });
-      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
-        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no text of the work.` },
-      ]);
+      const events = await run({ nebius, tavily });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+      expect(types(events)).not.toContain("cited_works");
     });
 
     it("doesn't count a library's help, search or catalog page against a cited work", async () => {
@@ -398,21 +433,47 @@ describe("investigate", () => {
       expect(entry.pages).toEqual([{ site: "archive.org", title: `Page at ${BOOK}` }]);
     });
 
-    it("says the search found no text of the work when it found only catalog pages and pages too short to hold it", async () => {
+    it("says nothing about a cited work when its search found only catalog and item pages", async () => {
+      // As for Cameron's book in the second eval: an archive.org item page with no text.
       const record = "https://catalog.hathitrust.org/Record/123";
-      const stub = "https://archive.org/details/sudden-death-stub";
-      const { tavily } = tavilyFor(
-        (q) => (q === LEAD.query ? [record, stub] : [NEWS]),
-        (url) => (url === NEWS ? PAGE_TEXT : url === stub ? "Sudden Death : Rita Mae Brown : Free Download, Borrow" : BOOK_WITHOUT),
-      );
+      const item = "https://archive.org/details/informalsociolog0000came";
+      const shell = `Internet Archive Audio Featured Top Images. Bookreader Item Preview. Sudden Death : Rita Mae Brown. ${"Featured Top ".repeat(60)}DOWNLOAD OPTIONS No suitable files to display here.`;
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [record, item] : [NEWS]), (url) => (url === NEWS ? PAGE_TEXT : url === item ? shell : BOOK_WITHOUT));
       const nebius = fakeNebius({
         read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : CITES_BOOK),
         trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
       });
-      await run({ nebius, tavily });
-      expect(citedWorks(nebius.prompts.get("verdict"))).toEqual([
-        { cited_by: "n1", work: LEAD.work, checked: `The digital-library search for ${LEAD.work} returned no text of the work.` },
-      ]);
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "page_read" && e.url === item)).toMatchObject({ outcome: "no_quote" });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
+    });
+
+    it("says nothing about a cited work when a confirmed library page is that work", async () => {
+      // As in the second eval's let-them-eat-cake: the citing page is a Wikisource
+      // page of the Confessions, and the library search found other parts of it.
+      const work = "Les Confessions by Jean-Jacques Rousseau";
+      const livre = "https://fr.wikisource.org/wiki/Les_Confessions_(Rousseau)/Livre_VI";
+      const contents = "https://fr.wikisource.org/wiki/Les_Confessions_(Rousseau)/Livre_I";
+      const lead = { ...LEAD, work, query: "Les Confessions Rousseau" };
+      const tavily: TavilyClient = {
+        extract: async () => {
+          throw new Error("not used");
+        },
+        search: async (query: string) => {
+          const results =
+            query === lead.query
+              ? [{ url: contents, title: "Les Confessions (Rousseau)/Livre I - Wikisource", rawContent: BOOK_WITHOUT }]
+              : [{ url: livre, title: "Les Confessions (Rousseau)/Livre VI - Wikisource", rawContent: PAGE_TEXT }];
+          return { ok: true, latencyMs: 5, data: { results, usage: { credits: 1 } } } as never;
+        },
+      };
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes("Lead:") ? NO_QUOTE : { ...CITES_BOOK, cited_source: "Les Confessions" }),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [lead] } : { leads: [] }),
+      });
+      const events = await run({ nebius, tavily });
+      expect(events.find((e) => e.type === "page_read" && e.url === contents)).toMatchObject({ outcome: "no_quote", lookingFor: work });
+      expect(citedWorks(nebius.prompts.get("verdict"))).toBeNull();
     });
 
     it("doesn't count a page against the citation when its full text has the saying the reader missed", async () => {
@@ -663,7 +724,7 @@ describe("investigate", () => {
 
     it("starts no trace once the readers use up the budget", async () => {
       const nebius = fakeNebius({ read: () => CITES_BOOK });
-      const events = await run({ nebius, maxUsd: 0.0004 });
+      const events = await run({ nebius, maxUsd: 0.00135 });
       expect(nebius.calls).toEqual(["plan", "read_page"]);
       expect(types(events).slice(-2)).toEqual(["budget_exceeded", "done"]);
     });
@@ -722,7 +783,7 @@ describe("investigate", () => {
 
   it("stops before the judge once the readers use up the budget", async () => {
     const nebius = fakeNebius();
-    const events = await run({ nebius, maxUsd: 0.0004 });
+    const events = await run({ nebius, maxUsd: 0.00135 });
     expect(nebius.calls).toEqual(["plan", "read_page"]);
     expect(types(events).slice(-2)).toEqual(["budget_exceeded", "done"]);
   });
@@ -745,9 +806,53 @@ describe("investigate", () => {
     const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? "length" : PLAN) });
     const events = await run({ nebius });
     expect(types(events).slice(0, 5)).toEqual(["started", "plan_failed", "escalated", "planned", "searched"]);
-    expect(events[2]).toMatchObject({ step: "plan", from: "super", to: "super", thinking: false, reason: "ran out of tokens" });
+    expect(events[2]).toMatchObject({ step: "plan", from: "ultra", to: "ultra", thinking: false, reason: "ran out of tokens" });
     expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
     expect(events.at(-2)?.type).toBe("verdict");
+  });
+
+  // The second eval's degenerate plans, as Super returned them before the plan moved to Ultra: insanity-same-thing's
+  // with nothing in it, and well-behaved-women's with two backslashes for queries.
+  const EMPTY_PLAN: PlannerOutput = { variants: [], candidate_authors: [], queries: [], usual_attribution: null };
+  const BACKSLASH_PLAN: PlannerOutput = { variants: [], candidate_authors: ["Laurel Thatcher Ulrich"], queries: ["\\", "\\"], usual_attribution: null };
+
+  it("plans again with thinking off when a plan gives no search besides the exact quote, and uses both", async () => {
+    for (const degenerate of [EMPTY_PLAN, BACKSLASH_PLAN]) {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? degenerate : { ...PLAN, variants: ["Insanity is doing the same thing again"] }) });
+      const events = await run({ nebius, tavily });
+      expect(types(events).slice(0, 5)).toEqual(["started", "planned", "escalated", "planned", "searched"]);
+      expect(events[2]).toMatchObject({ step: "plan", from: "ultra", to: "ultra", thinking: false, reason: "the plan gave no search besides the exact quote" });
+      expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
+      expect(events[3]).toMatchObject({
+        variants: ["Insanity is doing the same thing again"],
+        candidateAuthors: [...new Set([...degenerate.candidate_authors, ...PLAN.candidate_authors])],
+        queries: [`"${QUOTE}"`, PLAN.queries[0]],
+      });
+      expect(queries).toEqual([`"${QUOTE}"`, PLAN.queries[0]]);
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    }
+  });
+
+  it("goes on with the first plan when planning again fails", async () => {
+    // Running out of tokens is the model's doing, so the eval scores the run; an
+    // outage left unmade-up-for is the provider's, so it doesn't.
+    for (const [reply, scored] of [["length", true], [null, false]] as const) {
+      const events = await run({ nebius: fakeNebius({ plan: ({ thinking }) => (thinking ? EMPTY_PLAN : reply) }) });
+      expect(types(events).slice(0, 5)).toEqual(["started", "planned", "escalated", "plan_failed", "searched"]);
+      expect(events.at(-2)?.type).toBe("verdict");
+      expect(worthScoring(events)).toBe(scored);
+    }
+  });
+
+  it("plans a third time for no one: a plan given with thinking off stands, and a spent budget stops the second", async () => {
+    const retried = fakeNebius({ plan: ({ thinking }) => (thinking ? "length" : EMPTY_PLAN) });
+    await run({ nebius: retried });
+    expect(retried.calls.filter((c) => c === "plan")).toHaveLength(2);
+    const broke = fakeNebius({ plan: () => EMPTY_PLAN });
+    const events = await run({ nebius: broke, maxUsd: 0.0001 });
+    expect(broke.calls).toEqual(["plan"]);
+    expect(types(events)).toEqual(["started", "planned", "budget_exceeded", "done"]);
   });
 
   it("searches for the exact quote alone when both plans fail", async () => {
@@ -832,7 +937,7 @@ describe("investigate", () => {
 
   it("keeps the crossed-out node and reads no further once the budget is spent", async () => {
     const nebius = fakeNebius({ read: () => ({ ...READ, exact_snippet: "Einstein said doing the same thing twice is madness itself" }) });
-    const events = await run({ nebius, maxUsd: 0.00045 });
+    const events = await run({ nebius, maxUsd: 0.00136 });
     expect(types(events).slice(-4)).toEqual(["page_read", "node_added", "budget_exceeded", "done"]);
     expect(nebius.calls).toEqual(["plan", "read_page"]);
   });
@@ -861,6 +966,110 @@ describe("investigate", () => {
       ["ultra", []],
     ]);
     expect(events.at(-3)).toMatchObject({ step: "judge", from: "super", to: "ultra", thinking: true });
+  });
+
+  describe("a verdict that dates its earliest page by the page's own date", () => {
+    // A 2013 page that names the 1981 newspaper, as n9 named P.S. I Love You (1991)
+    // when the second eval's judge dated twenty-years-from-now by n9's 2017.
+    const page = `Posted 2013. From the Knoxville News-Sentinel, 1981: "${QUOTE}."`;
+    const reading = { ...READ, page_date: "2013", cited_source: "Knoxville News-Sentinel", cited_source_date: "1981" };
+    const late: JudgeOutput = { ...VERDICT, earliest_date: "2013", rationale: "A 2013 page has it [n1].", lineage: [] };
+    const tavily = () => tavilyFor(() => [NEWS], () => page).tavily;
+
+    it("asks Ultra once, told about the cited date, and takes Ultra's verdict", async () => {
+      const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? late : VERDICT) });
+      const events = await run({ nebius, tavily: tavily() });
+      expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "verdict", "done"]);
+      expect(events.at(-3)).toMatchObject({
+        step: "judge",
+        from: "super",
+        to: "ultra",
+        reason: "the verdict dates n1 by the page's own date 2013, though n1 names a source dated 1981",
+      });
+      expect(nebius.log.filter((c) => c.name === "verdict").at(-1)?.user).toContain("n1 names a source dated 1981");
+      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { earliest_date: "1981" } });
+    });
+
+    it("keeps the first verdict as the Judge gave it when Ultra gives none", async () => {
+      const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? late : null) });
+      const events = await run({ nebius, tavily: tavily() });
+      expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "judge_failed", "done"]);
+      // Code never takes the cited date for the Judge.
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_date: "2013" } });
+      expect(standingVerdict(events)?.fixes).toBeUndefined();
+    });
+
+    it("keeps the first verdict when Ultra gives the page's date again, whatever label it gives", async () => {
+      // As in the fish-climb-tree replay: Ultra turned a right no_known_source into
+      // misattributed while dating the same page by its own date.
+      const first = { ...late, verdict: "no_known_source" as const };
+      const second = { ...late, verdict: "misattributed" as const, rationale: "A 2013 page has it [n1]; the 1981 newspaper it names is unverified." };
+      const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? first : second) });
+      const events = await run({ nebius, tavily: tavily() });
+      expect(nebius.calls.filter((c) => c === "verdict")).toHaveLength(2);
+      expect(events.filter((e) => e.type === "verdict").at(-1)).toMatchObject({
+        tier: "ultra",
+        notTaken: "it gives no supported date earlier than the 2013 it was asked about, on n1, which cites 1981",
+      });
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { verdict: "no_known_source", earliest_date: "2013" } });
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    });
+
+    it("takes Ultra's verdict when it dates the saying by another, older page, even one citing an older source", async () => {
+      // The first verdict dates n1 by its 2013 though n1 cites 1981; Ultra names n2,
+      // a 1979 page that itself cites a 1950 source.
+      const page = `Posted 2013. From the Knoxville News-Sentinel, 1981: "${QUOTE}."`;
+      const other = "https://news.example.org/1979";
+      const twoPages = tavilyFor(() => [NEWS, other], (url) => (url === other ? `Posted 1979. From the Basic Text, 1950: "${QUOTE}."` : page)).tavily;
+      const elsewhere = { ...late, earliest_node: "n2", earliest_date: "1979", rationale: "A 1979 page has it [n2]." };
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(other) ? { ...READ, page_date: "1979", cited_source: "the Basic Text", cited_source_date: "1950" } : reading),
+        verdict: ({ model }) => (model === MODELS.super.id ? late : elsewhere),
+      });
+      const events = await run({ nebius, tavily: twoPages });
+      expect(events.filter((e) => e.type === "verdict").at(-1)).not.toHaveProperty("notTaken");
+      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { earliest_node: "n2", earliest_date: "1979" } });
+    });
+
+    it("keeps the first verdict when Ultra gives no date, or one no page backs", async () => {
+      // As Codex put it: a no_known_source on n1's 2013, and a misattributed with no date.
+      const first = { ...late, verdict: "no_known_source" as const };
+      for (const date of [null, "1975"]) {
+        const second = { ...late, verdict: "misattributed" as const, earliest_date: date, rationale: "The 1981 newspaper n1 names is the origin [n1]." };
+        const nebius = fakeNebius({ read: () => reading, verdict: ({ model }) => (model === MODELS.super.id ? first : second) });
+        const events = await run({ nebius, tavily: tavily() });
+        expect(events.filter((e) => e.type === "verdict").at(-1)).toMatchObject({ tier: "ultra", verdict: { earliest_date: null }, notTaken: expect.any(String) });
+        expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { verdict: "no_known_source", earliest_date: "2013" } });
+      }
+    });
+
+    it("keeps the first verdict when Ultra gives the same date from another page", async () => {
+      const page = `Posted 2013. From the Knoxville News-Sentinel, 1981: "${QUOTE}."`;
+      const other = "https://news.example.org/2013";
+      const twoPages = tavilyFor(() => [NEWS, other], (url) => (url === other ? `Posted 2013. "${QUOTE}."` : page)).tavily;
+      const sameDate = { ...late, earliest_node: "n2", earliest_date: "2013", rationale: "A 2013 page has it [n2]." };
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(other) ? { ...READ, page_date: "2013" } : reading),
+        verdict: ({ model }) => (model === MODELS.super.id ? late : sameDate),
+      });
+      const events = await run({ nebius, tavily: twoPages });
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_node: "n1" } });
+    });
+
+    it("never makes more than four judge calls", async () => {
+      // The longest path: Super refuses the bounded schema, its plain verdict
+      // takes the page's date, and Ultra runs out of tokens thinking, then with
+      // thinking off. Super's verdict stays the answer, as the Judge gave it.
+      const nebius = fakeNebius({
+        read: () => reading,
+        verdict: ({ model, schema }) => (model === MODELS.super.id ? (JSON.stringify(schema).includes("maxLength") ? "bad_request" : late) : "length"),
+      });
+      const events = await run({ nebius, tavily: tavily() });
+      const calls = nebius.log.filter((c) => c.name === "verdict").map((c) => `${c.model === MODELS.super.id ? "super" : "ultra"}${c.thinking ? "" : " no thinking"}`);
+      expect(calls).toEqual(["super", "super", "ultra", "ultra no thinking"]);
+      expect(calls).toHaveLength(MAX_JUDGE_CALLS);
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_date: "2013" } });
+    });
   });
 
   it("asks Ultra when a lineage step is on a node that isn't verified", async () => {
@@ -920,7 +1129,7 @@ describe("investigate", () => {
   it("does not ask Ultra about a verdict that stands, even with low confidence", async () => {
     const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, confidence: "low" }) });
     await run({ nebius });
-    expect(nebius.log.map((c) => c.model)).not.toContain(MODELS.ultra.id);
+    expect(nebius.log.filter((c) => c.name === "verdict").map((c) => c.model)).not.toContain(MODELS.ultra.id);
   });
 
   it("judges again with thinking off when thinking uses up the tokens", async () => {
@@ -1033,7 +1242,7 @@ describe("investigate", () => {
   it("does not ask Ultra once the budget is spent", async () => {
     const nebius = fakeNebius({ verdict: () => ({ ...VERDICT, rationale: "See [n9]." }) });
     // Plan, one read and the first verdict fit; nothing after them does.
-    const events = await run({ nebius, maxUsd: 0.0008 });
+    const events = await run({ nebius, maxUsd: 0.0017 });
     expect(types(events).slice(-3)).toEqual(["verdict", "budget_exceeded", "done"]);
     expect(nebius.calls).toEqual(["plan", "read_page", "verdict"]);
   });
@@ -1128,6 +1337,13 @@ describe("investigate", () => {
     const events = await run({ nebius: fakeNebius({ read: () => reading }), tavily });
     const node = events.find((e) => e.type === "node_added");
     expect(node?.type === "node_added" && node.node).toMatchObject({ pageDate: null, citedSourceDate: "1975", date: "1975" });
+  });
+
+  it("never keeps a page date that names two years", async () => {
+    // The lifespan sits at the top, where a page's own date would.
+    const brainy = tavilyFor(() => [NEWS], () => `Mahatma Gandhi, October 2, 1869 - January 30, 1948. "${QUOTE}."`);
+    const lifespan = await run({ nebius: fakeNebius({ read: () => ({ ...READ, page_date: "October 2, 1869 - January 30, 1948" }) }), tavily: brainy.tavily });
+    expect(lifespan.find((e) => e.type === "node_added")).toMatchObject({ node: { pageDate: null, date: null } });
   });
 
   it("counts a failed search as a call with unknown cost", async () => {
