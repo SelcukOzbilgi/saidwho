@@ -94,7 +94,7 @@ Setup: `pnpm eval` ran the twenty test quotes three ways: the app's mix of model
 
 ## 2026-10-14: The third eval run, and a held-out set
 
-Setup: `pnpm eval --setup cascade` on the twenty test quotes, then on ten held-out quotes run for the first time, at commit `a53fccf`. That's 30 runs with fresh plans. It cost $0.22 of Nebius and 141 new Tavily credits. The scores are in [eval/results.md](eval/results.md) and [eval/holdout-results.md](eval/holdout-results.md).
+Setup: `pnpm eval --setup cascade` on the twenty test quotes, then on ten held-out quotes run for the first time, at commit `a53fccf`. That's 30 runs with fresh plans. It cost $0.22 of Nebius and 141 Tavily credits of new searches. The score tables say 176, because they count a search that came from the cache at what it cost when it was first made. The scores are in [eval/results.md](eval/results.md) and [eval/holdout-results.md](eval/holdout-results.md).
 
 ### Token Factory
 
