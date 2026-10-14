@@ -1,6 +1,10 @@
 {
   "caseId": "think-you-can",
-  "ranAt": "2026-10-12T14:17:52.413Z",
+  "ranAt": "2026-10-14T07:38:52.158Z",
+  "code": {
+    "commit": "a53fccf",
+    "changes": null
+  },
   "events": [
     {
       "type": "started",
@@ -15,26 +19,34 @@
     },
     {
       "type": "planned",
-      "tier": "super",
-      "costUsd": 0.000954,
+      "tier": "ultra",
+      "costUsd": 0.001999,
       "usageKnown": true,
       "tokens": {
-        "promptTokens": 195,
-        "completionTokens": 995
+        "promptTokens": 235,
+        "completionTokens": 588
       },
-      "latencyMs": 5653,
-      "variants": [],
+      "latencyMs": 2101,
+      "variants": [
+        "Whether you think you can or think you can't you're right",
+        "If you think you can or think you can't you're right",
+        "Whether you believe you can or believe you can't you're right",
+        "If you think you can you can if you think you can't you're right",
+        "Whether you think you can or cannot you are right"
+      ],
       "candidateAuthors": [
         "Henry Ford",
-        "William James",
-        "Norman Vincent Peale"
+        "Norman Vincent Peale",
+        "Mary Kay Ash",
+        "Orville Wright",
+        "Virgil"
       ],
       "queries": [
         "\"Whether you think you can, or you think you can't, you're right.\"",
-        "earliest known source of \"Whether you think you can or you think you can't you're right\"",
-        "Henry Ford quote \"Whether you think you can\" source",
-        "William James \"Whether you think you can\" quote",
-        "Norman Vincent Peale \"Whether you think you can\" quote"
+        "\"can or you think you can't you're right\" earliest appearance",
+        "\"Whether you think you can or think you can't\" origin Henry Ford",
+        "\"If you think you can or think you can't\" first printed",
+        "Henry Ford \"you're right\" quote 1947 Reader's Digest"
       ],
       "foundAttribution": null
     },
@@ -47,211 +59,47 @@
     },
     {
       "type": "searched",
-      "query": "earliest known source of \"Whether you think you can or you think you can't you're right\"",
+      "query": "\"can or you think you can't you're right\" earliest appearance",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1449
+      "latencyMs": 1992
     },
     {
       "type": "searched",
-      "query": "Henry Ford quote \"Whether you think you can\" source",
+      "query": "\"Whether you think you can or think you can't\" origin Henry Ford",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2003
+      "latencyMs": 1185
     },
     {
       "type": "searched",
-      "query": "William James \"Whether you think you can\" quote",
+      "query": "\"If you think you can or think you can't\" first printed",
       "results": 5,
       "credits": 1,
-      "latencyMs": 1468
+      "latencyMs": 1290
     },
     {
       "type": "searched",
-      "query": "Norman Vincent Peale \"Whether you think you can\" quote",
+      "query": "Henry Ford \"you're right\" quote 1947 Reader's Digest",
       "results": 5,
       "credits": 1,
-      "latencyMs": 2031
+      "latencyMs": 1734
     },
     {
       "type": "pages_ready",
-      "pages": 7,
+      "pages": 11,
       "droppedExcluded": 0
     },
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.000059159999999999996,
+      "costUsd": 0.0001266,
       "usageKnown": true,
       "tokens": {
-        "promptTokens": 706,
-        "completionTokens": 70
-      },
-      "latencyMs": 561,
-      "url": "https://herbertlui.net/either-way-youre-probably-right",
-      "host": "herbertlui.net",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n4",
-        "url": "https://herbertlui.net/either-way-youre-probably-right",
-        "host": "herbertlui.net",
-        "title": "Either way, you’re probably right – Herbert Lui",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Whether you think you can, or you think you can’t—you’re right.",
-          "attributed_to": "Henry Ford",
-          "page_date": null,
-          "cited_source": "Dryden’s translation of Virgil",
-          "cited_source_date": null
-        },
-        "attributedTo": "Henry Ford",
-        "pageDate": null,
-        "citedSourceDate": null,
-        "date": null,
-        "foundVia": null
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00006858,
-      "usageKnown": true,
-      "tokens": {
-        "promptTokens": 839,
-        "completionTokens": 76
-      },
-      "latencyMs": 577,
-      "url": "https://medium.com/the-daily-cuppa/whether-you-think-you-can-or-you-think-you-cant-you-re-right-henry-ford-a78ad696674d",
-      "host": "medium.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n3",
-        "url": "https://medium.com/the-daily-cuppa/whether-you-think-you-can-or-you-think-you-cant-you-re-right-henry-ford-a78ad696674d",
-        "host": "medium.com",
-        "title": "Whether you think you can or you think you can’t, you’re right. ~Henry Ford I have always thought of this quote as being spot on. It’s a self-fulfilling prophecy. Because if you think you can’t, are… - The Daily Cuppa - Medium",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Whether you think you can or you think you can’t, you’re right. ~Henry Ford",
-          "attributed_to": "Henry Ford",
-          "page_date": "2021-06-10",
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Henry Ford",
-        "pageDate": "2021-06-10",
-        "citedSourceDate": null,
-        "date": "2021-06-10",
-        "foundVia": null
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00008885999999999999,
-      "usageKnown": true,
-      "tokens": {
-        "promptTokens": 1221,
-        "completionTokens": 65
-      },
-      "latencyMs": 719,
-      "url": "https://www.steppingstonecoaching.ca/blog/ncdyg2249yzek2cp3scp6fbaafz369",
-      "host": "steppingstonecoaching.ca",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n5",
-        "url": "https://www.steppingstonecoaching.ca/blog/ncdyg2249yzek2cp3scp6fbaafz369",
-        "host": "steppingstonecoaching.ca",
-        "title": "Whether you think you can, or you think you can’t – you’re right... Henry Ford — STEPPING STONE Women's Confidence Coach",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Whether you think you can, or you think you can’t – you’re right... HF",
-          "attributed_to": "Henry Ford",
-          "page_date": null,
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Henry Ford",
-        "pageDate": null,
-        "citedSourceDate": null,
-        "date": null,
-        "foundVia": null
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00009647999999999998,
-      "usageKnown": true,
-      "tokens": {
-        "promptTokens": 1312,
-        "completionTokens": 74
-      },
-      "latencyMs": 822,
-      "url": "https://www.cpapracticeadvisor.com/2014/07/15/whether-you-think-you-can-or-think-you-cant-youre-right/15980",
-      "host": "cpapracticeadvisor.com",
-      "outcome": "evidence",
-      "reason": null
-    },
-    {
-      "type": "node_added",
-      "node": {
-        "id": "n1",
-        "url": "https://www.cpapracticeadvisor.com/2014/07/15/whether-you-think-you-can-or-think-you-cant-youre-right/15980",
-        "host": "cpapracticeadvisor.com",
-        "title": "Whether You Think You Can, or Think You Can't ... You're Right",
-        "check": {
-          "status": "exact",
-          "score": 1
-        },
-        "reader": {
-          "contains_quote": true,
-          "exact_snippet": "Whether you think you can, or you think you can’t – you’re right,",
-          "attributed_to": "Henry Ford",
-          "page_date": "2014-07-15",
-          "cited_source": null,
-          "cited_source_date": null
-        },
-        "attributedTo": "Henry Ford",
-        "pageDate": "2014-07-15",
-        "citedSourceDate": null,
-        "date": "2014-07-15",
-        "foundVia": null
-      }
-    },
-    {
-      "type": "page_read",
-      "tier": "lightning",
-      "costUsd": 0.00012251999999999999,
-      "usageKnown": true,
-      "tokens": {
-        "promptTokens": 1778,
+        "promptTokens": 1846,
         "completionTokens": 66
       },
-      "latencyMs": 822,
+      "latencyMs": 9245,
       "url": "https://open.spotify.com/episode/5duoxRnAMesa2l9UdHX5fH",
       "host": "open.spotify.com",
       "outcome": "evidence",
@@ -286,32 +134,114 @@
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.00008814,
+      "costUsd": 0.00010056,
       "usageKnown": true,
       "tokens": {
-        "promptTokens": 1217,
-        "completionTokens": 63
+        "promptTokens": 1380,
+        "completionTokens": 74
       },
-      "latencyMs": 388,
-      "url": "https://www.behavioralessentials.com/resources/20-quotes-to-help-you-reframe-negative-thoughts",
-      "host": "behavioralessentials.com",
+      "latencyMs": 10586,
+      "url": "https://www.cpapracticeadvisor.com/2014/07/15/whether-you-think-you-can-or-think-you-cant-youre-right/15980",
+      "host": "cpapracticeadvisor.com",
       "outcome": "evidence",
       "reason": null
     },
     {
       "type": "node_added",
       "node": {
-        "id": "n7",
-        "url": "https://www.behavioralessentials.com/resources/20-quotes-to-help-you-reframe-negative-thoughts",
-        "host": "behavioralessentials.com",
-        "title": "Behavioral Essentials",
+        "id": "n1",
+        "url": "https://www.cpapracticeadvisor.com/2014/07/15/whether-you-think-you-can-or-think-you-cant-youre-right/15980",
+        "host": "cpapracticeadvisor.com",
+        "title": "Whether You Think You Can, or Think You Can't ... You're Right",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "Whether you think you can or you think you can’t either way you are right!",
+          "exact_snippet": "Whether you think you can, or you think you can’t – you’re right,",
+          "attributed_to": "Henry Ford",
+          "page_date": "2014-07-15",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": "2014-07-15",
+        "citedSourceDate": null,
+        "date": "2014-07-15",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 7.266e-05,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 907,
+        "completionTokens": 76
+      },
+      "latencyMs": 11287,
+      "url": "https://medium.com/the-daily-cuppa/whether-you-think-you-can-or-you-think-you-cant-you-re-right-henry-ford-a78ad696674d",
+      "host": "medium.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n3",
+        "url": "https://medium.com/the-daily-cuppa/whether-you-think-you-can-or-you-think-you-cant-you-re-right-henry-ford-a78ad696674d",
+        "host": "medium.com",
+        "title": "Whether you think you can or you think you can’t, you’re right. ~Henry Ford I have always thought of this quote as being spot on. It’s a self-fulfilling prophecy. Because if you think you can’t, are… - The Daily Cuppa - Medium",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Whether you think you can or you think you can’t, you’re right. ~Henry Ford",
+          "attributed_to": "Henry Ford",
+          "page_date": "2021-06-10",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": "2021-06-10",
+        "citedSourceDate": null,
+        "date": "2021-06-10",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 9.294e-05,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1289,
+        "completionTokens": 65
+      },
+      "latencyMs": 18974,
+      "url": "https://www.steppingstonecoaching.ca/blog/ncdyg2249yzek2cp3scp6fbaafz369",
+      "host": "steppingstonecoaching.ca",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n5",
+        "url": "https://www.steppingstonecoaching.ca/blog/ncdyg2249yzek2cp3scp6fbaafz369",
+        "host": "steppingstonecoaching.ca",
+        "title": "Whether you think you can, or you think you can’t – you’re right... Henry Ford — STEPPING STONE Women's Confidence Coach",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Whether you think you can, or you think you can’t – you’re right... HF",
           "attributed_to": "Henry Ford",
           "page_date": null,
           "cited_source": null,
@@ -327,15 +257,15 @@
     {
       "type": "page_read",
       "tier": "lightning",
-      "costUsd": 0.0000825,
+      "costUsd": 0.00010463999999999999,
       "usageKnown": true,
       "tokens": {
-        "promptTokens": 1083,
-        "completionTokens": 73
+        "promptTokens": 1496,
+        "completionTokens": 62
       },
-      "latencyMs": 460,
-      "url": "https://www.goodreads.com/quotes/978-whether-you-think-you-can-or-you-think-you-can-t--you-re",
-      "host": "goodreads.com",
+      "latencyMs": 16687,
+      "url": "https://online.visual-paradigm.com/flipbook-maker/templates/quotes/whether-you-think-you-can-or-you-think-you-cant-youre-right-henry-ford",
+      "host": "online.visual-paradigm.com",
       "outcome": "evidence",
       "reason": null
     },
@@ -343,75 +273,422 @@
       "type": "node_added",
       "node": {
         "id": "n6",
-        "url": "https://www.goodreads.com/quotes/978-whether-you-think-you-can-or-you-think-you-can-t--you-re",
-        "host": "goodreads.com",
-        "title": "Quote by Henry Ford: “Whether you think you can, or you think you can...”",
+        "url": "https://online.visual-paradigm.com/flipbook-maker/templates/quotes/whether-you-think-you-can-or-you-think-you-cant-youre-right-henry-ford",
+        "host": "online.visual-paradigm.com",
+        "title": "Whether you think you can or you think you can’t, you’re right.- Henry Ford | Quote Template",
         "check": {
           "status": "exact",
           "score": 1
         },
         "reader": {
           "contains_quote": true,
-          "exact_snippet": "Whether you think you can, or you think you can't--you're right.",
+          "exact_snippet": "Whether you think you can or you think you can't, you're right.",
           "attributed_to": "Henry Ford",
-          "page_date": "2026-08-31",
+          "page_date": null,
           "cited_source": null,
           "cited_source_date": null
         },
         "attributedTo": "Henry Ford",
-        "pageDate": "2026-08-31",
+        "pageDate": null,
         "citedSourceDate": null,
-        "date": "2026-08-31",
+        "date": null,
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 6.708e-05,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 774,
+        "completionTokens": 86
+      },
+      "latencyMs": 26024,
+      "url": "https://herbertlui.net/either-way-youre-probably-right",
+      "host": "herbertlui.net",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n4",
+        "url": "https://herbertlui.net/either-way-youre-probably-right",
+        "host": "herbertlui.net",
+        "title": "Either way, you’re probably right – Herbert Lui",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Whether you think you can, or you think you can’t—you’re right.",
+          "attributed_to": "Henry Ford",
+          "page_date": "2023",
+          "cited_source": "Dryden’s translation of Virgil, \"For they can conquer who believe they can.\"",
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null,
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 4.164e-05,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 442,
+        "completionTokens": 63
+      },
+      "latencyMs": 15057,
+      "url": "https://www.goodreads.com/author/quotes/203714.Henry_Ford",
+      "host": "goodreads.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "escalated",
+      "step": "read",
+      "from": "lightning",
+      "to": "super",
+      "thinking": false,
+      "reason": "the snippet is not on the page",
+      "url": "https://www.goodreads.com/author/quotes/203714.Henry_Ford"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010584,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1464,
+        "completionTokens": 75
+      },
+      "latencyMs": 15828,
+      "url": "https://www.instagram.com/p/DeMSNNwEbEW",
+      "host": "instagram.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n7",
+        "url": "https://www.instagram.com/p/DeMSNNwEbEW",
+        "host": "instagram.com",
+        "title": "Instagram",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "\"Whether you think you can, or you think you can’t—you’re right.\"",
+          "attributed_to": "Henry Ford",
+          "page_date": "October 07, 2026",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": "2026",
+        "citedSourceDate": null,
+        "date": "2026",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 8.609999999999999e-05,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1107,
+        "completionTokens": 82
+      },
+      "latencyMs": 7519,
+      "url": "https://bookviewreview.com/2025/01/05/interview-with-author-d-r-berlin",
+      "host": "bookviewreview.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n9",
+        "url": "https://bookviewreview.com/2025/01/05/interview-with-author-d-r-berlin",
+        "host": "bookviewreview.com",
+        "title": "Interview With Author D. R. Berlin – BookView Review",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "If you think you can or think you can’t, your right. Think you can, and anything is possible.",
+          "attributed_to": "D. R. Berlin",
+          "page_date": "2025-01-05",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "D. R. Berlin",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null,
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010302,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1429,
+        "completionTokens": 72
+      },
+      "latencyMs": 684,
+      "url": "https://www.livemint.com/news/us-news/quote-of-the-day-henry-ford-whether-you-think-you-can-or-you-think-you-cant-youre-right-11775623132014.html",
+      "host": "livemint.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n10",
+        "url": "https://www.livemint.com/news/us-news/quote-of-the-day-henry-ford-whether-you-think-you-can-or-you-think-you-cant-youre-right-11775623132014.html",
+        "host": "livemint.com",
+        "title": "Quote of the Day by Henry Ford: 'Whether you think you can or you think you can't — you're right' | Today News",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Whether you think you can or you think you can't — you're right",
+          "attributed_to": "Henry Ford",
+          "page_date": "2026-04-08",
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": "2026-04-08",
+        "citedSourceDate": null,
+        "date": "2026-04-08",
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "super",
+      "costUsd": 0.0001731,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 442,
+        "completionTokens": 45
+      },
+      "latencyMs": 818,
+      "url": "https://www.goodreads.com/author/quotes/203714.Henry_Ford",
+      "host": "goodreads.com",
+      "outcome": "no_quote",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n8",
+        "url": "https://www.goodreads.com/author/quotes/203714.Henry_Ford",
+        "host": "goodreads.com",
+        "title": "Henry Ford Quotes  (Author of My Life And Work)",
+        "check": {
+          "status": "not_found",
+          "score": 0
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "Whether you think you can, or you think you can't, you're right.",
+          "attributed_to": "Henry Ford",
+          "page_date": null,
+          "cited_source": null,
+          "cited_source_date": null
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": null,
+        "citedSourceDate": null,
+        "date": null,
+        "foundVia": null
+      }
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00010554,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1431,
+        "completionTokens": 82
+      },
+      "latencyMs": 4003,
+      "url": "https://www.revenueflow.com/blog/quote-sales-motivation",
+      "host": "revenueflow.com",
+      "outcome": "evidence",
+      "reason": null
+    },
+    {
+      "type": "node_added",
+      "node": {
+        "id": "n11",
+        "url": "https://www.revenueflow.com/blog/quote-sales-motivation",
+        "host": "revenueflow.com",
+        "title": "Sales Motivation Quotes: Seven Lines, and Who Said Them",
+        "check": {
+          "status": "exact",
+          "score": 1
+        },
+        "reader": {
+          "contains_quote": true,
+          "exact_snippet": "\"Whether you believe you can do a thing or not, you are right\"",
+          "attributed_to": "Henry Ford",
+          "page_date": "2026-09-19",
+          "cited_source": "The Reader's Digest",
+          "cited_source_date": "September 1947"
+        },
+        "attributedTo": "Henry Ford",
+        "pageDate": "2026-09-19",
+        "citedSourceDate": "1947",
+        "date": "1947",
         "foundVia": null
       }
     },
     {
       "type": "traced",
       "tier": "super",
-      "costUsd": 0.0001224,
+      "costUsd": 0.00018869999999999998,
       "usageKnown": true,
       "tokens": {
-        "promptTokens": 384,
-        "completionTokens": 8
+        "promptTokens": 404,
+        "completionTokens": 75
       },
-      "latencyMs": 426,
+      "latencyMs": 703,
       "round": 1,
-      "leads": []
+      "leads": [
+        {
+          "fromNode": "n4",
+          "work": "The Works of John Dryden, Volume V: Translations from Virgil",
+          "query": "John Dryden For they can conquer who believe they can"
+        }
+      ]
+    },
+    {
+      "type": "searched",
+      "query": "John Dryden For they can conquer who believe they can",
+      "results": 5,
+      "credits": 1,
+      "latencyMs": 3456
+    },
+    {
+      "type": "pages_ready",
+      "pages": 3,
+      "droppedExcluded": 0,
+      "round": 1
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012942,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1977,
+        "completionTokens": 45
+      },
+      "latencyMs": 422,
+      "url": "https://en.wikisource.org/wiki/The_Works_of_Virgil_(Dryden)/Aeneid/Book_X",
+      "host": "en.wikisource.org",
+      "outcome": "no_quote",
+      "reason": null,
+      "lookingFor": "The Works of John Dryden, Volume V: Translations from Virgil"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00011141999999999999,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1677,
+        "completionTokens": 45
+      },
+      "latencyMs": 448,
+      "url": "https://en.wikisource.org/wiki/The_Works_of_Virgil_(Dryden)/(Dedication_(Mulgrave)",
+      "host": "en.wikisource.org",
+      "outcome": "no_quote",
+      "reason": null,
+      "lookingFor": "The Works of John Dryden, Volume V: Translations from Virgil"
+    },
+    {
+      "type": "page_read",
+      "tier": "lightning",
+      "costUsd": 0.00012942,
+      "usageKnown": true,
+      "tokens": {
+        "promptTokens": 1977,
+        "completionTokens": 45
+      },
+      "latencyMs": 602,
+      "url": "https://en.wikisource.org/wiki/The_Works_of_Virgil_(Dryden)/Aeneid/Book_IX",
+      "host": "en.wikisource.org",
+      "outcome": "no_quote",
+      "reason": null,
+      "lookingFor": "The Works of John Dryden, Volume V: Translations from Virgil"
+    },
+    {
+      "type": "cited_works",
+      "works": [
+        {
+          "citedBy": "n4",
+          "work": "The Works of John Dryden, Volume V: Translations from Virgil",
+          "checked": "The pages this run read for The Works of John Dryden, Volume V: Translations from Virgil on en.wikisource.org don't have the saying; they may be another edition or only part of the work."
+        }
+      ]
     },
     {
       "type": "verdict",
       "tier": "super",
-      "costUsd": 0.0014853,
+      "costUsd": 0.002766,
       "usageKnown": true,
       "tokens": {
-        "promptTokens": 1471,
-        "completionTokens": 1160
+        "promptTokens": 2257,
+        "completionTokens": 2321
       },
-      "latencyMs": 6047,
+      "latencyMs": 11598,
       "verdict": {
-        "verdict": "misattributed",
-        "earliest_node": "n1",
-        "earliest_author": null,
-        "earliest_date": null,
-        "misattribution_node": null,
-        "confidence": "medium",
-        "rationale": "All available instances attribute the quote to Henry Ford, but none provide a primary source from Ford’s writings or speeches (n1, n2, n3, n5, n6, n7). Node n4 notes that the saying is cited as coming from “Dryden’s translation of Virgil”, implying an earlier literary origin unrelated to Ford (n4). Without any contemporaneous evidence linking the phrase to Ford, the attribution is unsupported and likely mistaken.",
         "lineage": [
           {
-            "node": "n1",
+            "node": "n11",
             "change": "first",
-            "note": "First appearance attributed to Henry Ford."
+            "note": "First known appearance in Reader's Digest 1947, attributed to Henry Ford"
           }
-        ]
+        ],
+        "rationale": "All available pages attribute the quote to Henry Ford, with the earliest verifiable source being a 1947 Reader's Digest citation. No credible source shows the quote or a meaningful variant attributed to anyone else; the sole alternative attribution to D. R. Berlin lacks sourcing and thus does not constitute an independent origin. Therefore the usual credit to Henry Ford is supported by contemporaneous records and is not contradicted.",
+        "verdict": "correct",
+        "confidence": "high",
+        "earliest_node": "n11",
+        "earliest_author": null,
+        "earliest_date": "1947",
+        "misattribution_node": null
       },
       "unknownIds": []
     },
     {
       "type": "done",
-      "nebiusUsd": 0.00316794,
-      "tavilyCredits": 5,
+      "nebiusUsd": 0.0065036799999999995,
+      "tavilyCredits": 6,
       "unknownCostCalls": 0,
-      "seconds": 22
+      "seconds": 52
     }
   ]
 }
