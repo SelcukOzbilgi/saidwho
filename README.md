@@ -32,7 +32,7 @@ Sometimes the honest answer is "people disagree" or "nothing old enough turned u
 
 The home page lists ten finished investigations. Each is a quote from the [test set](eval/), run once and saved as it happened. Each case has its own page, such as [/cases/insanity-same-thing](https://saidwho.vercel.app/cases/insanity-same-thing), where you can replay the run and see the known answer next to what Said Who? concluded.
 
-Eight of the ten come from the first full eval, run on October 12, and the Henry Ford and Churchill cases from the third, on October 14 (see below). Said Who? reaches the same verdict as the known answer in eight of the ten, though the earliest source it finds isn't always the one on record. The other two are kept on purpose, and their pages say that the verdict differs.
+Nine of the ten come from the first full eval, run on October 12, and Henry Ford's "Whether you think you can" from the third, on October 14 (see below). Said Who? reaches the same verdict as the known answer in eight of the ten, though the earliest source it finds isn't always the one on record. The other two are kept on purpose, and their pages say that the verdict differs.
 
 | Quote | Usually credited to | Known answer | Said Who?'s verdict |
 |---|---|---|---|
