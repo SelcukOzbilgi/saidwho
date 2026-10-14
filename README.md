@@ -47,7 +47,7 @@ Nine of the ten come from the first full eval, run on October 12, and Henry Ford
 | "Whether you think you can, or you think you can't..." | Henry Ford | said it | said it |
 | "Hayatta en hakiki mürşit ilimdir." | Mustafa Kemal Atatürk | said it | no known source |
 
-Most runs took 25 to 39 seconds. Henry Ford's took 52, and Roosevelt's about three minutes, because Nebius answered slowly for part of that afternoon. Each cost less than a cent in model use.
+Most runs took 25 to 39 seconds and Henry Ford's 52. Roosevelt's and Churchill's took three and four minutes, because Nebius answered slowly for part of that afternoon and one planning call had to be tried again. Each cost less than a cent in model use.
 
 ## How it works
 
