@@ -47,7 +47,7 @@ Eight of the ten come from the first full eval, run on October 12, and the Henry
 | "Whether you think you can, or you think you can't..." | Henry Ford | said it | said it |
 | "Hayatta en hakiki mürşit ilimdir." | Mustafa Kemal Atatürk | said it | no known source |
 
-Most runs took 22 to 39 seconds. Two took three and four minutes, because Nebius answered slowly for part of that afternoon and one planning call had to be tried again. Each cost less than a cent in model use.
+Most runs took 25 to 39 seconds. Henry Ford's took 52, and Roosevelt's about three minutes, because Nebius answered slowly for part of that afternoon. Each cost less than a cent in model use.
 
 ## How it works
 
@@ -81,7 +81,7 @@ The Nemotron models are served by [Nebius Token Factory](https://nebius.com/serv
 
 ## How well it does
 
-`pnpm eval` runs the twenty quotes in the test set, with Quote Investigator, Wikiquote, Wikipedia and each answer's own pages left out of the search. A held-out set of ten more quotes was picked after the fixes that came from the test set's misses, so none of them shaped the code.
+`pnpm eval` runs the twenty quotes in the test set, with Quote Investigator, Wikiquote, Wikipedia and each answer's own pages left out of the search. A held-out set of ten more quotes was never run until October 14, after every fix, so none of them shaped the code.
 
 The third run, on October 14 at commit `a53fccf`, with the app's mix of models:
 
@@ -110,7 +110,7 @@ There, the app's mix got as many verdicts right as every step on Ultra, at about
 What the third run's misses show:
 
 - **An older idea is taken for the saying.** For "Be the change you wish to see in the world", the Judge found Gandhi's 1913 line "If we could change ourselves, the tendencies in the world would also change" and called the credit to Gandhi right. For Roosevelt's "The only thing we have to fear is fear itself", it found Francis Bacon's "Nothing is terrible except fear itself" and called the credit wrong. Both are related ideas in other words, not earlier printings of the saying.
-- **Older dates are mostly related passages.** Six dates came out earlier than the known one. Two are the related ideas above, Gandhi's 1913 and Bacon's 1605. John Stuart Mill's 1867 line about good men who "look on and do nothing" is a related passage too, and 1765 is the year Rousseau wrote the "brioche" passage, which was published in 1782. For Bill Gates's "640K", 1981 is the year a page says he said it, not the date of anything printed then; the Checker keeps a year written next to the saying. For Warhol, a 2019 page cites a 1965 article by Henry Geldzahler, which the run didn't find.
+- **Older dates are related passages or later accounts.** Six dates came out earlier than the known one. Two are the related ideas above, Gandhi's 1913 and Bacon's 1605. John Stuart Mill's 1867 line about good men who "look on and do nothing" is a related passage too, and 1765 is the year Rousseau wrote the "brioche" passage, which was published in 1782. For Bill Gates's "640K", 1981 is the year a page says he said it, not the date of anything printed then; the Checker keeps a year written next to the saying. For Warhol, a page mentions a 1965 article about the curator Henry Geldzahler that quotes Warhol in other words, "no one will be famous for more than a week". The run didn't find that article.
 - **The Judge can be too strict.** For Edison's "Genius is one percent inspiration", it had a 1903 Harper's credit to Edison, from his own lifetime, and still said there was no known source. For "Hayatta en hakiki mürşit ilimdir", it set the 1924 credit to Atatürk aside because the run didn't find the cited works' text.
 - **Disputes get missed.** For "Gel, gel, ne olursan ol" and Warhol's "fifteen minutes of fame", the test set says the credit is contested. The Judge called the first unsourced and the second right.
 - **"Faster horses" still sits on a fine line.** The test set says there's no known source, since the earliest versions imagine what Ford might have said. The app's mix called it misattributed in all three runs.

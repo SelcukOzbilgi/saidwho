@@ -94,11 +94,11 @@ Setup: `pnpm eval` ran the twenty test quotes three ways: the app's mix of model
 
 ## 2026-10-14: The third eval run, and a held-out set
 
-Setup: `pnpm eval --setup cascade` on the twenty test quotes, then on ten held-out quotes picked after the fixes, at commit `a53fccf`. That's 30 runs with fresh plans. It cost $0.22 of Nebius and 141 new Tavily credits. The scores are in [eval/results.md](eval/results.md) and [eval/holdout-results.md](eval/holdout-results.md).
+Setup: `pnpm eval --setup cascade` on the twenty test quotes, then on ten held-out quotes run for the first time, at commit `a53fccf`. That's 30 runs with fresh plans. It cost $0.22 of Nebius and 141 new Tavily credits. The scores are in [eval/results.md](eval/results.md) and [eval/holdout-results.md](eval/holdout-results.md).
 
 ### Token Factory
 
-- **Sampling makes one run per quote a weak measure.** With thinking on we sample at temperature 0.6. Two runs of the same quote shared only one to three of their searches, and between the first and third runs four test quotes flipped to right and five to wrong. We measure prompt changes by judging saved evidence again, several samples each, instead. If Token Factory honours `seed` for these models, a line in the docs saying so would let an eval repeat a run exactly. We haven't tested it.
+- **Sampling makes one run per quote a weak measure.** With thinking on we sample at temperature 0.6. Two runs of the same quote shared only one to three of their searches, and between the first and third runs four test quotes flipped to right and five to wrong. We measure prompt changes by judging saved evidence again, several samples each, instead. If Token Factory supports `seed` for these models, a line in the docs saying so would help us test how repeatable the model calls are. We haven't tried it, and the searches would still vary.
 - **Ultra plans more reliably than Super.** Across the two earlier runs, Super returned a broken plan 7 times in 34: a `"> "` left at the start of a query, escaped quotes, or nothing usable to search. Ultra's 34 plans had none, so the Planner now runs on Ultra. That makes a quote about 70% dearer, $0.0076 against $0.0045.
 
 ### Tavily
