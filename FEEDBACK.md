@@ -91,3 +91,20 @@ Setup: `pnpm eval` ran the twenty test quotes three ways: the app's mix of model
 - **The judge's 8,000-token budget fits Super, not the others.** Super's judge never used more than 3,329 completion tokens. Lightning's judge hit the limit in 13 of 35 calls, and Ultra's in 3 of 22, mostly while thinking. Tries with thinking off then finished in 300 to 584 tokens. Once, on Edison's "Genius is one percent inspiration", Ultra ran out with thinking off as well, so that run had no verdict. A separate cap on reasoning tokens would still help most.
 - **Strict schema doesn't stop format slips inside strings.** Lightning wrote node ids as `"[n8]"` instead of `"n8"`, and once wrote the string `"null"` where the field allows `null`. It also put a range, `"n1–n7, n15"`, where one id belongs. The app counts these as evidence it can't find, so 7 Lightning verdicts were flagged even though every page they meant was confirmed.
 - **Super was slow for part of the afternoon.** Two planning calls timed out after 120 s, and a retry worked both times. The slowest run took four minutes, against a median of 36 s for the app's mix. One of those timeouts was followed by a planned query that was only `">"`, which Tavily refused. The app should drop such queries before searching.
+
+## 2026-10-14: The third eval run, and a held-out set
+
+Setup: `pnpm eval --setup cascade` on the twenty test quotes, then on ten held-out quotes run for the first time, at commit `a53fccf`. That's 30 runs with fresh plans. It cost $0.22 of Nebius and 141 Tavily credits of new searches. The score tables say 176, because they count a search that came from the cache at what it cost when it was first made. The scores are in [eval/results.md](eval/results.md) and [eval/holdout-results.md](eval/holdout-results.md).
+
+### Token Factory
+
+- **Sampling makes one run per quote a weak measure.** With thinking on we sample at temperature 0.6. Two runs of the same quote shared only one to three of their searches, and between the first and third runs four test quotes flipped to right and five to wrong. We measure prompt changes by judging saved evidence again, several samples each, instead. If Token Factory supports `seed` for these models, a line in the docs saying so would help us test how repeatable the model calls are. We haven't tried it, and the searches would still vary.
+- **Ultra plans more reliably than Super.** Across the two earlier runs, Super returned a broken plan 7 times in 34: a `"> "` left at the start of a query, escaped quotes, or nothing usable to search. Ultra's 34 plans had none, so the Planner now runs on Ultra. That makes a quote about 70% dearer, $0.0076 against $0.0045.
+
+### Tavily
+
+- **The usage endpoint lags.** On October 13, `/usage` still showed the same total hours after a run that made 136 credits of new searches. We now count spend from the `usage.credits` each search response returns.
+
+### Partner credits
+
+- **Toloka:** the promo code that showed as "not found" on October 6 now shows a $50 balance. We plan to use it for a small human check of the evidence the third run confirmed.
