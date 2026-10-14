@@ -2,12 +2,14 @@ import "server-only";
 
 import type { RunEvent } from "../../agent/events";
 import type { InvestigationOptions } from "../../agent/orchestrator";
+import { clientIp, UNKNOWN_VISITOR, visitorKey } from "./client-ip";
 import type { DailyLedger, Reservation } from "./daily-budget";
 import { TAVILY_USD_PER_CREDIT } from "./daily-budget";
 import type { ServerEnv } from "./env-schema";
 import { parseInvestigateRequest } from "./investigate-request";
 import type { NebiusClient, NebiusClientOptions } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
+import { DAY_SECONDS, HOUR_SECONDS, type Limit, type RateLimiter, secondsLeftInWindow } from "./rate-limit";
 import { resolveRunKeys } from "./run-keys";
 import { newRunId, type RunStore } from "./run-store";
 import { redactSecrets } from "./safe-error";
@@ -45,6 +47,8 @@ export const NEBIUS_TIMEOUT_MS = 90_000;
 export type InvestigateDeps = {
   env: ServerEnv;
   ledger: DailyLedger;
+  // Counts runs per visitor.
+  limiter: RateLimiter;
   // Sites left out of every live run, so the agent finds the trail itself.
   excludeDomains: readonly string[];
   createNebius: (options: NebiusClientOptions) => NebiusClient;
@@ -57,8 +61,14 @@ export type InvestigateDeps = {
 };
 
 // Error bodies carry a fixed code, never provider text or anything the visitor sent.
-const fail = (status: number, error: string, extra: Record<string, unknown> = {}): Response =>
-  Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store" } });
+const fail = (
+  status: number,
+  error: string,
+  extra: Record<string, unknown> = {},
+  headers: Record<string, string> = {},
+): Response => Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store", ...headers } });
+
+const LIMIT_ERRORS = { runs: "too_many_runs", trial: "trial_limit_reached" } as const;
 
 const KEY_ERRORS = {
   byok_incomplete: 400,
@@ -68,8 +78,12 @@ const KEY_ERRORS = {
 
 type DoneEvent = Extract<RunEvent, { type: "done" }>;
 
+const describe = (err: unknown, secrets: readonly string[]): string =>
+  (err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown").slice(0, 300);
+
 export function createInvestigateHandler(deps: InvestigateDeps): (request: Request) => Promise<Response> {
   const logError = deps.logError ?? ((message: string) => console.error(message));
+  let warnedNoAddress = false;
 
   return async function POST(request: Request): Promise<Response> {
     const parsed = await parseInvestigateRequest(request);
@@ -98,10 +112,71 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       return fail(500, "server_misconfigured");
     }
 
+    const onVercel = deps.env.VERCEL === "1";
+    const visitor = visitorKey(clientIp(request.headers, onVercel));
+    if (onVercel && visitor === UNKNOWN_VISITOR && !warnedNoAddress) {
+      // Once per server instance, and never with the headers themselves.
+      warnedNoAddress = true;
+      logError("investigate: Vercel gave no visitor address, so visitors without one share a count");
+    }
+
+    // The visitor is counted before the budget is touched, so a visitor at their
+    // limit can't hold any of the day's budget, however many requests they send.
+    // The scarcer trial limit goes first, so a visitor out of trial runs who keeps
+    // trying doesn't use up their hourly runs on their own keys too.
+    const limits: Limit[] = [{ name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS }];
+    if (keys.source === "owner") {
+      limits.unshift({ name: "trial", max: deps.env.TRIAL_RUNS_PER_IP_PER_DAY, windowSeconds: DAY_SECONDS });
+    }
+    // A run refused after it was counted gives its counts back, to the window each
+    // was counted in, so a run that never starts leaves the visitor's counts as
+    // they were. This is best effort: when it fails the run is still refused, and
+    // the count stays until its window ends.
+    const taken: { limit: Limit; windowStart: number }[] = [];
+    const refuse = async (response: Response): Promise<Response> => {
+      await Promise.all(
+        taken.map(async ({ limit, windowStart }) => {
+          try {
+            await deps.limiter.unhit(visitor, limit, windowStart);
+          } catch (err: unknown) {
+            logError(`investigate: could not give back the ${limit.name} count: ${describe(err, secrets)}`);
+          }
+        }),
+      );
+      return response;
+    };
+    for (const limit of limits) {
+      let windowStart: number | null;
+      try {
+        windowStart = await deps.limiter.hit(visitor, limit);
+      } catch (err: unknown) {
+        logError(`investigate: could not check the ${limit.name} limit: ${describe(err, secrets)}`);
+        // A trial run spends the owner's money, so without a working count none
+        // starts. A run on the visitor's own keys costs the owner nothing, so a
+        // broken count shouldn't block it. A count whose call failed may or may
+        // not have been made, so it isn't given back.
+        if (keys.source === "owner") return refuse(fail(503, "limits_unavailable"));
+        continue;
+      }
+      if (windowStart === null) {
+        const retryAfter = String(secondsLeftInWindow(limit.windowSeconds));
+        return refuse(fail(429, LIMIT_ERRORS[limit.name], {}, { "Retry-After": retryAfter }));
+      }
+      taken.push({ limit, windowStart });
+    }
+
+    // The budget comes last, so nothing after it can refuse the run and leave a
+    // reservation behind.
     let reservation: Reservation | null = null;
     if (keys.source === "owner") {
-      reservation = deps.ledger.reserve(TRIAL_RESERVE_USD);
-      if (!reservation) return fail(429, "daily_budget_spent");
+      try {
+        reservation = await deps.ledger.reserve(TRIAL_RESERVE_USD);
+      } catch (err: unknown) {
+        // A trial run spends the owner's money, so without a working count none starts.
+        logError(`investigate: could not check the daily budget: ${describe(err, secrets)}`);
+        return refuse(fail(503, "limits_unavailable"));
+      }
+      if (!reservation) return refuse(fail(429, "daily_budget_spent"));
     }
 
     // One controller stops the run, whether the client disconnects (request.signal),
@@ -135,22 +210,25 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
         if (runId) send(toRunIdChunk(runId));
         heartbeat = setInterval(() => send(SSE_HEARTBEAT), HEARTBEAT_MS);
 
-        deps
-          .investigate({
-            nebius,
-            tavily,
-            input: { quote, popularAttribution, language, excludeDomains: deps.excludeDomains },
-            maxUsd: keys.source === "owner" ? TRIAL_MAX_USD : BYOK_MAX_USD,
-            signal: abort.signal,
-            onEvent: (event) => {
-              if (event.type === "done") done = event;
-              events.push(event);
-              send(toSseChunk(event));
-            },
-          })
+        // Called inside a promise, so a run that throws before it returns one still
+        // ends below, with its reservation settled.
+        Promise.resolve()
+          .then(() =>
+            deps.investigate({
+              nebius,
+              tavily,
+              input: { quote, popularAttribution, language, excludeDomains: deps.excludeDomains },
+              maxUsd: keys.source === "owner" ? TRIAL_MAX_USD : BYOK_MAX_USD,
+              signal: abort.signal,
+              onEvent: (event) => {
+                if (event.type === "done") done = event;
+                events.push(event);
+                send(toSseChunk(event));
+              },
+            }),
+          )
           .catch((err: unknown) => {
-            const message = err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown";
-            logError(`investigate: run failed: ${message.slice(0, 300)}`);
+            logError(`investigate: run failed: ${describe(err, secrets)}`);
             send(SSE_RUN_FAILED);
           })
           .finally(async () => {
@@ -162,7 +240,12 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
             const finished = done as DoneEvent | null;
             const counted = finished ? finished.nebiusUsd + finished.tavilyCredits * TAVILY_USD_PER_CREDIT : 0;
             const allKnown = finished !== null && finished.unknownCostCalls === 0;
-            reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
+            try {
+              await reservation?.settle(allKnown ? counted : Math.max(counted, TRIAL_RESERVE_USD));
+            } catch (err: unknown) {
+              // The reservation then stays counted in full, which errs toward spending less.
+              logError(`investigate: could not settle the daily budget: ${describe(err, secrets)}`);
+            }
             // Saved before the stream closes: work left for after the response ends
             // may never run on a serverless platform. A run that ended before it
             // planned or searched anything, as one with a rejected key does, has
@@ -174,8 +257,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
                 await deps.store.save({ id: runId, keys: keys.source === "owner" ? "trial" : "own", events });
                 send(toSavedChunk(runId));
               } catch (err: unknown) {
-                const message = err instanceof Error ? `${err.name}: ${redactSecrets(err.message, secrets)}` : "unknown";
-                logError(`investigate: could not save the run: ${message.slice(0, 300)}`);
+                logError(`investigate: could not save the run: ${describe(err, secrets)}`);
               }
             }
             if (!closed) {

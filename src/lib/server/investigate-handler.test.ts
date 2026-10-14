@@ -14,6 +14,7 @@ import {
 } from "./investigate-handler";
 import type { NebiusClient } from "./providers/nebius";
 import type { TavilyClient } from "./providers/tavily";
+import { createMemoryLimiter, type Limit, type RateLimiter } from "./rate-limit";
 import type { RunStore } from "./run-store";
 
 const NEBIUS_KEY = "fake-visitor-nebius-key";
@@ -27,13 +28,40 @@ const body = (keys: unknown) => ({ quote: "Gel, gel, ne olursan ol yine gel", po
 const byok = body({ mode: "byok", nebiusApiKey: NEBIUS_KEY, tavilyApiKey: TAVILY_KEY });
 const trial = body({ mode: "trial" });
 
-const post = (json: unknown, signal?: AbortSignal) =>
+const post = (json: unknown, signal?: AbortSignal, headers: Record<string, string> = {}) =>
   new Request("http://localhost/api/investigate", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(json),
     signal,
   });
+
+// The window each limit's count lands in, so a give-back can be matched to its hit.
+const WINDOW_STARTS = { runs: Date.parse("2026-10-12T10:00:00Z"), trial: Date.parse("2026-10-12T00:00:00Z") };
+
+// A limiter that remembers who it was asked about and what it gave back, and can be made to fail.
+function spyLimiter(
+  answer: (limit: Limit) => Promise<boolean> = async () => true,
+  giveBack: (limit: Limit) => Promise<void> = async () => {},
+) {
+  const hits: { visitor: string; limit: Limit; windowStart: number | null }[] = [];
+  const unhits: { visitor: string; limit: Limit; windowStart: number }[] = [];
+  const limiter: RateLimiter = {
+    hit: async (visitor, limit) => {
+      const hit = { visitor, limit, windowStart: null as number | null };
+      hits.push(hit);
+      hit.windowStart = (await answer(limit)) ? WINDOW_STARTS[limit.name] : null;
+      return hit.windowStart;
+    },
+    unhit: async (visitor, limit, windowStart) => {
+      unhits.push({ visitor, limit, windowStart });
+      return giveBack(limit);
+    },
+  };
+  return { limiter, hits, unhits };
+}
+
+const names = (counted: { limit: Limit }[]) => counted.map((c) => c.limit.name).sort();
 
 type Run = (options: InvestigationOptions) => Promise<void>;
 
@@ -52,6 +80,7 @@ function setup(overrides: Partial<InvestigateDeps> & { run?: Run; envVars?: Reco
   const deps: InvestigateDeps = {
     env: parseServerEnv(envVars),
     ledger: createDailyLedger(0),
+    limiter: createMemoryLimiter(),
     excludeDomains: ["quoteinvestigator.com"],
     createNebius,
     createTavily,
@@ -122,6 +151,26 @@ describe("POST /api/investigate", () => {
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ error: "daily_budget_spent" });
     expect(calls).toHaveLength(0);
+  });
+
+  it("refuses a trial run when the daily budget can't be checked, and logs why", async () => {
+    const ledger = { reserve: async () => Promise.reject(new Error("reserve_trial_budget failed with 503")) };
+    const { handler, calls, logError } = setup({ envVars: ownerEnv, ledger });
+    const res = await handler(post(trial));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "limits_unavailable" });
+    expect(calls).toHaveLength(0);
+    expect(logError.mock.calls[0][0]).toContain("could not check the daily budget");
+  });
+
+  it("still ends the stream when settling fails, and logs it", async () => {
+    const ledger = {
+      reserve: async () => ({ settle: async () => Promise.reject(new Error("settle_trial_budget failed with 500")) }),
+    };
+    const { handler, logError } = setup({ envVars: ownerEnv, ledger });
+    const events = frames(await (await handler(post(trial))).text()).map((f) => f.data?.type);
+    expect(events.at(-1)).toBe("done");
+    expect(logError.mock.calls[0][0]).toContain("could not settle the daily budget");
   });
 
   it("runs a trial on owner keys with the trial limit, then settles what it spent", async () => {
@@ -224,6 +273,24 @@ describe("POST /api/investigate", () => {
     expect(logError.mock.calls[0][0]).not.toContain(NEBIUS_KEY);
   });
 
+  it("settles a trial's reservation when the run throws before returning a promise", async () => {
+    const ledger = createDailyLedger(1);
+    const { handler, logError } = setup({
+      envVars: ownerEnv,
+      ledger,
+      run: () => {
+        throw new Error(`thrown at once with ${ownerEnv.NEBIUS_API_KEY}`);
+      },
+    });
+    const text = await (await handler(post(trial))).text();
+    expect(frames(text).at(-1)).toEqual({ event: "error", data: { error: "run_failed" }, comment: false });
+    expect(logError.mock.calls[0][0]).toContain("run failed");
+    expect(logError.mock.calls[0][0]).not.toContain(ownerEnv.NEBIUS_API_KEY);
+    // No done event, so the whole reservation counts as spent, and none is left held.
+    expect(ledger.spentTodayUsd()).toBeCloseTo(TRIAL_RESERVE_USD);
+    expect(await ledger.reserve(1 - TRIAL_RESERVE_USD)).not.toBeNull();
+  });
+
   it("saves the run once it ends and sends its id last", async () => {
     const saved: Parameters<RunStore["save"]>[0][] = [];
     const store: RunStore = { save: async (run) => void saved.push(run), load: async () => null };
@@ -300,6 +367,199 @@ describe("POST /api/investigate", () => {
     const all = frames(await (await handler(post(byok))).text());
     expect(saved).toEqual([]);
     expect(all.map((f) => f.event)).not.toContain("saved");
+  });
+
+  it("refuses a visitor past the hourly limit, with Retry-After", async () => {
+    const { handler, calls } = setup({ envVars: { RUNS_PER_IP_PER_HOUR: "2" } });
+    for (let i = 0; i < 2; i++) expect((await handler(post(byok))).status).toBe(200);
+    const res = await handler(post(byok));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "too_many_runs" });
+    const retryAfter = Number(res.headers.get("retry-after"));
+    expect(retryAfter).toBeGreaterThan(0);
+    expect(retryAfter).toBeLessThanOrEqual(3600);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("limits trial runs per visitor per day, apart from runs on their own keys", async () => {
+    const { handler, calls } = setup({
+      envVars: { ...ownerEnv, TRIAL_RUNS_PER_IP_PER_DAY: "1" },
+      ledger: createDailyLedger(10),
+    });
+    await (await handler(post(trial))).text();
+    const res = await handler(post(trial));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "trial_limit_reached" });
+    expect(Number(res.headers.get("retry-after"))).toBeLessThanOrEqual(86_400);
+    expect((await handler(post(byok))).status).toBe(200);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("counts a visitor by the address Vercel gives, and only on Vercel", async () => {
+    const vercelHeaders = { "x-vercel-forwarded-for": "203.0.113.7", "x-forwarded-for": "192.0.2.9" };
+    const onVercel = spyLimiter();
+    await setup({ envVars: { VERCEL: "1" }, limiter: onVercel.limiter }).handler(post(byok, undefined, vercelHeaders));
+    expect(onVercel.hits.map((h) => h.visitor)).toEqual(["203.0.113.7"]);
+
+    const elsewhere = spyLimiter();
+    await setup({ limiter: elsewhere.limiter }).handler(post(byok, undefined, vercelHeaders));
+    expect(elsewhere.hits.map((h) => h.visitor)).toEqual(["unknown"]);
+  });
+
+  it("never touches the budget for a visitor at their limit, however many requests they send", async () => {
+    const ledger = createDailyLedger(TRIAL_RESERVE_USD);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { limiter, unhits } = spyLimiter(async () => false);
+    const { handler } = setup({ envVars: ownerEnv, ledger, limiter });
+    const responses = await Promise.all(Array.from({ length: 5 }, () => handler(post(trial))));
+    expect(responses.map((r) => r.status)).toEqual([429, 429, 429, 429, 429]);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(unhits).toEqual([]);
+  });
+
+  it("gives back the trial count when the hourly limit refuses a trial run", async () => {
+    const ledger = createDailyLedger(1);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { limiter, unhits } = spyLimiter(async (limit) => limit.name === "trial");
+    const res = await setup({ envVars: ownerEnv, ledger, limiter }).handler(post(trial));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "too_many_runs" });
+    expect(names(unhits)).toEqual(["trial"]);
+    expect(reserve).not.toHaveBeenCalled();
+  });
+
+  it("gives back both counts when the day's budget is spent", async () => {
+    const { limiter, hits, unhits } = spyLimiter();
+    const res = await setup({ envVars: ownerEnv, ledger: createDailyLedger(0), limiter }).handler(post(trial));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+    expect(names(hits)).toEqual(["runs", "trial"]);
+    expect(unhits).toEqual(hits);
+  });
+
+  it("gives back both counts when the daily budget can't be checked", async () => {
+    const ledger = { reserve: async () => Promise.reject(new Error("reserve_trial_budget failed with 503")) };
+    const { limiter, hits, unhits } = spyLimiter();
+    const res = await setup({ envVars: ownerEnv, ledger, limiter }).handler(post(trial));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "limits_unavailable" });
+    expect(names(unhits)).toEqual(["runs", "trial"]);
+    expect(unhits).toEqual(hits);
+  });
+
+  it("leaves a visitor's counts as they were when the budget refuses, with the real limiter", async () => {
+    const { handler } = setup({
+      envVars: { ...ownerEnv, RUNS_PER_IP_PER_HOUR: "1", TRIAL_RUNS_PER_IP_PER_DAY: "1" },
+      ledger: createDailyLedger(0),
+    });
+    // A leaked trial count would refuse the second request with trial_limit_reached instead.
+    for (let i = 0; i < 3; i++) {
+      const res = await handler(post(trial));
+      expect(res.status).toBe(429);
+      expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+    }
+    const own = await handler(post(byok));
+    expect(own.status).toBe(200);
+    await own.text();
+  });
+
+  it("uses up no count or budget when the provider clients can't be made", async () => {
+    const ledger = createDailyLedger(1);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { limiter, hits } = spyLimiter();
+    const res = await setup({
+      envVars: ownerEnv,
+      ledger,
+      limiter,
+      createNebius: () => {
+        throw new Error("bad setup");
+      },
+    }).handler(post(trial));
+    expect(res.status).toBe(500);
+    expect(hits).toEqual([]);
+    expect(reserve).not.toHaveBeenCalled();
+  });
+
+  it("keeps a visitor's hourly runs when their trial runs are used up", async () => {
+    const { handler, calls } = setup({
+      envVars: { ...ownerEnv, RUNS_PER_IP_PER_HOUR: "2", TRIAL_RUNS_PER_IP_PER_DAY: "1" },
+      ledger: createDailyLedger(10),
+    });
+    await (await handler(post(trial))).text();
+    for (let i = 0; i < 3; i++) expect((await handler(post(trial))).status).toBe(429);
+    const own = await handler(post(byok));
+    expect(own.status).toBe(200);
+    await own.text();
+    expect((await handler(post(byok))).status).toBe(429);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("still refuses when giving a count back fails, and logs it", async () => {
+    const { limiter, unhits } = spyLimiter(
+      async () => true,
+      async () => Promise.reject(new Error(`unhit_rate_limit failed for ${ownerEnv.NEBIUS_API_KEY}`)),
+    );
+    const { handler, calls, logError } = setup({ envVars: ownerEnv, ledger: createDailyLedger(0), limiter });
+    const res = await handler(post(trial));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+    expect(unhits).toHaveLength(2);
+    expect(calls).toHaveLength(0);
+    expect(logError).toHaveBeenCalledTimes(2);
+    expect(logError.mock.calls[0][0]).toContain("could not give back the");
+    expect(logError.mock.calls[0][0]).not.toContain(ownerEnv.NEBIUS_API_KEY);
+  });
+
+  it("logs once when Vercel gives no visitor address, without the headers", async () => {
+    const { handler, logError } = setup({ envVars: { VERCEL: "1" } });
+    const junk = { "x-vercel-forwarded-for": "not-an-address", "x-real-ip": "also-junk" };
+    for (let i = 0; i < 2; i++) await (await handler(post(byok, undefined, junk))).text();
+    expect(logError).toHaveBeenCalledOnce();
+    expect(logError.mock.calls[0][0]).toContain("no visitor address");
+    expect(logError.mock.calls[0][0]).not.toMatch(/not-an-address|also-junk/);
+  });
+
+  it("logs nothing about the address off Vercel, where it is never read", async () => {
+    const { handler, logError } = setup();
+    await (await handler(post(byok))).text();
+    expect(logError).not.toHaveBeenCalled();
+  });
+
+  it("refuses a trial run when the visitor limits can't be checked, without touching the budget", async () => {
+    const { limiter, unhits } = spyLimiter(async () => Promise.reject(new Error("hit_rate_limit failed with 503")));
+    const ledger = createDailyLedger(TRIAL_RESERVE_USD);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { handler, calls, logError } = setup({ envVars: ownerEnv, ledger, limiter });
+    const res = await handler(post(trial));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "limits_unavailable" });
+    expect(calls).toHaveLength(0);
+    expect(logError.mock.calls[0][0]).toContain("could not check the trial limit");
+    expect(reserve).not.toHaveBeenCalled();
+    expect(unhits).toEqual([]);
+  });
+
+  it("gives back the trial count when the hourly limit can't be checked on a trial run", async () => {
+    const { limiter, unhits } = spyLimiter(async (limit) =>
+      limit.name === "trial" ? true : Promise.reject(new Error("hit_rate_limit failed with 503")),
+    );
+    const ledger = createDailyLedger(1);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const res = await setup({ envVars: ownerEnv, ledger, limiter }).handler(post(trial));
+    expect(res.status).toBe(503);
+    expect(names(unhits)).toEqual(["trial"]);
+    expect(reserve).not.toHaveBeenCalled();
+  });
+
+  it("still runs on the visitor's own keys when the limits can't be checked, and logs it", async () => {
+    const { limiter } = spyLimiter(async () => Promise.reject(new Error(`hit_rate_limit failed for ${NEBIUS_KEY}`)));
+    const { handler, calls, logError } = setup({ limiter });
+    const res = await handler(post(byok));
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(calls).toHaveLength(1);
+    expect(logError).toHaveBeenCalledOnce();
+    expect(logError.mock.calls[0][0]).not.toContain(NEBIUS_KEY);
   });
 
   it("reports server setup problems as a 500 without the error text", async () => {

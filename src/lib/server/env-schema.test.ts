@@ -9,7 +9,17 @@ describe("parseServerEnv", () => {
     expect(env.LIVE_RUNS_ENABLED).toBe(false);
     expect(env.TRIAL_RUNS_ENABLED).toBe(false);
     expect(env.DAILY_BUDGET_USD).toBe(0);
+    expect(env.RUNS_PER_IP_PER_HOUR).toBe(10);
+    expect(env.TRIAL_RUNS_PER_IP_PER_DAY).toBe(3);
     expect(env.NEBIUS_API_KEY).toBeUndefined();
+  });
+
+  it("parses the visitor limits, and refuses ones that can't be counted", () => {
+    const env = parseServerEnv({ RUNS_PER_IP_PER_HOUR: "20", TRIAL_RUNS_PER_IP_PER_DAY: " " });
+    expect(env.RUNS_PER_IP_PER_HOUR).toBe(20);
+    expect(env.TRIAL_RUNS_PER_IP_PER_DAY).toBe(3);
+    expect(() => parseServerEnv({ RUNS_PER_IP_PER_HOUR: "0" })).toThrow(EnvError);
+    expect(() => parseServerEnv({ TRIAL_RUNS_PER_IP_PER_DAY: "1.5" })).toThrow(EnvError);
   });
 
   it("treats blank values as unset", () => {
