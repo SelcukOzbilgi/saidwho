@@ -4,6 +4,13 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+- Each example case has its own share image with its verdict, the quote, who it's usually credited to and what the run found, and a saved run's preview is titled with its quote (#46)
+
+### Changed
+- Gandhi's case was recorded again on the new Planner and now credits Arleen Lorrance's 1974 book (#44)
+- Links point at saidwho.online (#47)
+
 ## [0.7.0] - 2026-10-15
 
 ### Added
