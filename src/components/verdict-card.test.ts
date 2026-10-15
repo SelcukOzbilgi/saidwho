@@ -90,9 +90,9 @@ describe("earliestTrace", () => {
   });
 
   it("names the cited work and the page it came from when the Judge left the author empty", () => {
-    const { output, nodes } = saved("insanity-same-thing");
+    const { output, nodes } = saved("good-men-do-nothing");
     expect(output.earliest_author).toBeNull();
-    expect(earliestTrace(output, nodes)).toEqual({ trace: "1980, Narcotics Anonymous literature", via: "style.mla.org" });
+    expect(earliestTrace(output, nodes)).toEqual({ trace: "1999, alt.quotations newsgroup", via: "tartarus.org" });
   });
 
   it("names only the page when the year is the page's own, not that of a work it cites", () => {
@@ -107,9 +107,9 @@ describe("earliestTrace", () => {
   });
 
   it("names no page the Checker didn't confirm", () => {
-    const { output, nodes } = saved("insanity-same-thing");
+    const { output, nodes } = saved("good-men-do-nothing");
     const crossed = nodes.map((n) => (n.id === output.earliest_node ? { ...n, check: { ...n.check, status: "not_found" as const } } : n));
-    expect(earliestTrace(output, crossed)).toEqual({ trace: "1980", via: null });
+    expect(earliestTrace(output, crossed)).toEqual({ trace: "1999", via: null });
   });
 
   it("is nothing when the Judge gave neither author nor date", () => {

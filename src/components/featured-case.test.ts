@@ -15,6 +15,9 @@ describe("plainNote", () => {
     expect(plainNote("Seen in a 1983 novel (n3, n5) and later n7 online.")).toBe("Seen in a 1983 novel and later online.");
     expect(plainNote("Credited in *Sudden Death* by **Rita Mae Brown**.")).toBe("Credited in Sudden Death by Rita Mae Brown.");
     expect(plainNote("Version n10 shows up in 1981.")).toBe("Version shows up in 1981.");
+    expect(plainNote("As cited by pages n1, n2, and n7. Later n3 and n5 credit Einstein.")).toBe(
+      "As cited by pages. Later credit Einstein.",
+    );
   });
 });
 
@@ -57,9 +60,9 @@ describe("FeaturedCase", () => {
     expect(html).not.toMatch(/\[n\d+\]/);
   });
 
-  it("says where the earliest trace was seen when the judge named no author", () => {
+  it("gives the earliest trace the judge named", () => {
     const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured! }));
-    expect(html).toContain("Earliest trace: <strong>1980, Narcotics Anonymous literature</strong>, via style.mla.org");
+    expect(html).toContain("Earliest trace: <strong>Rita Mae Brown, 1983</strong>");
   });
 
   it("gives the judge's reasoning on every screen size, cut short only on a phone", () => {

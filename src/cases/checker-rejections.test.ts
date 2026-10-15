@@ -41,7 +41,7 @@ describe("checkerRejections", () => {
   // The home page states these; a new or re-recorded case should change them on purpose.
   it("gives the bundled cases' numbers, with a crossed-out card to link to", () => {
     const counts = checkerRejections(CASES);
-    expect(counts).toEqual({ rejected: 4, rescued: 2, crossedOut: 2, example: { caseId: "let-them-eat-cake", nodeId: expect.any(String) } });
+    expect(counts).toEqual({ rejected: 3, rescued: 1, crossedOut: 2, example: { caseId: "let-them-eat-cake", nodeId: expect.any(String) } });
     const example = CASES.find((c) => c.caseId === counts.example!.caseId)!;
     expect(example.run.nodes.find((n) => n.id === counts.example!.nodeId)?.check.status).toBe("not_found");
   });
