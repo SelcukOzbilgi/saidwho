@@ -108,9 +108,8 @@ const VARIANTS: Record<string, Variant> = {
   noorigin: { evidence: "new", prompt: JUDGE_PROMPT, checks: true, originCheck: false },
 };
 
-// The reader prompts --reread can compare, by --prompts name, each with the
-// characters of page it is given (READER_CHARS unless set).
-const READER_VARIANTS: Record<string, { prompt: string; passageChars?: number }> = {
+// The reader prompts --reread can compare, by --prompts name.
+const READER_VARIANTS: Record<string, { prompt: string }> = {
   main: { prompt: MAIN_READER_PROMPT },
   new: { prompt: READER_PROMPT },
 };
@@ -301,7 +300,7 @@ async function main(): Promise<void> {
     console.log(`${jobs.length} readings: ${readings.length} pages, ${promptNames.join(" and ")}, ${samples} samples each, at most $${maxUsd}.`);
     await pool(jobs, concurrency, async ({ r, i, tier, name, sample }) => {
       const variant = READER_VARIANTS[name];
-      const passage = selectPassages(r.page.text, r.phrases, variant.passageChars ?? READER_CHARS);
+      const passage = selectPassages(r.page.text, r.phrases, READER_CHARS);
       const user = `Saying: "${r.phrases[0]}"\nVariants: ${r.phrases.slice(1).join(" | ")}\n\nPage: ${r.page.title}\nURL: ${r.read.url}\n\n${passage}`;
       const read = await callStructured(capped.client, { model: MODELS[tier], schema: readerOutputSchema, name: "read_page", thinking: false, maxTokens: 600, system: variant.prompt, user });
       lines.set(`${i}|${tier}|${name}|${sample}`, read.ok ? describeReading(read.data, r.page, r.phrases) : `failed (${read.reason.slice(0, 60)})`);
