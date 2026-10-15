@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
@@ -9,6 +9,7 @@ import { CaseReplay } from "@/components/case-replay";
 import { SiteFooter } from "@/components/site-footer";
 import { env } from "@/lib/server/env";
 import { runStoreFromEnv } from "@/lib/server/run-store";
+import { runShareMetadata } from "@/lib/share";
 
 // A saved run, opened from its public link. Unlike the example cases there is no
 // known answer to show next to it.
@@ -24,17 +25,10 @@ const loadRun = cache(async (id: string) => {
   return events.success ? { createdAt: saved.createdAt, events: events.data } : null;
 });
 
-export async function generateMetadata({ params }: PageProps<"/runs/[id]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/runs/[id]">, parent: ResolvingMetadata): Promise<Metadata> {
   const run = await loadRun((await params).id);
   const started = run?.events.find((e) => e.type === "started");
-  return {
-    // Shared by link, not listed: search engines are asked to leave it out.
-    robots: { index: false, follow: false },
-    ...(started && {
-      title: `“${started.quote}” · Said Who?`,
-      description: "A Said Who? run looking into where this quote came from, with every step.",
-    }),
-  };
+  return runShareMetadata(started?.quote ?? null, await parent);
 }
 
 export default async function RunPage({ params }: PageProps<"/runs/[id]">) {
