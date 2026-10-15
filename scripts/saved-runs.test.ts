@@ -155,6 +155,52 @@ describe("rebuildEvidence with a filter", () => {
     expect(after.citedWorks.map((w) => w.work)).toEqual([WORK]);
   });
 
+  it("leaves a canceled lead search's readings out of what settles a kept lead's cited work", () => {
+    // As above, but the copy came back from the Memoirs search with the saying,
+    // was read and became n20. The filter drops n16, so that reading never
+    // happened, and the Confessions copy read with no quote counts again.
+    const copy = "https://archive.org/stream/confessions00rous/confessions00rous_djvu.txt";
+    const other = "Rousseau Memoirs full text";
+    const saved = run([
+      searched(EXACT),
+      searched(REQUOTE),
+      { type: "pages_ready", pages: 2, droppedExcluded: 0 },
+      node("n1", "https://a.org/1", { cited_source: WORK }),
+      node("n16", "https://b.org/0", { cited_source: "Memoirs" }),
+      {
+        type: "traced",
+        ...spend,
+        tier: "super",
+        round: 1,
+        leads: [
+          { fromNode: "n1", work: WORK, query: LEAD },
+          { fromNode: "n16", work: "Memoirs", query: other },
+        ],
+      },
+      searched(LEAD),
+      searched(other),
+      { type: "pages_ready", pages: 1, droppedExcluded: 0, round: 1 },
+      { type: "page_read", ...spend, url: copy, host: "archive.org", outcome: "no_quote", reason: null, lookingFor: WORK },
+      { type: "page_read", ...spend, url: copy, host: "archive.org", outcome: "evidence", reason: null, lookingFor: "Memoirs" },
+      node("n20", copy, {}, { node: "n16", work: "Memoirs" }),
+    ]);
+    const title = "The Confessions of Jean-Jacques Rousseau";
+    const cache = cacheOf(
+      {
+        [EXACT]: [result("https://a.org/1", `Rousseau's ${WORK} has it: ${QUOTE}.`)],
+        [REQUOTE]: [result("https://b.org/0", `${QUOTE}, from the Memoirs.`)],
+      },
+      {
+        [LEAD]: [result(copy, "I was born at Geneva. ".repeat(600), title)],
+        [other]: [result(copy, "I was born at Geneva. ".repeat(600), title)],
+      },
+    );
+
+    expect(rebuildEvidence(saved, "new", cache).citedWorks).toEqual([]);
+    const after = rebuildEvidence(saved, "new", cache, { requote: true, hosts: [] });
+    expect(after.citedWorks.map((w) => w.work)).toEqual([WORK]);
+  });
+
   it("checks the credit again on the kept search's text", () => {
     // The re-quoting search returned the page with the credit on it, and the
     // reader saw that text; a kept search returned it without.

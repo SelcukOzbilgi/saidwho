@@ -254,9 +254,16 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: Pick<SearchC
   const confirmed = rebuilt.filter((n) => n.check.status !== "not_found");
 
   // The cited works, settled as the orchestrator settles them.
-  const reads = events.flatMap((e) => (e.type === "page_read" ? [e] : []));
+  // Only the readings the filter keeps: none from a canceled lead's search, and
+  // no first-round reading of a page whose node it dropped.
+  const keptNodes = nodes.filter((n) => !dropped.nodes.has(n.id));
+  const nodeUrls = new Set(keptNodes.map((n) => n.url));
+  const droppedUrls = new Set(nodes.flatMap((n) => (dropped.nodes.has(n.id) && !nodeUrls.has(n.url) ? [n.url] : [])));
+  const keptWorks = new Set(leads.map((lead) => lead.work));
+  const reads = events.flatMap((e) =>
+    e.type === "page_read" && (e.lookingFor === undefined ? !droppedUrls.has(e.url) : keptWorks.has(e.lookingFor)) ? [e] : [],
+  );
   const readUrls = new Set(reads.map((r) => r.url));
-  const nodeUrls = new Set(nodes.map((n) => n.url));
   const noQuoteUrls = new Set(reads.filter((r) => r.outcome === "no_quote" && !nodeUrls.has(r.url)).map((r) => r.url));
   const quoteWords = normalizeText(quote).split(" ").length;
   const aboutAsLong = (snippet: string) => {
