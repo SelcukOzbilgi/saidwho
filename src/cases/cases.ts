@@ -22,7 +22,7 @@ import thinkYouCan from "./think-you-can.json";
 const caseLogSchema = z.strictObject({
   caseId: z.string(),
   ranAt: z.iso.datetime(),
-  // Logs pnpm eval writes also say which commit ran; pnpm investigate's don't.
+  // Which commit ran; logs written before pnpm investigate recorded it have none.
   code: codeFingerprintSchema.nullable().optional(),
   events: z.array(runEventSchema),
 });
