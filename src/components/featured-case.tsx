@@ -5,7 +5,7 @@ import { type LineageStep, MAX_LINEAGE_STEPS } from "../agent/schemas";
 import type { ExampleCase } from "../cases/cases";
 import { type RunState, verdictWords } from "../lib/run-state";
 import { unmark } from "./timeline";
-import { HEADLINE, VERDICT_LOOK } from "./verdict-card";
+import { earliestTrace, HEADLINE, VERDICT_LOOK } from "./verdict-card";
 
 // One finished case at the top of the home page, so a first visit shows what a
 // run ends with before it asks for anything. It is a short version of the case
@@ -58,7 +58,7 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
   const href = `/cases/${caseId}`;
   const { steps, more } = trailOf(run);
   const sources = run.nodes.filter((n) => n.check.status !== "not_found").length;
-  const earliest = [output.earliest_author, output.earliest_date].filter(Boolean).join(", ");
+  const earliest = earliestTrace(output, run.nodes);
 
   return (
     <section aria-labelledby="featured-title" className="rounded-2xl border border-line bg-card/60 p-5 shadow-sm sm:p-6">
@@ -89,7 +89,8 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
           </h2>
           {earliest && (
             <p className="mt-3 text-sm">
-              Earliest trace: <strong>{earliest}</strong>
+              Earliest trace: <strong>{earliest.trace}</strong>
+              {earliest.via && `, via ${earliest.via}`}
             </p>
           )}
           {/* On a phone it is cut to three lines, so the trail still makes the first screen; the case page has all of it. */}

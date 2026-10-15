@@ -22,6 +22,26 @@ export const HEADLINE: Record<JudgeOutput["verdict"], (name: string | null) => s
   no_known_source: () => "No source old enough to settle it",
 };
 
+// The earliest trace line: who and when, as the Judge gave them. The Judge often
+// leaves the author empty, and a bare year says nothing about where it was seen,
+// so then the line names the page the Judge pointed to, if the Checker confirmed
+// it, and the work that page cites when the year is that work's. The cited work
+// is the reader's words, so the page it came from is always named with it.
+// null when the Judge gave neither author nor date.
+export function earliestTrace(
+  output: Pick<JudgeOutput, "earliest_author" | "earliest_date" | "earliest_node">,
+  nodes: RunState["nodes"],
+): { trace: string; via: string | null } | null {
+  const { earliest_author: author, earliest_date: date, earliest_node: id } = output;
+  if (!author && !date) return null;
+  if (author) return { trace: [author, date].filter(Boolean).join(", "), via: null };
+  const node = nodes.find((n) => n.id === id && n.check.status !== "not_found");
+  if (!node) return { trace: date!, via: null };
+  const work = node.reader.cited_source;
+  const workYear = node.citedSourceDate?.slice(0, 4);
+  return { trace: work && workYear === date!.slice(0, 4) ? `${date}, ${work}` : date!, via: node.host };
+}
+
 type Props = Pick<RunState, "verdict" | "noVerdict" | "stopped" | "popularAttribution" | "nodes">;
 
 export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, nodes }: Props) {
@@ -46,6 +66,7 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
 
   const { output, tier } = verdict;
   const confirmed = new Set(nodes.filter((n) => n.check.status !== "not_found").map((n) => n.id));
+  const earliest = earliestTrace(output, nodes);
 
   return (
     <section aria-label="Verdict" className="arrive rounded-xl border border-line bg-card p-5 shadow-sm">
@@ -59,12 +80,10 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
 
       <h2 className="mt-2 font-serif text-3xl leading-tight font-semibold">{HEADLINE[output.verdict](popularAttribution)}</h2>
 
-      {(output.earliest_author || output.earliest_date) && (
-        <p className="mt-3 text-sm">
-          Earliest trace:{" "}
-          <strong>
-            {[output.earliest_author, output.earliest_date].filter(Boolean).join(", ")}
-          </strong>
+      {earliest && (
+        <p className="mt-3 text-sm leading-6">
+          Earliest trace: <strong>{earliest.trace}</strong>
+          {earliest.via && `, via ${earliest.via}`}
           {output.earliest_node && (
             <>
               {" "}

@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { JudgeOutput } from "../agent/schemas";
-import { Rationale, VerdictCard } from "./verdict-card";
+import { findCase } from "../cases/cases";
+import { earliestTrace, Rationale, VerdictCard } from "./verdict-card";
 
 const render = (text: string, confirmed: string[] = ["n2"]) =>
   renderToStaticMarkup(createElement(Rationale, { text, confirmed: new Set(confirmed) }));
@@ -74,5 +75,39 @@ describe("VerdictCard", () => {
     expect(headline("misattributed", null)).toBe("What the sources show");
     expect(headline("correct", null)).toBe("What the sources show");
     expect(headline("contested", null)).toBe("Where it comes from is contested");
+  });
+});
+
+describe("earliestTrace", () => {
+  const saved = (id: string) => {
+    const { run } = findCase(id)!;
+    return { output: run.verdict!.output, nodes: run.nodes };
+  };
+
+  it("gives the Judge's author and date as they are when it named someone", () => {
+    const { output, nodes } = saved("so-much-owed");
+    expect(earliestTrace(output, nodes)).toEqual({ trace: "Winston Churchill, 1940", via: null });
+  });
+
+  it("names the cited work and the page it came from when the Judge left the author empty", () => {
+    const { output, nodes } = saved("insanity-same-thing");
+    expect(output.earliest_author).toBeNull();
+    expect(earliestTrace(output, nodes)).toEqual({ trace: "1980, Narcotics Anonymous literature", via: "style.mla.org" });
+  });
+
+  it("names only the page when the year isn't that of a work the page cites", () => {
+    const { output, nodes } = saved("faster-horses");
+    expect(earliestTrace(output, nodes)).toEqual({ trace: "1999", via: "hbr.org" });
+  });
+
+  it("names no page the Checker didn't confirm", () => {
+    const { output, nodes } = saved("insanity-same-thing");
+    const crossed = nodes.map((n) => (n.id === output.earliest_node ? { ...n, check: { ...n.check, status: "not_found" as const } } : n));
+    expect(earliestTrace(output, crossed)).toEqual({ trace: "1980", via: null });
+  });
+
+  it("is nothing when the Judge gave neither author nor date", () => {
+    const { output, nodes } = saved("gel-ne-olursan-ol");
+    expect(earliestTrace(output, nodes)).toBeNull();
   });
 });
