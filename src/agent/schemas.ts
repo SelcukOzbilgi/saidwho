@@ -19,7 +19,7 @@ export const plannerOutputSchema = z.strictObject({
 
 export const readerOutputSchema = z.strictObject({
   contains_quote: z.boolean(),
-  // Copied word for word from the page; the Verifier checks it.
+  // Copied word for word from the page; the Checker checks it.
   exact_snippet: z.string().nullable(),
   attributed_to: z.string().nullable(),
   page_date: z.string().nullable(),

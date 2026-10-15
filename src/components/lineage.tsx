@@ -11,7 +11,7 @@ const CHANGE: Record<LineageStep["change"], { label: string; look: string }> = {
 
 // How the saying got to the form people share, as the judge traced it: where it
 // first appears, then each change in wording, language or credit, in the judge's
-// order. A step on a page the Verifier didn't confirm is left out. The cards show
+// order. A step on a page the Checker didn't confirm is left out. The cards show
 // no year: a page's date may be its own or that of the work it cites, and which
 // one a step means is in its note. The timeline below has the dates.
 export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes: readonly EvidenceNode[] }) {
