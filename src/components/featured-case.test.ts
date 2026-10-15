@@ -60,9 +60,9 @@ describe("FeaturedCase", () => {
     expect(html).not.toMatch(/\[n\d+\]/);
   });
 
-  it("gives the earliest trace the judge named", () => {
+  it("says where the earliest trace was seen when the judge named no author", () => {
     const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured! }));
-    expect(html).toContain("Earliest trace: <strong>Rita Mae Brown, 1983</strong>");
+    expect(html).toContain("Earliest trace: <strong>1980, Narcotics Anonymous literature</strong>, via style.mla.org");
   });
 
   it("gives the judge's reasoning on every screen size, cut short only on a phone", () => {
