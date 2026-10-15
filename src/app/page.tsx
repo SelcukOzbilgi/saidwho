@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { connection } from "next/server";
 
 import { CASES, FEATURED_CASE_ID, findCase } from "../cases/cases";
@@ -11,6 +12,12 @@ import { SiteFooter } from "../components/site-footer";
 import { env } from "../lib/server/env";
 import { TRIAL_RESERVE_USD } from "../lib/server/investigate-handler";
 import { runStoreFromEnv } from "../lib/server/run-store";
+
+// Only this page says it is the canonical "/"; set in the layout, it would reach
+// run pages and the not-found page too, since child metadata merges shallowly.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 // The saved cases don't change between requests, so they are counted once.
 const REJECTIONS = checkerRejections(CASES);
