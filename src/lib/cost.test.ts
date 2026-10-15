@@ -18,6 +18,8 @@ describe("ultraRatio", () => {
   it("says nothing when the gap is too small to mean anything", () => {
     expect(ultraRatio(0.03, 0.03)).toBeNull();
     expect(ultraRatio(0.02, 0.029)).toBeNull();
-    expect(ultraRatio(0.02, 0.03)).toBe(2);
+    expect(ultraRatio(0.02, 0.03)).toBeNull();
+    expect(ultraRatio(0.01, 0.0199)).toBeNull();
+    expect(ultraRatio(0.01, 0.02)).toBe(2);
   });
 });

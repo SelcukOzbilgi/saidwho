@@ -41,8 +41,8 @@ export const STEPS: readonly Step[] = [
   {
     name: "Checker",
     does:
-      "Looks for each copied sentence in the page's own text, and checks it is the saying and not some other line. " +
-      "It's plain code, not AI, so it can't be talked into a sentence the page doesn't have.",
+      "Looks for each copied sentence in the page's own text, allowing small differences in wording, and checks it is the saying and not some other line. " +
+      "It's plain code, not AI, so a snippet with no close match on the page is thrown out.",
     tool: "Plain code",
   },
   {
@@ -56,7 +56,7 @@ export const STEPS: readonly Step[] = [
   {
     name: "Judge",
     does:
-      "Writes the verdict from the confirmed pages only. Code checks every page it cites, and a verdict that cites one the Checker didn't confirm is set aside and written again.",
+      "Writes the verdict from the confirmed pages only. Code checks every page it cites. A verdict that cites one the Checker didn't confirm is set aside, and the Judge gets one more try on a bigger model.",
     model: { first: CASCADE.judge.tier, retry: CASCADE.rejudge.tier },
   },
 ];

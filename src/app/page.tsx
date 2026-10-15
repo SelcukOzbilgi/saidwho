@@ -34,8 +34,8 @@ export default async function Home() {
         </h1>
         <p className="mt-2 text-lg leading-7 sm:mt-3 sm:text-xl sm:leading-8">
           Ask a chatbot where a quote comes from and it will often guess a source. Said Who? goes and finds the pages
-          and their dates, and a check written in plain code, not AI, throws out any snippet that isn&apos;t really on
-          the page.
+          and their dates, and a check written in plain code, not AI, throws out any snippet it can&apos;t find on the
+          page.
         </p>
         <p className="mt-2 leading-7 text-muted sm:text-lg sm:leading-8">
           Paste a quote you saw online and find out where it first appeared, with a link for every step.

@@ -81,7 +81,7 @@ export function UltraSaving({ nebiusUsd, ultraUsd }: Pick<RunState, "nebiusUsd" 
   if (ratio === null) return null;
   return (
     <p className="text-sm">
-      <strong className="font-semibold text-accent-ink tabular-nums">{ratio}x cheaper</strong> than the same calls at{" "}
+      <strong className="font-semibold text-accent-ink tabular-nums">About {ratio}x cheaper</strong> than the same calls at{" "}
       {MODEL_NAME.ultra} prices
     </p>
   );

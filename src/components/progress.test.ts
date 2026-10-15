@@ -22,7 +22,7 @@ describe("Progress", () => {
       renderToStaticMarkup(
         createElement(Progress, { ...initialRunState, finished, nebiusUsd: 0.0072, ultraUsd, running: false }),
       ).replace(/<[^>]+>/g, "");
-    expect(at(true, 0.0433)).toContain("6x cheaper than the same calls at Nemotron 3 Ultra prices");
+    expect(at(true, 0.0433)).toContain("About 6x cheaper than the same calls at Nemotron 3 Ultra prices");
     expect(at(false, 0.0433)).not.toContain("cheaper");
     expect(at(true, null)).not.toContain("cheaper");
   });
