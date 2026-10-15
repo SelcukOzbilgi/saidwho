@@ -1072,6 +1072,75 @@ describe("investigate", () => {
     });
   });
 
+  describe("a misattributed verdict on an earliest page worded unlike the saying", () => {
+    // As Bacon's "Nothing is terrible except fear itself" (1605) was taken for
+    // Roosevelt's line in the third eval: an older page with a related idea, a
+    // later one with the saying.
+    const OLD = "https://sermons.example.org/1950";
+    // The Checker keeps it, since it shares the saying's words, but not their order.
+    const RELATED = "Expecting results that are different, while doing again the same old thing over, is insanity";
+    const pages = (oldText = `A 1950 sermon. "${RELATED}," the preacher said.`) =>
+      tavilyFor(() => [OLD, NEWS], (url) => (url === OLD ? oldText : PAGE_TEXT)).tavily;
+    const reads = (oldReading: Partial<ReaderOutput> = {}) => ({ user }: Call) =>
+      user.includes(OLD) ? { ...READ, exact_snippet: RELATED, attributed_to: "a preacher", page_date: "1950", ...oldReading } : READ;
+    const onOld: JudgeOutput = { ...VERDICT, earliest_node: "n1", earliest_date: "1950", rationale: "A 1950 sermon has it [n1].", lineage: [] };
+    const onNews: JudgeOutput = { ...VERDICT, earliest_node: "n2", earliest_date: "1981", rationale: "The 1981 newspaper has it [n2].", lineage: [] };
+
+    it("asks Ultra once, shown the page's snippet, and takes a verdict on another page", async () => {
+      const nebius = fakeNebius({ read: reads(), verdict: ({ model }) => (model === MODELS.super.id ? onOld : onNews) });
+      const events = await run({ nebius, tavily: pages() });
+      expect(types(events).slice(-4)).toEqual(["verdict", "escalated", "verdict", "done"]);
+      expect(events.at(-3)).toMatchObject({ step: "judge", from: "super", to: "ultra", reason: expect.stringContaining("rests on n1 as another origin") });
+      expect(nebius.log.filter((c) => c.name === "verdict").at(-1)?.user).toContain(`its snippet words it very differently: "${RELATED}"`);
+      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { earliest_node: "n2", earliest_date: "1981" } });
+    });
+
+    it("takes Ultra's verdict when it keeps the page but drops the other origin", async () => {
+      const unsupported = { ...onOld, verdict: "no_known_source" as const };
+      const nebius = fakeNebius({ read: reads(), verdict: ({ model }) => (model === MODELS.super.id ? onOld : unsupported) });
+      const events = await run({ nebius, tavily: pages() });
+      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { verdict: "no_known_source", earliest_node: "n1" } });
+    });
+
+    it("keeps the first verdict when Ultra rests on the same page as another origin again", async () => {
+      const nebius = fakeNebius({ read: reads(), verdict: () => onOld });
+      const events = await run({ nebius, tavily: pages() });
+      expect(events.filter((e) => e.type === "verdict").at(-1)).toMatchObject({
+        tier: "ultra",
+        notTaken: "it rests on n1 as another origin again, the page it was asked about",
+      });
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_node: "n1" } });
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    });
+
+    it("doesn't ask when the page credits the usual name, or the verdict isn't misattributed", async () => {
+      // The Checker keeps a credit only when the page names that person.
+      const byEinstein = `A 1950 talk by Albert Einstein. "${RELATED}," he said.`;
+      for (const [text, reading, verdict] of [
+        [byEinstein, { attributed_to: "Albert Einstein" }, onOld],
+        [undefined, {}, { ...onOld, verdict: "no_known_source" as const }],
+      ] as const) {
+        const nebius = fakeNebius({ read: reads(reading), verdict: () => verdict });
+        const events = await run({ nebius, tavily: pages(text) });
+        expect(nebius.calls.filter((c) => c === "verdict")).toHaveLength(1);
+        expect(standingVerdict(events)).toMatchObject({ tier: "super" });
+      }
+    });
+
+    it("asks about both in one second judge when the page also dates itself over a source it cites", async () => {
+      const cites = reads({ page_date: "2013", cited_source: "a 1950 sermon", cited_source_date: "1950" });
+      const late = { ...onOld, earliest_date: "2013" };
+      const nebius = fakeNebius({ read: cites, verdict: ({ model }) => (model === MODELS.super.id ? late : onNews) });
+      const events = await run({ nebius, tavily: pages(`Posted 2013. From a 1950 sermon: "${RELATED}."`) });
+      expect(nebius.calls.filter((c) => c === "verdict")).toHaveLength(2);
+      const asked = nebius.log.filter((c) => c.name === "verdict").at(-1)?.user;
+      expect(asked).toContain("n1 names a source dated 1950");
+      expect(asked).toContain("its snippet words it very differently");
+      // A later date, but on a page with the saying: the origin was answered.
+      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { earliest_node: "n2" } });
+    });
+  });
+
   it("asks Ultra when a lineage step is on a node that isn't verified", async () => {
     const stray = { ...VERDICT, lineage: [...(VERDICT.lineage ?? []), { node: "n7", change: "credit" as const, note: "Einstein from here." }] };
     const nebius = fakeNebius({ verdict: ({ model }) => (model === MODELS.super.id ? stray : VERDICT) });

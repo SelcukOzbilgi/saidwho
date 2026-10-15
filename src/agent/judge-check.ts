@@ -160,6 +160,61 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
   };
 }
 
+// How much wording two texts share: the part of one's word pairs the other
+// has, taken whichever way gives more, so a snippet that is part of the saying,
+// or the saying inside a longer passage, counts in full. Pairs rather than
+// single words, since a related idea shares words like "change" and "world"
+// without their order. Any language, with no list of words to skip.
+export function wordingOverlap(a: string, b: string): number {
+  const pairs = (text: string): Set<string> => {
+    const words: string[] = text.normalize("NFKC").toLowerCase().replace(/['’]/g, "").match(/[\p{L}\p{N}]+/gu) ?? [];
+    if (words.length < 2) return new Set(words);
+    return new Set(words.slice(1).map((word, i) => `${words[i]} ${word}`));
+  };
+  const share = (from: Set<string>, to: Set<string>) => (from.size === 0 ? 0 : [...from].filter((pair) => to.has(pair)).length / from.size);
+  const [pa, pb] = [pairs(a), pairs(b)];
+  return Math.max(share(pa, pb), share(pb, pa));
+}
+
+// Below this, an earliest page's snippet is worded unlike the saying. In the
+// third eval the earliest pages a misattributed verdict rested on scored 0.67 or
+// more when they had the saying, and 0.31 or less when they had another text.
+export const LOW_OVERLAP = 0.5;
+
+// A misattributed verdict whose earliest page words it unlike the saying and
+// doesn't credit the usual name: an older related idea may have been taken for
+// the saying, as Bacon's "Nothing is terrible except fear itself" (1605) was for
+// Roosevelt's line in the third eval. Code can't tell that from the right origin
+// in other words or another language, so a second judge is asked.
+export type OtherOrigin = { node: string; snippet: string; overlap: number };
+
+export function otherOrigin(verdict: JudgeOutput, verified: readonly EvidenceNode[], quote: string, credit: string | null): OtherOrigin | null {
+  if (verdict.verdict !== "misattributed" || verdict.earliest_node === null) return null;
+  const page = verified.find((n) => n.id === verdict.earliest_node);
+  const snippet = page?.reader.exact_snippet;
+  if (!page || !snippet) return null;
+  const overlap = wordingOverlap(quote, snippet);
+  if (overlap >= LOW_OVERLAP) return null;
+  // The usual name's last word among the page's credit, so "Gandhi" matches
+  // "Mahatma Gandhi".
+  const words = (text: string | null | undefined): string[] => text?.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  const surname = words(credit).at(-1);
+  if (surname && words(page.attributedTo).includes(surname)) return null;
+  return { node: page.id, snippet, overlap };
+}
+
+const MAX_NOTE_SNIPPET = 300;
+
+// What the next judge is told when the last verdict rests on such a page.
+export function otherOriginNote({ node, snippet }: OtherOrigin): string {
+  const shown = snippet.length > MAX_NOTE_SNIPPET ? `${snippet.slice(0, MAX_NOTE_SNIPPET).trimEnd()}…` : snippet;
+  return (
+    `Your last verdict rests on page ${node} as an origin other than the usual credit, but its snippet words it very differently: "${shown}". ` +
+    `Say whether ${node} has the saying itself or a variant with the same meaning. ` +
+    "If it has only a related older idea, a paraphrase or a hypothetical, that is no different origin: name the earliest page that has the saying, and judge the credit again."
+  );
+}
+
 // What the next judge is told when the last verdict dated its earliest page by
 // the page's own date over the earlier source it cites.
 // Whether one date comes before another. Dates are "1981", "1981-03" or
