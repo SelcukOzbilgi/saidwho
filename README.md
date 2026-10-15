@@ -51,7 +51,7 @@ Seven of the ten come from the first full eval, run on October 12, Henry Ford's 
 | "Whether you think you can, or you think you can't..." | Henry Ford | said it | said it |
 | "Hayatta en hakiki mürşit ilimdir." | Mustafa Kemal Atatürk | said it | no known source |
 
-Most runs took 25 to 39 seconds, Henry Ford's 52 and Gandhi's 61. Roosevelt's and Churchill's took three and four minutes, because Nebius answered slowly for part of that afternoon and one planning call had to be tried again. Each cost less than a cent in model use.
+Most runs took 25 to 39 seconds, Henry Ford's 52 and Gandhi's 61. Roosevelt's and Churchill's took three and four minutes, because Nebius answered slowly for part of that afternoon and one planning call had to be tried again. Each cost less than a cent in model use, except Gandhi's at about 3 cents, most of it a second verdict written on Nemotron 3 Ultra.
 
 ## How it works
 
