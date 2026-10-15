@@ -61,7 +61,7 @@ describe("resolveRunKeys", () => {
     expect(trialRefusal(shared)).toBeNull();
   });
 
-  it("keeps the trial on off Vercel without Supabase, where one process keeps the counts", () => {
+  it("keeps the trial on without Supabase when not on Vercel, where one process keeps the counts", () => {
     expect(resolveRunKeys({ mode: "trial" }, ownerEnv())).toMatchObject({ ok: true, keys: { source: "owner" } });
     expect(trialRefusal(ownerEnv())).toBeNull();
   });

@@ -32,8 +32,8 @@ export const accessCodeMatches = (sent: string, expected: string): boolean =>
   timingSafeEqual(digest(sent.trim()), digest(expected.trim()));
 
 // Why this server can't start a trial run, or null when it can. The home page
-// asks the same question before it offers the trial, so it never offers one the
-// API would refuse. On Vercel the trial's daily budget and visitor counts are
+// asks the same question before it offers the trial, so the two agree on when
+// the trial is on. On Vercel the trial's daily budget and visitor counts are
 // shared through Supabase; without it each server instance would keep its own
 // in memory, and the limits wouldn't hold, so the trial stays off. That turns
 // off only the trial: runs on a visitor's own keys still work. A local run,
