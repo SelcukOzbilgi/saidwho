@@ -315,7 +315,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
             type="submit"
             disabled={!ready}
             aria-describedby={`${id}-why`}
-            className="shrink-0 rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent disabled:opacity-40 disabled:hover:bg-foreground"
+            className="shrink-0 rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent hover:text-on-accent disabled:opacity-40 disabled:hover:bg-foreground disabled:hover:text-background"
           >
             Find the source
           </button>

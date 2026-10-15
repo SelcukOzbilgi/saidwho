@@ -136,7 +136,7 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
       <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
         <Link
           href={href}
-          className="rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent"
+          className="rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent hover:text-on-accent"
         >
           See every step
         </Link>

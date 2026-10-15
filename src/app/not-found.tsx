@@ -16,7 +16,7 @@ export default function NotFound() {
         <p className="mt-6">
           <Link
             href="/"
-            className="inline-block rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent"
+            className="inline-block rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent hover:text-on-accent"
           >
             Back to Said Who?
           </Link>
