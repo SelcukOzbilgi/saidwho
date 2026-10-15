@@ -38,16 +38,18 @@ export function CaseGallery({ cases, title = "Finished cases" }: { cases: readon
                 href={`/cases/${caseId}`}
                 className="flex h-full flex-col gap-2 rounded-xl border border-line bg-card p-4 transition-colors hover:border-foreground/40"
               >
-                <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
-                  <span className={`font-medium uppercase tracking-wider ${verdict ? VERDICT_LOOK[verdict] : "text-muted"}`}>
-                    {verdict ? verdictWords(verdict) : "No verdict"}
-                  </span>
-                  {match && <span className={`rounded-full px-2 py-0.5 ${MATCH_LOOK[match]}`}>{MATCH_CHIP[match]}</span>}
+                <span
+                  className={`text-xs font-medium uppercase tracking-wider ${verdict ? VERDICT_LOOK[verdict] : "text-muted"}`}
+                >
+                  {verdict ? verdictWords(verdict) : "No verdict"}
                 </span>
                 <span className="line-clamp-3 font-serif text-lg leading-snug">“{run.quote}”</span>
                 <span className="text-sm text-muted">Credited to {run.popularAttribution ?? "no one in particular"}</span>
-                <span className="mt-auto pt-2 font-mono text-xs text-muted tabular-nums">
-                  {plural(confirmed, "source")} · ${run.nebiusUsd.toFixed(4)} · {run.seconds}s
+                <span className="mt-auto flex flex-col items-start gap-2 pt-2">
+                  {match && <span className={`rounded-full px-2 py-0.5 text-xs ${MATCH_LOOK[match]}`}>{MATCH_CHIP[match]}</span>}
+                  <span className="font-mono text-xs text-muted tabular-nums">
+                    {plural(confirmed, "source")} · ${run.nebiusUsd.toFixed(4)} · {run.seconds}s
+                  </span>
                 </span>
               </Link>
             </li>
