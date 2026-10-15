@@ -4,6 +4,19 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-15
+
+### Added
+- The home page opens with what Said Who? does differently, then a six-step "How it works" strip with each step's Nemotron tier or tool, the eval numbers, and how much cheaper a run was than the same calls at Nemotron 3 Ultra prices (#41)
+- Gallery cards say whether the run matches the known answer, a short legend explains what each agent does, and every page has a header (#42)
+- `scripts/rejudge.ts` can replay the Judge with chosen searches or hosts left out, and `pnpm eval --cache` reuses another checkout's search cache (#43)
+- This changelog (#40)
+
+### Changed
+- The Planner names a likely first source with a year in one or two of its searches, and searches that only quote the saying again are dropped. On 8 test cases, each judged 5 times, right verdicts went from 18 to 27 of 40 and dates from 16 to 22 of 40 (#43)
+- The earliest trace names its source when the Judge left the author blank, from a confirmed page that carries that year (#42)
+- Links and buttons are at least 24 px tall on phones (#42)
+
 ## [0.6.0] - 2026-10-15
 
 ### Added
@@ -84,7 +97,8 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 - The eval set of 20 quotes with known origins (#3)
 - `pnpm investigate <case-id>`, the first end-to-end investigation (#5)
 
-[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.3.0...v0.4.0
