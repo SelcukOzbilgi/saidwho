@@ -271,6 +271,7 @@ describe("wordingOverlap", () => {
       ),
     ).toBeGreaterThanOrEqual(LOW_OVERLAP);
     expect(wordingOverlap("Ladies and gentlemen of the class of '97: Wear sunscreen.", "Wear sunscreen.")).toBe(1);
+    expect(wordingOverlap("İlim ilim bilmektir, ilim kendin bilmektir.", "ILIM ILIM BILMEKTIR, ILIM KENDIN BILMEKTIR.")).toBe(1);
     expect(wordingOverlap("Hayatta en hakiki mürşit ilimdir.", "Atatürk’ün \"Hayatta en hakiki mürşit ilimdir.\" sözü")).toBe(1);
   });
 });
@@ -287,6 +288,8 @@ describe("otherOrigin", () => {
     for (const credit of ["Francis Bacon", null]) {
       expect(otherOrigin(misattributed, [bacon(credit)], QUOTE, "Franklin D. Roosevelt")).toMatchObject({ node: "n16", snippet: "Nothing is terrible except fear itself." });
     }
+    // A shared "Jr." is no shared name.
+    expect(otherOrigin(misattributed, [bacon("John Smith Jr.")], QUOTE, "Martin Luther King Jr.")).not.toBeNull();
   });
 
   it("leaves alone a page that credits the usual name, another verdict, and a page worded like the saying", () => {

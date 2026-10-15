@@ -8,6 +8,7 @@ import {
   MAX_NOTE_CHARS,
   MAX_RATIONALE_CHARS,
 } from "./schemas";
+import { normalizeText } from "./verifier";
 
 // Plain-code checks on a verdict before it can stand. The model's ids are
 // tidied first, since a slip like "[n8]" or "null" says nothing about the
@@ -164,10 +165,11 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
 // has, taken whichever way gives more, so a snippet that is part of the saying,
 // or the saying inside a longer passage, counts in full. Pairs rather than
 // single words, since a related idea shares words like "change" and "world"
-// without their order. Any language, with no list of words to skip.
+// without their order. Any language, with no list of words to skip. Words are
+// compared as the Checker compares them, so case and accents don't count.
 export function wordingOverlap(a: string, b: string): number {
   const pairs = (text: string): Set<string> => {
-    const words: string[] = text.normalize("NFKC").toLowerCase().replace(/['’]/g, "").match(/[\p{L}\p{N}]+/gu) ?? [];
+    const words = normalizeText(text).split(" ").filter(Boolean);
     if (words.length < 2) return new Set(words);
     return new Set(words.slice(1).map((word, i) => `${words[i]} ${word}`));
   };
@@ -188,6 +190,8 @@ export const LOW_OVERLAP = 0.5;
 // in other words or another language, so a second judge is asked.
 export type OtherOrigin = { node: string; snippet: string; overlap: number };
 
+const NAME_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv"]);
+
 export function otherOrigin(verdict: JudgeOutput, verified: readonly EvidenceNode[], quote: string, credit: string | null): OtherOrigin | null {
   if (verdict.verdict !== "misattributed" || verdict.earliest_node === null) return null;
   const page = verified.find((n) => n.id === verdict.earliest_node);
@@ -196,9 +200,11 @@ export function otherOrigin(verdict: JudgeOutput, verified: readonly EvidenceNod
   const overlap = wordingOverlap(quote, snippet);
   if (overlap >= LOW_OVERLAP) return null;
   // The usual name's last word among the page's credit, so "Gandhi" matches
-  // "Mahatma Gandhi".
-  const words = (text: string | null | undefined): string[] => text?.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-  const surname = words(credit).at(-1);
+  // "Mahatma Gandhi". A suffix like "Jr." is no surname.
+  const words = (text: string | null | undefined): string[] => normalizeText(text ?? "").split(" ").filter(Boolean);
+  const surname = words(credit)
+    .filter((word) => !NAME_SUFFIXES.has(word))
+    .at(-1);
   if (surname && words(page.attributedTo).includes(surname)) return null;
   return { node: page.id, snippet, overlap };
 }

@@ -160,11 +160,12 @@ export async function judge(step: JudgeStep): Promise<void> {
     // date or none at all (a year no page backs is cleared to none) leave the
     // first verdict as the answer.
     // Asked about an earliest page worded unlike the saying, it is taken when it
-    // names another page or gives another verdict; the same page as a
+    // names another page or gives another verdict; the same page, or none, as a
     // misattribution again leaves the first. Asked about both, either answer
     // takes it, since a page with the saying itself is often later.
     const moved = (date: string | null, asked: NonNullable<Asked["date"]>) => date !== null && earlierDate(date, asked.given);
-    const answered = (asked: OtherOrigin) => verdict.earliest_node !== asked.node || verdict.verdict !== "misattributed";
+    const answered = (asked: OtherOrigin) =>
+      verdict.verdict !== "misattributed" || (verdict.earliest_node !== null && verdict.earliest_node !== asked.node);
     const unanswered: string[] = [];
     if (recheck?.date && !moved(verdict.earliest_date, recheck.date)) {
       const { given, node, cited } = recheck.date;

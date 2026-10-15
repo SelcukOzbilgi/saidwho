@@ -1113,6 +1113,14 @@ describe("investigate", () => {
       for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
     });
 
+    it("keeps the first verdict when Ultra names no page but still says misattributed", async () => {
+      const noPage = { ...onOld, earliest_node: null, earliest_date: null, rationale: "Another origin, though no page shows it [n1]." };
+      const nebius = fakeNebius({ read: reads(), verdict: ({ model }) => (model === MODELS.super.id ? onOld : noPage) });
+      const events = await run({ nebius, tavily: pages() });
+      expect(events.filter((e) => e.type === "verdict").at(-1)).toMatchObject({ tier: "ultra", notTaken: expect.stringContaining("rests on n1") });
+      expect(standingVerdict(events)).toMatchObject({ tier: "super", verdict: { earliest_node: "n1" } });
+    });
+
     it("doesn't ask when the page credits the usual name, or the verdict isn't misattributed", async () => {
       // The Checker keeps a credit only when the page names that person.
       const byEinstein = `A 1950 talk by Albert Einstein. "${RELATED}," he said.`;
@@ -1127,17 +1135,43 @@ describe("investigate", () => {
       }
     });
 
-    it("asks about both in one second judge when the page also dates itself over a source it cites", async () => {
+    describe("when the page also dates itself over a source it cites", () => {
       const cites = reads({ page_date: "2013", cited_source: "a 1950 sermon", cited_source_date: "1950" });
       const late = { ...onOld, earliest_date: "2013" };
-      const nebius = fakeNebius({ read: cites, verdict: ({ model }) => (model === MODELS.super.id ? late : onNews) });
-      const events = await run({ nebius, tavily: pages(`Posted 2013. From a 1950 sermon: "${RELATED}."`) });
-      expect(nebius.calls.filter((c) => c === "verdict")).toHaveLength(2);
-      const asked = nebius.log.filter((c) => c.name === "verdict").at(-1)?.user;
-      expect(asked).toContain("n1 names a source dated 1950");
-      expect(asked).toContain("its snippet words it very differently");
-      // A later date, but on a page with the saying: the origin was answered.
-      expect(standingVerdict(events)).toMatchObject({ tier: "ultra", verdict: { earliest_node: "n2" } });
+      const both = (second: JudgeOutput) => {
+        const nebius = fakeNebius({ read: cites, verdict: ({ model }) => (model === MODELS.super.id ? late : second) });
+        return { nebius, events: run({ nebius, tavily: pages(`Posted 2013. From a 1950 sermon: "${RELATED}."`) }) };
+      };
+
+      it("asks about both in one second judge", async () => {
+        const { nebius, events } = both(onNews);
+        await events;
+        expect(nebius.calls.filter((c) => c === "verdict")).toHaveLength(2);
+        const asked = nebius.log.filter((c) => c.name === "verdict").at(-1)?.user;
+        expect(asked).toContain("n1 names a source dated 1950");
+        expect(asked).toContain("its snippet words it very differently");
+      });
+
+      it("takes a verdict that answers only the origin, on a page with the saying and no earlier date", async () => {
+        const { events } = both({ ...onNews, earliest_date: null });
+        expect(standingVerdict(await events)).toMatchObject({ tier: "ultra", verdict: { earliest_node: "n2", earliest_date: null } });
+      });
+
+      it("takes a verdict that answers only the date, on the same page", async () => {
+        const { events } = both({ ...onOld, earliest_date: "1950" });
+        expect(standingVerdict(await events)).toMatchObject({ tier: "ultra", verdict: { earliest_node: "n1", earliest_date: "1950" } });
+      });
+
+      it("keeps the first verdict when the second answers neither", async () => {
+        const { events } = both(late);
+        const done = await events;
+        expect(done.filter((e) => e.type === "verdict").at(-1)).toMatchObject({
+          notTaken:
+            "it gives no supported date earlier than the 2013 it was asked about, on n1, which cites 1950, " +
+            "and it rests on n1 as another origin again, the page it was asked about",
+        });
+        expect(standingVerdict(done)).toMatchObject({ tier: "super", verdict: { earliest_date: "2013" } });
+      });
     });
   });
 
