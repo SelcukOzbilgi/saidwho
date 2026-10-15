@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Keeps the SHA pins in .github/workflows/ci.yml current. npm packages are left
+  # out until after the Oct 30 deadline, so no dependency bump lands in the freeze.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
