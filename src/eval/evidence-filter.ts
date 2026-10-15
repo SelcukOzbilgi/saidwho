@@ -1,4 +1,3 @@
-import { MAX_PAGES } from "../agent/orchestrator";
 import { isExtraRequote } from "../agent/queries";
 
 // Leaves pages out of a saved run's evidence, so scripts/rejudge.ts can judge it
@@ -13,9 +12,10 @@ import { isExtraRequote } from "../agent/queries";
 //   hosts    drops every page on these hosts or their subdomains, as
 //            excludeDomains would.
 // A page dropped takes the Genealogist's leads from it along: the works it cited
-// were never looked for, so the pages found for them go too. Not one a kept
-// search returned that the first round would now read: with fewer pages ahead
-// of it, a page past the first MAX_PAGES moves up.
+// were never looked for, so the pages found for them go too. That holds for one
+// a kept search also returned: read only as a lead's page, it may have sat past
+// the pages the first round reads, and the log can't tell, so the replay can
+// count fewer pages than the filter would keep.
 
 export type EvidenceFilter = { requote: boolean; hosts: readonly string[] };
 
@@ -72,14 +72,12 @@ export function applyFilter(quote: string, searches: readonly LoggedSearch[], no
   const droppedSearches = new Set(filter.requote ? searches.flatMap((s, i) => (isExtraRequote(s.query, quote) ? [i] : [])) : []);
   const keptUrls = new Set(searches.flatMap((s, i) => (droppedSearches.has(i) ? [] : s.urls)));
   const droppedOnlyUrls = new Set(searches.flatMap((s, i) => (droppedSearches.has(i) ? s.urls.filter((u) => !keptUrls.has(u)) : [])));
-  // The pages the first round would read without what the filter drops.
-  const readFirst = new Set([...keptUrls].filter((u) => !onHosts(u, filter.hosts)).slice(0, MAX_PAGES));
   const dropped = new Map<string, DropReason>();
   // In log order, so a lead's pages see whether the page it came from was dropped.
   for (const node of nodes) {
     if (onHosts(node.url, filter.hosts)) dropped.set(node.id, "host");
     else if (node.foundVia) {
-      if (dropped.has(node.foundVia.node) && !readFirst.has(node.url)) dropped.set(node.id, "lead");
+      if (dropped.has(node.foundVia.node)) dropped.set(node.id, "lead");
     } else if (droppedOnlyUrls.has(node.url)) dropped.set(node.id, "search");
   }
   return { searches: droppedSearches, nodes: dropped };

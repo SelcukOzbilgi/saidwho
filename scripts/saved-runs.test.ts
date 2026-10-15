@@ -72,39 +72,87 @@ describe("rebuildEvidence with a filter", () => {
     expect(onArchive({ requote: false, hosts: ["archive.org"] })).toBe(false);
   });
 
-  it("keeps a lead's page the first round now reads, on that round's text and found via nothing", () => {
-    // The exact search returned 15 pages and the re-quoting one 10 more, so the
-    // page only the third search returned came 26th and wasn't read until a lead
-    // from a re-quoting page found it. Without the re-quoting search it is 16th.
-    const exact = Array.from({ length: 15 }, (_, i) => result(`https://a.org/${i}`, `${QUOTE}, page ${i}`));
-    const requote = Array.from({ length: 10 }, (_, i) => result(`https://b.org/${i}`, `${QUOTE}, says page ${i}, from the ${WORK}`));
+  it("drops a lead's page and what it led to when the page the lead came from is dropped", () => {
+    // n16 came only from the re-quoting search. A lead from it found late.org,
+    // which a kept search returned too, and a lead from that page found n24.
     const late = "https://late.org/x";
+    const later = "https://later.org/y";
     const saved = run([
       searched(EXACT),
       searched(REQUOTE),
       searched(KEPT),
-      { type: "pages_ready", pages: 20, droppedExcluded: 0 },
+      { type: "pages_ready", pages: 3, droppedExcluded: 0 },
+      node("n1", "https://a.org/1"),
       node("n16", "https://b.org/0", { cited_source: WORK }),
       { type: "traced", ...spend, tier: "super", round: 1, leads: [{ fromNode: "n16", work: WORK, query: LEAD }] },
       searched(LEAD),
       { type: "pages_ready", pages: 1, droppedExcluded: 0, round: 1 },
       { type: "page_read", ...spend, url: late, host: "late.org", outcome: "evidence", reason: null, lookingFor: WORK },
-      node("n21", late, {}, { node: "n16", work: WORK }),
+      node("n21", late, { cited_source: "Émile" }, { node: "n16", work: WORK }),
+      { type: "traced", ...spend, tier: "super", round: 2, leads: [{ fromNode: "n21", work: "Émile", query: "Rousseau Émile full text" }] },
+      searched("Rousseau Émile full text"),
+      { type: "pages_ready", pages: 1, droppedExcluded: 0, round: 2 },
+      { type: "page_read", ...spend, url: later, host: "later.org", outcome: "evidence", reason: null, lookingFor: "Émile" },
+      node("n24", later, {}, { node: "n21", work: "Émile" }),
     ]);
     const cache = cacheOf(
-      { [EXACT]: exact, [REQUOTE]: requote, [KEPT]: [result(late, `${QUOTE}, they said.`)] },
-      { [LEAD]: [result(late, `They said: ${QUOTE}, in ${WORK}.`)] },
+      {
+        [EXACT]: [result("https://a.org/1", `${QUOTE}, as the saying goes.`)],
+        [REQUOTE]: [result("https://b.org/0", `${QUOTE}, from the ${WORK}.`)],
+        [KEPT]: [result(late, "Brioche, they said.")],
+      },
+      { [LEAD]: [result(late, `They said: ${QUOTE}, in Émile.`)], "Rousseau Émile full text": [result(later, `${QUOTE}, it says.`)] },
     );
 
-    const before = rebuildEvidence(saved, "new", cache);
-    expect(before.verified.map((n) => [n.id, n.foundVia])).toEqual([
-      ["n16", null],
-      ["n21", { node: "n16", work: WORK }],
-    ]);
-
+    expect(rebuildEvidence(saved, "new", cache).verified.map((n) => n.id)).toEqual(["n1", "n16", "n21", "n24"]);
     const after = rebuildEvidence(saved, "new", cache, { requote: true, hosts: [] });
-    expect(Object.fromEntries(after.dropped.nodes)).toEqual({ n16: "search" });
-    expect(after.verified.map((n) => [n.id, n.foundVia])).toEqual([["n21", null]]);
+    expect(Object.fromEntries(after.dropped.nodes)).toEqual({ n16: "search", n21: "lead", n24: "lead" });
+    expect(after.verified.map((n) => n.id)).toEqual(["n1"]);
+  });
+
+  it("leaves a canceled lead search's text out of what settles a kept lead's cited work", () => {
+    // n1 cites the Confessions and its library search returned a copy read with
+    // no quote. n16, only from the re-quoting search, cited another work whose
+    // search returned the same copy with the saying in its text.
+    const copy = "https://archive.org/stream/confessions00rous/confessions00rous_djvu.txt";
+    const other = "Rousseau Memoirs full text";
+    const saved = run([
+      searched(EXACT),
+      searched(REQUOTE),
+      { type: "pages_ready", pages: 2, droppedExcluded: 0 },
+      node("n1", "https://a.org/1", { cited_source: WORK }),
+      node("n16", "https://b.org/0", { cited_source: "Memoirs" }),
+      {
+        type: "traced",
+        ...spend,
+        tier: "super",
+        round: 1,
+        leads: [
+          { fromNode: "n1", work: WORK, query: LEAD },
+          { fromNode: "n16", work: "Memoirs", query: other },
+        ],
+      },
+      searched(LEAD),
+      searched(other),
+      { type: "pages_ready", pages: 1, droppedExcluded: 0, round: 1 },
+      { type: "page_read", ...spend, url: copy, host: "archive.org", outcome: "no_quote", reason: null, lookingFor: WORK },
+    ]);
+    const title = "The Confessions of Jean-Jacques Rousseau";
+    const cache = cacheOf(
+      {
+        [EXACT]: [result("https://a.org/1", `Rousseau's ${WORK} has it: ${QUOTE}.`)],
+        [REQUOTE]: [result("https://b.org/0", `${QUOTE}, from the Memoirs.`)],
+      },
+      {
+        [LEAD]: [result(copy, "I was born at Geneva. ".repeat(600), title)],
+        [other]: [result(copy, `${"I was born at Geneva. ".repeat(600)} ${QUOTE}.`, title)],
+      },
+    );
+
+    expect(rebuildEvidence(saved, "new", cache).citedWorks).toEqual([]);
+    const after = rebuildEvidence(saved, "new", cache, { requote: true, hosts: [] });
+    expect(after.dropped.leads).toBe(1);
+    expect(after.citedWorks.map((w) => w.work)).toEqual([WORK]);
   });
 
   it("checks the credit again on the kept search's text", () => {

@@ -209,30 +209,30 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: Pick<SearchC
     filter,
   );
   const droppedQueries = new Set([...dropped.searches].map((i) => firstRound[i].query));
-  // Every text the run got for each page, and the first, which its reader saw.
+  // Leads and the pages each one's search returned. A lead from a page the filter
+  // dropped was never followed, so its search was never made.
+  const allLeads = events.flatMap((e) => (e.type === "traced" ? e.leads : []));
+  const leads = allLeads.filter((lead) => !dropped.nodes.has(lead.fromNode));
+  const keptLeadQueries = new Set(leads.map((lead) => lead.query));
+  const canceledQueries = new Set(allLeads.flatMap((lead) => (keptLeadQueries.has(lead.query) ? [] : [lead.query])));
+  // Every text the run got for each page from the searches the filter keeps, and
+  // the first, which its reader saw.
   const textsOf = new Map<string, string[]>();
   const firstPage = new Map<string, Page>();
   for (const { query, library } of searches) {
-    if (!library && droppedQueries.has(query)) continue;
+    if (library ? canceledQueries.has(query) : droppedQueries.has(query)) continue;
     for (const r of results(query, library) ?? []) {
       if (!r.rawContent) continue;
       textsOf.set(r.url, [...new Set([...(textsOf.get(r.url) ?? []), r.rawContent])]);
       if (!library && !firstPage.has(r.url)) firstPage.set(r.url, { title: r.title, text: r.rawContent });
     }
   }
-  // Leads and the pages each one's search returned. A lead from a page the filter
-  // dropped was never followed.
-  const allLeads = events.flatMap((e) => (e.type === "traced" ? e.leads : []));
-  const leads = allLeads.filter((lead) => !dropped.nodes.has(lead.fromNode));
   const leadResults = new Map(leads.map((lead) => [lead.work, searches.some((s) => s.library && s.query === lead.query) ? results(lead.query, true) : null]));
   for (const lead of leads) if (searches.some((s) => s.library && s.query === lead.query) && leadResults.get(lead.work) === null) missing.leads++;
 
-  // The nodes, checked again under the rules. A node kept though the lead that
-  // found it was dropped is one the first round now reads (see applyFilter), so
-  // it is read on that round's text and found via nothing.
+  // The nodes, checked again under the rules.
   const rebuilt = nodes.filter((n) => !dropped.nodes.has(n.id)).map((logged) => {
-    const foundVia = logged.foundVia && !dropped.nodes.has(logged.foundVia.node) ? logged.foundVia : null;
-    const fromLead = foundVia ? (leadResults.get(foundVia.work) ?? []).find((r) => r.url === logged.url && r.rawContent) : undefined;
+    const fromLead = logged.foundVia ? (leadResults.get(logged.foundVia.work) ?? []).find((r) => r.url === logged.url && r.rawContent) : undefined;
     const page: Page | undefined = fromLead ? { title: fromLead.title, text: fromLead.rawContent ?? "" } : firstPage.get(logged.url);
     if (!page) {
       missing.pages++;
@@ -249,7 +249,7 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: Pick<SearchC
     // The credit too, as the reader's is kept: only when the page names it.
     const credit = reading.attributed_to;
     const attributedTo = credit && mentionsName(credit, `${page.title}\n${page.text}`) ? credit : null;
-    return { ...logged, check, attributedTo, ...dates, date: dates.citedSourceDate ?? dates.pageDate, ...(logged.foundVia && { foundVia }) };
+    return { ...logged, check, attributedTo, ...dates, date: dates.citedSourceDate ?? dates.pageDate };
   });
   const confirmed = rebuilt.filter((n) => n.check.status !== "not_found");
 
