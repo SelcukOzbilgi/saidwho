@@ -140,7 +140,7 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] An eval of the whole test set, run three ways, with [the results](eval/results.md)
 - [x] A held-out set of ten quotes that played no part in the fixes, with [its results](eval/holdout-results.md)
 
-Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases). Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
+Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases), and [CHANGELOG.md](CHANGELOG.md) lists what each one changed. Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
 
 ## Using the public demo
 
