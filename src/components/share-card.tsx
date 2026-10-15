@@ -33,8 +33,11 @@ const VERDICT_COLOR: Record<JudgeOutput["verdict"], string> = {
 // Fetched at build time, like next/font fetches them for the pages.
 const NEWSREADER = "https://fonts.gstatic.com/s/newsreader/v26/cY9qfjOCX1hbuyalUrK49dLac06G1ZGsZBtoBCzBDXXD9JVF438w";
 const GEIST = "https://fonts.gstatic.com/s/geist/v5/gyBhhwUxId8gMGYQMKR3pzfaWI_R";
+// A stalled download fails the build after 30 seconds instead of hanging it.
 const font = async (url: string): Promise<ArrayBuffer> => {
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) }).catch((error: unknown) => {
+    throw new Error(`Couldn't load a share image font: ${error instanceof Error ? error.message : String(error)} ${url}`);
+  });
   if (!res.ok) throw new Error(`Couldn't load a share image font: ${res.status} ${url}`);
   return res.arrayBuffer();
 };
