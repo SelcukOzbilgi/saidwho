@@ -33,13 +33,15 @@ const VERDICT_COLOR: Record<JudgeOutput["verdict"], string> = {
 // Fetched at build time, like next/font fetches them for the pages.
 const NEWSREADER = "https://fonts.gstatic.com/s/newsreader/v26/cY9qfjOCX1hbuyalUrK49dLac06G1ZGsZBtoBCzBDXXD9JVF438w";
 const GEIST = "https://fonts.gstatic.com/s/geist/v5/gyBhhwUxId8gMGYQMKR3pzfaWI_R";
-// A stalled download fails the build after 30 seconds instead of hanging it.
+// A stalled download fails the build after 30 seconds instead of hanging it,
+// and every failure, the body's too, names the font's address.
 const font = async (url: string): Promise<ArrayBuffer> => {
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) }).catch((error: unknown) => {
-    throw new Error(`Couldn't load a share image font: ${error instanceof Error ? error.message : String(error)} ${url}`);
-  });
-  if (!res.ok) throw new Error(`Couldn't load a share image font: ${res.status} ${url}`);
-  return res.arrayBuffer();
+  const fail = (why: unknown): never => {
+    throw new Error(`Couldn't load a share image font: ${why instanceof Error ? why.message : String(why)} ${url}`);
+  };
+  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) }).catch(fail);
+  if (!res.ok) fail(res.status);
+  return res.arrayBuffer().catch(fail);
 };
 const [serif, serifSemibold, sans, sansMedium] = await Promise.all([
   font(`${NEWSREADER}eI_ADA.ttf`),
