@@ -38,7 +38,7 @@ const font = async (url: string): Promise<ArrayBuffer> => {
   if (!res.ok) throw new Error(`Couldn't load a share image font: ${res.status} ${url}`);
   return res.arrayBuffer();
 };
-const fonts = Promise.all([
+const [serif, serifSemibold, sans, sansMedium] = await Promise.all([
   font(`${NEWSREADER}eI_ADA.ttf`),
   font(`${NEWSREADER}pojADA.ttf`),
   font(`${GEIST}nOM4nQ.ttf`),
@@ -51,7 +51,6 @@ const quoteSize = (quote: string): number => (quote.length <= 30 ? 80 : quote.le
 export async function shareCard({ run }: ExampleCase): Promise<ImageResponse> {
   // A recorded case always starts with its quote.
   const quote = run.quote ?? "";
-  const [serif, serifSemibold, sans, sansMedium] = await fonts;
   const verdict = run.verdict?.output.verdict;
   const answer = shareAnswer(run);
 
