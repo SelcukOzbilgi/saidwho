@@ -88,6 +88,46 @@ describe("createNebiusClient", () => {
     expect(JSON.stringify(result)).not.toContain("visitor-secret");
     expect(!result.ok && result.error.kind).toBe("auth");
   });
+
+  it.each([500, 200])("gives up near the timeout when a %i response sends its headers and stalls the body", async (status) => {
+    let bodyCancelled = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("{"));
+            init.signal?.addEventListener("abort", () => {
+              bodyCancelled = true;
+              controller.error(init.signal?.reason);
+            });
+          },
+        });
+        return new Response(body, { status, headers: { "content-type": "application/json" } });
+      }),
+    );
+    const client = createNebiusClient({ apiKey: "visitor-key", baseURL: BASE_URL, timeoutMs: 50 });
+    const started = performance.now();
+    const result = await client.chat({ model: "m", messages: [{ role: "user", content: "hi" }] });
+    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(bodyCancelled).toBe(true);
+    expect(!result.ok && result.error.kind).toBe("timeout");
+  });
+
+  it("reports a timeout when no response arrives in time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+          }),
+      ),
+    );
+    const client = createNebiusClient({ apiKey: "visitor-key", baseURL: BASE_URL, timeoutMs: 50 });
+    const result = await client.chat({ model: "m", messages: [{ role: "user", content: "hi" }] });
+    expect(!result.ok && result.error.kind).toBe("timeout");
+  });
 });
 
 describe("sdk guards", () => {
