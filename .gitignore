@@ -36,3 +36,4 @@ CLAUDE.md
 # Local agent memory and settings
 /MEMORY.md
 .claude/
+.playwright-mcp/
