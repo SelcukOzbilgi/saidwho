@@ -17,6 +17,16 @@ describe("Progress", () => {
     expect(render(null)).not.toContain("Ultra");
   });
 
+  it("says how much cheaper the run was than the same calls at Ultra prices, once it has finished", () => {
+    const at = (finished: boolean, ultraUsd: number | null) =>
+      renderToStaticMarkup(
+        createElement(Progress, { ...initialRunState, finished, nebiusUsd: 0.0072, ultraUsd, running: false }),
+      ).replace(/<[^>]+>/g, "");
+    expect(at(true, 0.0433)).toContain("About 6x cheaper than the same calls at Nemotron 3 Ultra prices");
+    expect(at(false, 0.0433)).not.toContain("cheaper");
+    expect(at(true, null)).not.toContain("cheaper");
+  });
+
   it("says one page, not one pages", () => {
     const text = renderToStaticMarkup(
       createElement(Progress, {
