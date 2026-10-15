@@ -131,7 +131,8 @@ export function EvalNumbers() {
         <p className="mt-3 text-sm text-muted">
           Ultra on every step found the earliest year more often, {ultra.years} against {mix.years}. Run at commit{" "}
           <span className="font-mono text-xs">{THREE_WAY.commit}</span>;{" "}
-          <FileLink file={THREE_WAY.file}>scores quote by quote</FileLink>.
+          <FileLink file={THREE_WAY.file}>scores quote by quote</FileLink>. A quote costs about 70% more than on{" "}
+          {THREE_WAY.date}, mostly because the Planner moved from Nemotron 3 Super to Ultra.
         </p>
       </div>
     </section>
