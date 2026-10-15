@@ -35,6 +35,8 @@ Leave out `--setup` to run all three setups. Held-out runs keep their own logs i
 
 To check a fix on the same searches as an earlier run, `--replay-plan <runs dir>` takes each quote's plan from that run's log instead of asking the Planner, so the first searches come from the cache. It cuts the search bill but doesn't zero it: the Genealogist still writes its own library searches from what the Readers find, and any the cache doesn't have cost Tavily credits.
 
+`--cache <dir>` uses another search cache, such as the one in a checkout that already ran the eval, so a test in a fresh worktree pays only for searches that cache doesn't have. The directory must exist, and new searches are added to it.
+
 ## Running the eval on Nebius Serverless AI Jobs
 
 The full eval takes about an hour, so it can run as a [Serverless AI job](https://docs.nebius.com/serverless/jobs/manage) instead of on a laptop. The job uses the public Node.js image, clones this repo and runs [`job.sh`](job.sh), so there's no image to build.
