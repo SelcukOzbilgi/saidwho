@@ -113,4 +113,4 @@ Setup: `pnpm eval --setup cascade` on the twenty test quotes, then on ten held-o
 
 ### Partner credits
 
-- **Toloka:** we set up a project for three people to check 41 of the quotes the third run confirmed, within the $50 balance. On October 14 and again on October 15, the launch step showed no price, so we couldn't see the total before paying. We dropped the human check. A price shown before launch, or an error saying the pricing service was down, would have helped.
+- **Toloka:** we set up a project for three people to check 41 of the pages the third run confirmed: whether each page holds the quote, credits it to the person named, and gives the year shown. It fit the $50 balance. On October 14 and again on October 15, the launch step showed no price, so we couldn't see the total before paying. We dropped the human check. A price shown before launch, or an error saying the pricing service was down, would have helped.
