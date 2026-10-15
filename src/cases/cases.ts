@@ -15,9 +15,10 @@ import soMuchOwed from "./so-much-owed.json";
 import thinkYouCan from "./think-you-can.json";
 
 // Finished runs, shown as example cases and replayed from their saved events.
-// Each is a quote from the test set (eval/quotes.jsonl) run with
-// `pnpm investigate <id>`; the log it writes to .runs/ is copied here as it is
-// and added to the list below, in the order the gallery shows them.
+// Each is a quote from the test set (eval/quotes.jsonl) run once. Most are logs
+// pnpm eval wrote to .runs/eval/; a case can also come from
+// `pnpm investigate <id>`, which writes to .runs/. The log is copied here as it
+// is and added to the list below, in the order the gallery shows them.
 
 const caseLogSchema = z.strictObject({
   caseId: z.string(),
