@@ -91,7 +91,7 @@ export function EvalNumbers() {
 
       <div className="mt-8 rounded-xl border border-line bg-card p-4 sm:p-5">
         <h3 className="font-medium">
-          As many right verdicts as every step on Ultra, at about a tenth of the cost
+          As many right verdicts as every step on Ultra, at about a tenth of the Nebius cost
         </h3>
         <div className="mt-3">
           <table className="w-full text-left text-sm tabular-nums">
@@ -108,7 +108,7 @@ export function EvalNumbers() {
                   Earliest year
                 </th>
                 <th scope="col" className="py-2 pl-3 text-right font-normal">
-                  Per quote
+                  Nebius per quote
                 </th>
               </tr>
             </thead>

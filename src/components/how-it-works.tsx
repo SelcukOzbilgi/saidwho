@@ -35,7 +35,7 @@ export const STEPS: readonly Step[] = [
   },
   {
     name: "Readers",
-    does: `Go through up to ${MAX_PAGES} pages and copy the sentence that carries the quote, who it's credited to, the date, and any older source the page names.`,
+    does: `Go through up to ${MAX_PAGES} pages from the searches, and the ones the Genealogist turns up, and copy the sentence that carries the quote, who it's credited to, the date, and any older source the page names.`,
     model: { first: CASCADE.read.tier, retry: CASCADE.reread.tier },
   },
   {
