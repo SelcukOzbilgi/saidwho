@@ -24,12 +24,13 @@ const CHANGE: Record<LineageStep["change"], { label: string; look: string }> = {
   credit: { label: "Credit changes", look: "bg-bad/15 text-bad" },
 };
 
-// The judge's notes cite evidence as n3, [n3] or (n3, n5) and sometimes mark
-// titles in Markdown. Here there are no cards to point to, so both go.
+// The judge's notes cite evidence as n3, [n3], (n3, n5) or "n1, n2, and n7",
+// and sometimes mark titles in Markdown. Here there are no cards to point to,
+// so both go, lists with their commas and "and".
 export const plainNote = (text: string): string =>
   unmark(text)
     .replace(/\s*[[(]\s*n\d+(?:\s*,\s*n\d+)*\s*[\])]/g, "")
-    .replace(/\s*\bn\d+\b/g, "")
+    .replace(/\s*\bn\d+(?:\s*,\s*(?:(?:and|or)\s+)?n\d+)*(?:\s*,?\s+(?:and|or)\s+n\d+)?\b/g, "")
     .replace(/\s+([.,;:])/g, "$1")
     .replace(/\s{2,}/g, " ")
     .trim();

@@ -15,6 +15,9 @@ describe("plainNote", () => {
     expect(plainNote("Seen in a 1983 novel (n3, n5) and later n7 online.")).toBe("Seen in a 1983 novel and later online.");
     expect(plainNote("Credited in *Sudden Death* by **Rita Mae Brown**.")).toBe("Credited in Sudden Death by Rita Mae Brown.");
     expect(plainNote("Version n10 shows up in 1981.")).toBe("Version shows up in 1981.");
+    expect(plainNote("As cited by pages n1, n2, and n7. Later n3 and n5 credit Einstein.")).toBe(
+      "As cited by pages. Later credit Einstein.",
+    );
   });
 });
 
