@@ -194,6 +194,13 @@ describe("reduceRun", () => {
     expect(searchedAnyway.noVerdict).toBeNull();
   });
 
+  it("names Tavily when a search fails on its key, and shows other kinds as they are", () => {
+    expect(run([{ type: "search_failed", query: "q", reason: "auth" }]).log.at(-1)?.text).toBe(
+      "Search failed (the Tavily API key was rejected): q",
+    );
+    expect(run([{ type: "search_failed", query: "q", reason: "timeout" }]).log.at(-1)?.text).toBe("Search failed (timeout): q");
+  });
+
   it("adds up spend as it streams, then takes the server's totals", () => {
     const state = run([
       { type: "page_read", ...spend, url: "https://a.org/", host: "a.org", outcome: "no_quote", reason: null },
