@@ -20,7 +20,7 @@ export const AGENT_ROLE: Record<Agent, string> = {
   Planner: "Writes the search: other wordings of the quote, who might have said it, and the queries.",
   Search: "Web search through Tavily, which brings back the pages to read.",
   Reader: "Reads one page and copies the quote word for word, with who the page credits, its date and any older work it names.",
-  Checker: "Plain code, no model. Checks every copied line against the page text and crosses out what isn't there. It also corrects a verdict's earliest date or page when the pages don't back it.",
+  Checker: "Plain code, no model. Checks every copied line against the page text, allowing small differences in wording, and crosses out what it can't find there. It also corrects a verdict's earliest date or page when the pages don't back it.",
   Genealogist: "Picks older works the confirmed pages name and looks for them in digital libraries, for up to two rounds.",
   Judge: "Weighs only the confirmed pages and gives the verdict, which code checks before it stands.",
 };
