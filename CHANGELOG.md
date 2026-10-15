@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Said Who? are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Releases before 1.0.0 are pre-releases.
+All notable changes to Said Who? are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Releases before 1.0.0 are pre-releases. Versions 0.2.0 to 0.6.0 were tagged on 2026-10-15, after the fact; the date next to each is the day that milestone was complete on main.
 
 ## [Unreleased]
 
@@ -18,7 +18,7 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 ## [0.5.0] - 2026-10-14
 
 ### Added
-- Every run is saved when it ends and gets a public page at `/runs/<id>`. Keys and page text are never saved (#19)
+- When the run log is set up, a run that got as far as planning is saved when it ends and gets a public page at `/runs/<id>`. Keys and page text are never saved (#19)
 - Run limits per visitor, and a trial budget shared by every server instance through the database (#27)
 - `TRIAL_ACCESS_CODE`, which makes a trial run need an access code; a `#code=` link fills it in (#30)
 
