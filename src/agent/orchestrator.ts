@@ -62,7 +62,8 @@ export const READER_PROMPT =
   "contains_quote: the page contains the saying or a close variant. " +
   "exact_snippet: the sentence with the saying, copied character for character from the page, at most 300 characters; null if absent. " +
   "attributed_to: who the page credits, or null. page_date: when this page was published. " +
-  "cited_source: an earlier work the page names as where the saying appeared, with cited_source_date. " +
+  "cited_source: the earlier work the page says the sentence in exact_snippet first appeared in, with cited_source_date; a translation of it counts. " +
+  "Never a work the page names only for another passage or an older idea. " +
   "Dates as YYYY, YYYY-MM or YYYY-MM-DD; null when the page does not say. Never guess.";
 
 const GENEALOGIST_PROMPT =
@@ -367,7 +368,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     const leadNote = lead
       ? `\nLead: this page turned up in a search for ${lead.work}${lead.year ? ` (${lead.year})` : ""}, a work an earlier page names as a source. ` +
         "If this page is that work or a copy of it, put the date this page gives for the work in page_date. " +
-        "Use cited_source only for an earlier work this page itself names as where the saying appeared."
+        "Use cited_source only for an earlier work this page itself names as where the sentence in exact_snippet first appeared."
       : "";
     const pageText = `${page.title}\n${page.text}`;
 
