@@ -56,7 +56,7 @@ export const STEPS: readonly Step[] = [
   {
     name: "Judge",
     does:
-      "Writes the verdict from the confirmed pages only. Code checks every page it cites. A verdict that cites one the Checker didn't confirm is set aside, and the Judge gets one more try on a bigger model.",
+      "Writes the verdict from the confirmed pages only. Code checks every page it cites. A verdict that cites one the Checker didn't confirm is set aside, and the Judge can try once more on a bigger model if the run's limits allow.",
     model: { first: CASCADE.judge.tier, retry: CASCADE.rejudge.tier },
   },
 ];
