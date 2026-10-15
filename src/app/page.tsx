@@ -27,7 +27,7 @@ export default async function Home() {
   const featured = findCase(FEATURED_CASE_ID);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-8 sm:px-6 sm:py-14">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-4 pb-10 sm:px-6 sm:pt-6 sm:pb-14">
       <header className="max-w-2xl">
         <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
           Said Who<span className="text-accent">?</span>
