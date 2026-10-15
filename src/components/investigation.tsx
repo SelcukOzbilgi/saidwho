@@ -12,7 +12,7 @@ import { RunView } from "./run-view";
 // the page finds on its own.
 const PROBLEMS: Record<string, string> = {
   invalid_request:
-    "Check what you entered: a quote of up to 500 characters, a name of up to 200 if you add one, and keys or an access code in plain keyboard characters with no spaces.",
+    "Check what you entered: a quote of up to 500 characters, a name of up to 200 if you add one, and keys (up to 512 characters) or an access code (up to 200) in plain keyboard characters with no spaces.",
   invalid_json: "The page sent something the server could not read. Reload and try again.",
   expected_json: "The page sent something the server could not read. Reload and try again.",
   body_too_large: "That's too long to look up.",
