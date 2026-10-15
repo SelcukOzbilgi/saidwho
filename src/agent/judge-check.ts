@@ -65,7 +65,8 @@ export type VerdictCheck = {
 };
 
 // verified: the confirmed pages the Judge was shown, in page order. guards off
-// gives main's checks before these were added, for replays that compare them.
+// leaves out pageDateOverCited, so a replay (scripts/rejudge.ts) can compare
+// with the rules from before that recheck; every other check here still runs.
 export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[], guards = true): VerdictCheck {
   const byId = new Map(verified.map((n) => [n.id, n]));
   const unknown = new Set<string>();
@@ -221,8 +222,6 @@ export function otherOriginNote({ node, snippet }: OtherOrigin): string {
   );
 }
 
-// What the next judge is told when the last verdict dated its earliest page by
-// the page's own date over the earlier source it cites.
 // Whether one date comes before another. Dates are "1981", "1981-03" or
 // "1981-03-14". Within the same year, only a date at least as precise as the
 // other can come first: "2013-01" before "2013-12", but not "2013" before it.
@@ -233,6 +232,8 @@ export function earlierDate(date: string, than: string): boolean {
   return than.length > 4 && date.length >= than.length && date.slice(0, than.length) < than;
 }
 
+// What the next judge is told when the last verdict dated its earliest page by
+// the page's own date over the earlier source it cites.
 export function citedDateNote({ node, given, cited }: NonNullable<VerdictCheck["pageDateOverCited"]>): string {
   return (
     `Your last verdict gave ${given}, the date of page ${node} itself, as the earliest date, but ${node} names a source dated ${cited}. ` +

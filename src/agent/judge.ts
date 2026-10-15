@@ -10,8 +10,9 @@ import type { ModelPolicy, ModelSpec, Tier, TokenUsage } from "./models";
 import { boundedCompactJudgeOutputSchema, boundedJudgeOutputSchema, compactJudgeOutputSchema, judgeOutputSchema } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult, worthRetrying } from "./structured";
 
-// The most judge calls one run makes: a first judge, a second one, and tries
-// again with thinking off or without the lineage when tokens run out.
+// The most judge calls one run makes, whatever they were for: a first judge, a
+// second one, and tries again with thinking off or without the lineage when
+// tokens run out, or without the schema's limits when the provider refuses them.
 export const MAX_JUDGE_CALLS = 4;
 
 export const JUDGE_PROMPT =
@@ -99,9 +100,11 @@ export type JudgeStep = {
   spend: <T>(model: ModelSpec, result: StructuredResult<T>) => Spent;
   // True once the run must not start another paid call.
   mustStop: () => boolean;
-  // Another system prompt, and main's checks only (see checkVerdict), for
-  // replays that compare them. originCheck off leaves out the second judge for
-  // an earliest page worded unlike the saying (see otherOrigin).
+  // For replays that compare rules on the same evidence (scripts/rejudge.ts):
+  // another system prompt; checks false leaves out the date recheck (guards in
+  // checkVerdict) and the second judge for an earliest page worded unlike the
+  // saying, and originCheck false leaves out only the second (see otherOrigin).
+  // The checks on cited ids, the lineage and the earliest date always run.
   prompt?: string;
   checks?: boolean;
   originCheck?: boolean;
@@ -113,16 +116,18 @@ export async function judge(step: JudgeStep): Promise<void> {
   const baseUser = judgeUser(quote, credit, verified, citedWorks);
   const allowedIds = verified.map((n) => n.id);
 
-  // One judge call and how it went. bounded sends the schema with limits; it is
-  // dropped only if the provider refuses it. note tells a later judge why the
-  // last verdict was set aside.
-  // A verdict that stands can still be worth asking about once more (recheck).
-  // recheck holds what the second judge was asked about: the first verdict's
-  // earliest page, the page's own date it gave, and the earlier date the page
-  // cites; or an earliest page worded unlike the saying; or both.
+  // What a second judge is asked about: the first verdict's earliest page, the
+  // page's own date it gave, and the earlier date the page cites; or an earliest
+  // page worded unlike the saying; or both.
   type Asked = { date: { node: string; given: string; cited: string } | null; origin: OtherOrigin | null };
+  // One judge call. bounded sends the schema with limits; it is dropped only if
+  // the provider refuses it. note tells a later judge why the last verdict was
+  // set aside or asked about, and recheck is what it was asked about.
   type JudgeAttempt = { model: ModelSpec; thinking: boolean; compact: boolean; bounded: boolean; note: string | null; recheck: Asked | null };
+  // A verdict that stands can still be worth asking about once more: why, what
+  // the next judge is told, and what it is asked.
   type Recheck = { reason: string; note: string; asked: Asked };
+  // How a judge call went.
   type JudgeOutcome =
     | { stands: true; recheck: Recheck | null }
     | { stands: false; cause: FailureCause | "unsupported"; reason: string; note: string | null };
@@ -207,13 +212,14 @@ export async function judge(step: JudgeStep): Promise<void> {
   // stop. Running out of tokens is tried again on the same model, first with
   // thinking off and then without the lineage, since a bigger model could run
   // out the same way. A verdict citing pages that aren't confirmed goes to the
-  // second judge, told what was wrong and which ids it may use. So
-  // does a failed call, unless it would fail the same way again, and a verdict
-  // that stands but dates its earliest page by the page's own date over an
-  // earlier one it cites. That one stays the answer unless the second judge's
-  // verdict stands and changes the date (see notTaken). There is one second
-  // judge per run, whichever sent it. Low confidence alone is not a reason: thin
-  // evidence is an honest answer.
+  // second judge, told what was wrong and which ids it may use. So does a failed
+  // call, unless it would fail the same way again. A verdict that stands but
+  // dates its earliest page by the page's own date over an earlier one it cites,
+  // or rests on an earliest page worded unlike the saying, goes to the second
+  // judge too (the loop below sends it), and stays the answer unless the second
+  // judge's verdict stands and answers what it was asked (see notTaken). There
+  // is one second judge per run, whichever sent it. Low confidence alone is not
+  // a reason: thin evidence is an honest answer.
   let escalated = false;
   const nextAttempt = (tried: JudgeAttempt, outcome: JudgeOutcome & { stands: false }): JudgeAttempt | null => {
     const { cause, note } = outcome;

@@ -78,8 +78,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
     // Set when the eval reused a saved run's plan instead of asking the planner.
     replayed: z.literal(true).optional(),
   }),
-  // A failed plan is tried once more, on Super with thinking off, unless the
-  // failure would repeat (a rejected key, no credits, a rate limit, a refused
+  // A failed plan is tried once more, on the same model with thinking off, unless
+  // the failure would repeat (a rejected key, no credits, a rate limit, a refused
   // request) or the run must stop; then the run ends here. When the second try
   // fails too, no planned event follows and the run searches for the exact
   // quote alone, with no variants.
@@ -161,9 +161,10 @@ export const runEventSchema = z.discriminatedUnion("type", [
     // What code changed about the verdict's earliest date or page. Runs saved
     // before this check have no key.
     fixes: z.array(z.string()).optional(),
-    // Set on a second judge's verdict that was asked about its earliest date and
-    // gave no supported date earlier than it: the first verdict stays the answer.
-    // Says why.
+    // Set on a second judge's verdict that answered none of what it was asked:
+    // asked about the earliest date, it gave no supported date earlier than it;
+    // asked about an earliest page worded unlike the saying, it rested on that
+    // page as another origin again. The first verdict stays the answer. Says why.
     notTaken: z.string().optional(),
   }),
   z.strictObject({ type: z.literal("judge_failed"), ...spendSchema, reason: z.string() }),

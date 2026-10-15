@@ -1,7 +1,10 @@
 // Model tiers on Nebius Token Factory. Prices are USD per 1M tokens.
-// A step moves up a tier only when a check fails (a failed call, a snippet not
-// on its page, a verdict pointing at unverified evidence);
-// see the orchestrator.
+// In the cascade a step moves up a tier only when a check fails: a page is read
+// again on Super when Lightning's reading failed or its snippet isn't on the
+// page or isn't the saying, and a second judge runs on Ultra (see judge.ts for
+// when). A plan tried again, and a judge tried again with thinking off, without
+// the lineage or without the schema's limits, stay on the same model. See the
+// orchestrator.
 
 export type Tier = "lightning" | "nano" | "super" | "ultra";
 
