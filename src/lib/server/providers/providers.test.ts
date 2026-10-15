@@ -36,6 +36,20 @@ describe("createTavilyClient", () => {
     expect(search).toHaveBeenCalledWith("q", { includeUsage: true, maxResults: 3, timeout: TAVILY_TIMEOUT_MS / 1000 });
   });
 
+  it("stops waiting for a search at the timeout even if the SDK never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      tavilyFactory.mockReturnValueOnce({ search: vi.fn(() => new Promise<never>(() => {})), extract: vi.fn() });
+      const client = createTavilyClient({ apiKey: "tvly-visitor-key" });
+      const pending = client.search("q");
+      await vi.advanceTimersByTimeAsync(TAVILY_TIMEOUT_MS);
+      const result = await pending;
+      expect(!result.ok && result.error.kind).toBe("timeout");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refuses to start while SDK env overrides are set", () => {
     vi.stubEnv("TAVILY_HTTPS_PROXY", "http://proxy.example");
     expect(() => createTavilyClient({ apiKey: "tvly-visitor-key" })).toThrow("TAVILY_HTTPS_PROXY");
