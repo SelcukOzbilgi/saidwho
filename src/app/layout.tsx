@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { SITE_URL } from "@/lib/site";
@@ -32,6 +32,14 @@ export const metadata: Metadata = {
   description,
   openGraph: { type: "website", siteName: "Said Who?", title: "Said Who?", description, url: "/" },
   twitter: { card: "summary_large_image", title: "Said Who?", description },
+};
+
+// The browser bar takes the page's paper color, the same --background as globals.css.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f4ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#14130f" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
