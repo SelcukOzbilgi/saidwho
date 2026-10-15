@@ -5,7 +5,7 @@ vi.mock("@tavily/core", () => ({ tavily: tavilyFactory }));
 
 import { createNebiusClient } from "./nebius";
 import { assertAllowedBaseUrl, assertNoSdkEnvOverrides, normalizeApiKey } from "./sdk-guards";
-import { createTavilyClient } from "./tavily";
+import { createTavilyClient, TAVILY_TIMEOUT_MS } from "./tavily";
 
 const BASE_URL = "https://api.tokenfactory.nebius.com/v1/";
 
@@ -26,6 +26,14 @@ describe("createTavilyClient", () => {
   it("passes the trimmed key explicitly to the SDK", () => {
     createTavilyClient({ apiKey: " tvly-visitor-key \n" });
     expect(tavilyFactory).toHaveBeenCalledWith({ apiKey: "tvly-visitor-key" });
+  });
+
+  it("gives every search an explicit timeout, in seconds, that a caller can't drop", async () => {
+    const search = vi.fn(async () => ({ results: [] }));
+    tavilyFactory.mockReturnValueOnce({ search, extract: vi.fn() });
+    const client = createTavilyClient({ apiKey: "tvly-visitor-key" });
+    await client.search("q", { maxResults: 3, timeout: undefined });
+    expect(search).toHaveBeenCalledWith("q", { includeUsage: true, maxResults: 3, timeout: TAVILY_TIMEOUT_MS / 1000 });
   });
 
   it("refuses to start while SDK env overrides are set", () => {

@@ -18,6 +18,11 @@ export type TavilyClient = {
   readonly extract: (urls: string[], options?: TavilyExtractOptions) => Promise<Result<TavilyExtractResponse>>;
 };
 
+// How long a search may take before it gives up. A live run's deadline counts on
+// it (RUN_DEADLINE_MS in investigate-handler.ts), so it is set here rather than
+// left to the SDK's default, and a caller can't drop it. The SDK takes seconds.
+export const TAVILY_TIMEOUT_MS = 60_000;
+
 // @tavily/core falls back to process.env.TAVILY_API_KEY when apiKey is empty,
 // and to an anonymous "keyless" mode when that is unset too. A BYOK request with
 // a blank key must never end up on the owner's key, so a blank key is rejected here.
@@ -41,7 +46,8 @@ export function createTavilyClient({ apiKey }: { apiKey: string }): TavilyClient
   }
 
   return {
-    search: (query, options) => run(() => sdk.search(query, { includeUsage: true, ...options })),
+    search: (query, options) =>
+      run(() => sdk.search(query, { includeUsage: true, ...options, timeout: TAVILY_TIMEOUT_MS / 1000 })),
     extract: (urls, options) => run(() => sdk.extract(urls, { includeUsage: true, ...options })),
   };
 }
