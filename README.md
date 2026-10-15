@@ -17,6 +17,8 @@ Quotes travel. Every time one gets shared it can lose a word, pick up a new one,
 
 Take *"Insanity is doing the same thing over and over again and expecting different results."* It's usually credited to Albert Einstein, but there's no evidence he ever said it. The earliest match [Quote Investigator](https://quoteinvestigator.com/2017/03/23/same/) found is a 1981 newspaper report on an Al-Anon meeting in Knoxville, Tennessee.
 
+<p align="center"><img src="docs/why.jpg" alt="A quote passed from a 1981 newspaper to a book, a radio, a laptop and a phone, changing a little at each stop, until a name tag reading Einstein? is pinned to it." width="100%"></p>
+
 Ask a chatbot where a quote comes from and you'll get a confident answer, and sometimes a source that doesn't exist. Said Who? works differently. Instead of guessing, it reads the pages it finds, checks that the quote is really on them, and only then tells you what it found.
 
 ## What you see
@@ -27,6 +29,8 @@ Ask a chatbot where a quote comes from and you'll get a confident answer, and so
 4. At the end you get a short verdict: whether the usual name holds up, the earliest source found, and how sure it is. The verdict links back to the cards it rests on.
 
 Sometimes the honest answer is "people disagree" or "nothing old enough turned up". Said Who? says that rather than make something up.
+
+<p align="center"><img src="docs/what-you-see.jpg" alt="Sources in columns by year: a 1981 book with a check mark, a 2001 magazine, a 2018 newspaper crossed out, and a 2024 phone, each with a highlighted sentence sticking out." width="100%"></p>
 
 ## Example cases
 
@@ -52,6 +56,8 @@ Most runs took 25 to 39 seconds and Henry Ford's 52. Roosevelt's and Churchill's
 ## How it works
 
 Each quote goes through six steps, each with one job:
+
+<p align="center"><img src="docs/how-it-works.jpg" alt="The six steps in a row: Planner, Search, Readers, Checker, Genealogist and Judge, with an arrow from Genealogist back to Readers." width="100%"></p>
 
 - **Planner** thinks of other ways the quote has been worded or translated, who might have said it, and what to search for. If you left the name blank, it also tries to say who the quote is usually credited to. A plan that leaves nothing to search but the quote itself is asked for once more.
 - **Search** runs up to five web searches through Tavily, always starting with the exact quote. Sites that have already written up the answer, such as Quote Investigator, Wikiquote and Wikipedia, are left out, so the trail has to be found from scratch. Plain code checks each query the Planner writes first: markup a model leaves in it, like a markdown quote mark or an escaped quote, comes off, one with no letters or almost nothing in it is never sent, and a long quoted saying in a later query is cut to a distinctive part of it, since pages often word a long saying a little differently. When a search in quotes finds nothing, a looser one takes the place of the last planned search.
@@ -82,6 +88,8 @@ The Nemotron models are served by [Nebius Token Factory](https://nebius.com/serv
 ## How well it does
 
 `pnpm eval` runs the twenty quotes in the test set, with Quote Investigator, Wikiquote, Wikipedia and each answer's own pages left out of the search. A held-out set of ten more quotes was never run until October 14, after every fix, so none of them shaped the code.
+
+<p align="center"><img src="docs/eval.jpg" alt="A clipboard of quote cards, most checked and a few crossed out, next to a stopwatch and a stack of coins." width="75%"></p>
 
 The third run, on October 14 at commit `a53fccf`, with the app's mix of models:
 
