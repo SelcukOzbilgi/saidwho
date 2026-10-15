@@ -122,6 +122,8 @@ export function Rationale({ text, confirmed }: { text: string; confirmed: Readon
   });
 }
 
+// The link's own padding makes the tap target 24 px tall; the chip inside keeps
+// the text's height, so a line of reasoning with ids in it doesn't spread out.
 function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> }) {
   if (!confirmed.has(id)) {
     return (
@@ -131,11 +133,8 @@ function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> })
     );
   }
   return (
-    <a
-      href={`#node-${id}`}
-      className="rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink no-underline hover:bg-accent/25"
-    >
-      {id}
+    <a href={`#node-${id}`} className="group py-1 no-underline">
+      <span className="rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink group-hover:bg-accent/25">{id}</span>
     </a>
   );
 }

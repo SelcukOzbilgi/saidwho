@@ -57,7 +57,7 @@ export function KnownAnswer({ known, reached }: { known: EvalCase; reached: Judg
         {known.references.map((url, i) => (
           <span key={url}>
             {i > 0 && ", "}
-            <a href={url} rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
+            <a href={url} rel="noopener noreferrer" className="py-1 underline underline-offset-2 hover:text-foreground">
               {hostOf(url)}
             </a>
           </span>
