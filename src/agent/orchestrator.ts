@@ -9,7 +9,7 @@
 
 import type { NebiusClient } from "../lib/server/providers/nebius";
 import type { TavilyClient } from "../lib/server/providers/tavily";
-import type { EvidenceNode, RunEvent } from "./events";
+import { type EvidenceNode, type RunEvent, SNIPPET_NOT_ON_PAGE, SNIPPET_NOT_THE_SAYING } from "./events";
 import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { citedWork, judge } from "./judge";
@@ -23,9 +23,9 @@ import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, nor
 // them so the agent has to find the trail itself.
 export const ANSWER_SITES = ["quoteinvestigator.com", "wikiquote.org", "wikipedia.org"];
 
-const MAX_QUERIES = 5;
+export const MAX_QUERIES = 5;
 const RESULTS_PER_QUERY = 5;
-const MAX_PAGES = 20;
+export const MAX_PAGES = 20;
 export const READER_CHARS = 6_000;
 // Reader fields longer than this are dropped, and titles cut to it: they may be page
 // text, which is never stored.
@@ -35,8 +35,8 @@ const MAX_NAME_CHARS = 200;
 const READER_CONCURRENCY = 5;
 // The Genealogist follows what confirmed pages cite: a few works a round, a few
 // pages for each, so the worst case stays well inside the route's time limit.
-const TRACE_ROUNDS = 2;
-const LEADS_PER_ROUND = 3;
+export const TRACE_ROUNDS = 2;
+export const LEADS_PER_ROUND = 3;
 const PAGES_PER_LEAD = 3;
 // The fewest words a confirmed snippet needs to count as a wording of the saying.
 const MIN_WORDING_WORDS = 4;
@@ -446,9 +446,9 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       report("evidence");
       const retry =
         check.reason === "not_the_saying"
-          ? "the snippet is not the saying"
+          ? SNIPPET_NOT_THE_SAYING
           : check.status === "not_found"
-            ? "the snippet is not on the page"
+            ? SNIPPET_NOT_ON_PAGE
             : null;
       return { node, retry };
     };

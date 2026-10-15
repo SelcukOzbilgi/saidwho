@@ -21,6 +21,11 @@ const spendSchema = {
   latencyMs: z.number(),
 };
 
+// Why a page is read again when the Checker turns a reader's snippet down.
+// Saved runs carry these in their escalated events, and the home page counts them.
+export const SNIPPET_NOT_ON_PAGE = "the snippet is not on the page";
+export const SNIPPET_NOT_THE_SAYING = "the snippet is not the saying";
+
 export const evidenceNodeSchema = z.strictObject({
   id: z.string(),
   url: z.string(),
