@@ -71,6 +71,25 @@ describe("applyFilter", () => {
     expect(Object.fromEntries(dropped.nodes)).toEqual({ n2: "host", n3: "search", n5: "lead", n6: "lead" });
   });
 
+  it("keeps a lead's page that a kept search returned when the first round would now read it", () => {
+    // n3 came only from the re-quoting search; a lead from it found late.org,
+    // which the third search returned past the first round's MAX_PAGES.
+    const urls = (site: string, n: number) => Array.from({ length: n }, (_, i) => `https://${site}/${i}`);
+    const searches = (exact: number) => [
+      { query: `"${QUOTE}"`, urls: urls("a.org", exact) },
+      { query: `"${QUOTE}" origin first appearance`, urls: urls("b.org", 10) },
+      { query: 'Rousseau Confessions "eat cake" brioche', urls: ["https://late.org/x"] },
+    ];
+    const nodes = [
+      { id: "n3", url: "https://b.org/0" },
+      { id: "n30", url: "https://late.org/x", foundVia: { node: "n3", work: "Confessions" } },
+    ];
+    // Without the re-quoting search's 10 pages it comes 16th, and is read.
+    expect(Object.fromEntries(applyFilter(QUOTE, searches(15), nodes, { requote: true, hosts: [] }).nodes)).toEqual({ n3: "search" });
+    // Behind 20 kept pages it is still past the limit, so it goes with its lead.
+    expect(Object.fromEntries(applyFilter(QUOTE, searches(20), nodes, { requote: true, hosts: [] }).nodes)).toEqual({ n3: "search", n30: "lead" });
+  });
+
   it("leaves a page no logged search returned with text to the caller, as missing rather than dropped", () => {
     const dropped = applyFilter(QUOTE, SEARCHES, [{ id: "n9", url: "https://gone.org/9" }], { requote: true, hosts: [] });
     expect(dropped.nodes.size).toBe(0);

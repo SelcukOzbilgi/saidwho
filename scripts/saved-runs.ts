@@ -23,8 +23,8 @@ import { type CitedWork, citedWork } from "../src/agent/judge";
 import { mayHoldWork, namesWork } from "../src/agent/library-pages";
 import { hostOf, LIBRARY_SITES } from "../src/agent/orchestrator";
 import { cleanDate, type PlannerOutput } from "../src/agent/schemas";
-import { carriesSaying, checkSnippet, keepsCitedDate, keptDates, matchSnippet, normalizeText, type Span } from "../src/agent/verifier";
-import { applyFilter, type DropReason, type EvidenceFilter, NO_FILTER } from "../src/eval/evidence-filter";
+import { carriesSaying, checkSnippet, keepsCitedDate, keptDates, matchSnippet, mentionsName, normalizeText, type Span } from "../src/agent/verifier";
+import { applyFilter, type DropReason, type EvidenceFilter, NO_FILTER, onHosts } from "../src/eval/evidence-filter";
 
 export type Rules = "main" | "new";
 
@@ -172,7 +172,7 @@ export function firstPageOf(run: SavedRun, url: string, cache: SearchCache): Pag
   return null;
 }
 
-export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache, filter: EvidenceFilter = NO_FILTER): Evidence {
+export function rebuildEvidence(run: SavedRun, rules: Rules, cache: Pick<SearchCache, "results">, filter: EvidenceFilter = NO_FILTER): Evidence {
   const { events } = run;
   const started = events.find((e) => e.type === "started");
   if (!started || started.type !== "started") throw new Error(`${run.path}: no started event`);
@@ -201,7 +201,7 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache,
   // kept one returned it with text too, read on the kept search's text.
   const nodes = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
   const firstRound = searches.filter((s) => !s.library);
-  const withText = (query: string) => (results(query, false) ?? []).flatMap((r) => (r.rawContent ? [r.url] : []));
+  const withText = (query: string) => (results(query, false) ?? []).flatMap((r) => (r.rawContent && !isExcluded(r.url) ? [r.url] : []));
   const dropped = applyFilter(
     quote,
     firstRound.map((s) => ({ query: s.query, urls: withText(s.query) })),
@@ -227,9 +227,12 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache,
   const leadResults = new Map(leads.map((lead) => [lead.work, searches.some((s) => s.library && s.query === lead.query) ? results(lead.query, true) : null]));
   for (const lead of leads) if (searches.some((s) => s.library && s.query === lead.query) && leadResults.get(lead.work) === null) missing.leads++;
 
-  // The nodes, checked again under the rules.
+  // The nodes, checked again under the rules. A node kept though the lead that
+  // found it was dropped is one the first round now reads (see applyFilter), so
+  // it is read on that round's text and found via nothing.
   const rebuilt = nodes.filter((n) => !dropped.nodes.has(n.id)).map((logged) => {
-    const fromLead = logged.foundVia ? (leadResults.get(logged.foundVia.work) ?? []).find((r) => r.url === logged.url && r.rawContent) : undefined;
+    const foundVia = logged.foundVia && !dropped.nodes.has(logged.foundVia.node) ? logged.foundVia : null;
+    const fromLead = foundVia ? (leadResults.get(foundVia.work) ?? []).find((r) => r.url === logged.url && r.rawContent) : undefined;
     const page: Page | undefined = fromLead ? { title: fromLead.title, text: fromLead.rawContent ?? "" } : firstPage.get(logged.url);
     if (!page) {
       missing.pages++;
@@ -243,7 +246,10 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache,
         ? { status: "not_found", score: match.score, reason: "not_the_saying" }
         : { status: match.status, score: match.score };
     const dates = rules === "main" ? mainDates(reading, page, match.span) : keptDates(reading, page, match.span);
-    return { ...logged, check, ...dates, date: dates.citedSourceDate ?? dates.pageDate };
+    // The credit too, as the reader's is kept: only when the page names it.
+    const credit = reading.attributed_to;
+    const attributedTo = credit && mentionsName(credit, `${page.title}\n${page.text}`) ? credit : null;
+    return { ...logged, check, attributedTo, ...dates, date: dates.citedSourceDate ?? dates.pageDate, ...(logged.foundVia && { foundVia }) };
   });
   const confirmed = rebuilt.filter((n) => n.check.status !== "not_found");
 
@@ -263,7 +269,8 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache,
   const citedWorks = leads.flatMap((lead): CitedWork[] => {
     const found = leadResults.get(lead.work);
     if (!found) return [];
-    const usable = found.filter((r) => !isExcluded(r.url));
+    // A page on a dropped host never reached a reader, so it counts neither way.
+    const usable = found.filter((r) => !isExcluded(r.url) && !onHosts(r.url, filter.hosts));
     const urls = usable.map((r) => r.url);
     if (urls.some((url) => readUrls.has(url) && !noQuoteUrls.has(url))) return [];
     if (urls.some((url) => (textsOf.get(url) ?? []).some(holdsSaying))) return [];

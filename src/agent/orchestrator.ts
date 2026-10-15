@@ -25,7 +25,7 @@ export const ANSWER_SITES = ["quoteinvestigator.com", "wikiquote.org", "wikipedi
 
 const MAX_QUERIES = 5;
 const RESULTS_PER_QUERY = 5;
-const MAX_PAGES = 20;
+export const MAX_PAGES = 20;
 export const READER_CHARS = 6_000;
 // Reader fields longer than this are dropped, and titles cut to it: they may be page
 // text, which is never stored.
