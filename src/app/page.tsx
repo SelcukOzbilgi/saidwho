@@ -10,6 +10,7 @@ import { Investigation } from "../components/investigation";
 import { SiteFooter } from "../components/site-footer";
 import { env } from "../lib/server/env";
 import { TRIAL_RESERVE_USD } from "../lib/server/investigate-handler";
+import { trialRefusal } from "../lib/server/run-keys";
 import { runStoreFromEnv } from "../lib/server/run-store";
 
 // The saved cases don't change between requests, so they are counted once.
@@ -19,9 +20,8 @@ export default async function Home() {
   // Read the switches per request, so turning trial runs off needs no rebuild.
   await connection();
   const trialOpen =
-    env.LIVE_RUNS_ENABLED &&
-    env.TRIAL_RUNS_ENABLED &&
-    Boolean(env.NEBIUS_API_KEY && env.TAVILY_API_KEY) &&
+    // The same check the API makes before a trial run.
+    trialRefusal(env) === null &&
     // A trial run sets aside its worst case before it starts; a smaller budget can't fit even one.
     env.DAILY_BUDGET_USD >= TRIAL_RESERVE_USD;
   const featured = findCase(FEATURED_CASE_ID);

@@ -156,6 +156,18 @@ describe("POST /api/investigate", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("refuses trial runs on Vercel when Supabase isn't set, before counting or reserving anything", async () => {
+    const { limiter, hits } = spyLimiter();
+    const reserve = vi.fn(async () => null);
+    const { handler, calls } = setup({ envVars: { ...ownerEnv, VERCEL: "1" }, limiter, ledger: { reserve } });
+    const res = await handler(post(trial));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "trial_disabled" });
+    expect(hits).toHaveLength(0);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+
   it("refuses a trial run once the daily budget can't cover it", async () => {
     const { handler, calls } = setup({ envVars: ownerEnv, ledger: createDailyLedger(0) });
     const res = await handler(post(trial));

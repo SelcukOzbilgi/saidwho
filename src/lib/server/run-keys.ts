@@ -31,6 +31,20 @@ const digest = (value: string) => createHash("sha256").update(value).digest();
 export const accessCodeMatches = (sent: string, expected: string): boolean =>
   timingSafeEqual(digest(sent.trim()), digest(expected.trim()));
 
+// Why this server can't start a trial run, or null when it can. The home page
+// asks the same question before it offers the trial, so it never offers one the
+// API would refuse. On Vercel the trial's daily budget and visitor counts are
+// shared through Supabase; without it each server instance would keep its own
+// in memory, and the limits wouldn't hold, so the trial stays off. That turns
+// off only the trial: runs on a visitor's own keys still work. A local run,
+// with one process, keeps its counts in memory as before.
+export function trialRefusal(env: ServerEnv): "trial_disabled" | "owner_keys_missing" | null {
+  if (!env.LIVE_RUNS_ENABLED || !env.TRIAL_RUNS_ENABLED) return "trial_disabled";
+  if (env.VERCEL === "1" && (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY)) return "trial_disabled";
+  if (!env.NEBIUS_API_KEY || !env.TAVILY_API_KEY) return "owner_keys_missing";
+  return null;
+}
+
 export function resolveRunKeys(request: RunRequest, env: ServerEnv): RunKeysResult {
   if (request.mode === "byok") {
     const nebiusApiKey = request.nebiusApiKey?.trim() ?? "";
@@ -39,7 +53,9 @@ export function resolveRunKeys(request: RunRequest, env: ServerEnv): RunKeysResu
     return { ok: true, keys: { source: "byok", nebiusApiKey, tavilyApiKey, withCode: false } };
   }
 
-  if (!env.LIVE_RUNS_ENABLED || !env.TRIAL_RUNS_ENABLED) return { ok: false, reason: "trial_disabled" };
+  const refusal = trialRefusal(env);
+  if (refusal) return { ok: false, reason: refusal };
+  // Already checked in trialRefusal; repeated so TypeScript knows both keys are set.
   if (!env.NEBIUS_API_KEY || !env.TAVILY_API_KEY) return { ok: false, reason: "owner_keys_missing" };
   return {
     ok: true,

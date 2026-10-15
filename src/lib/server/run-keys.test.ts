@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseServerEnv } from "./env-schema";
-import { accessCodeMatches, resolveRunKeys } from "./run-keys";
+import { accessCodeMatches, resolveRunKeys, trialRefusal } from "./run-keys";
 
 const ownerEnv = (overrides: Record<string, string> = {}) =>
   parseServerEnv({
@@ -41,6 +41,44 @@ describe("resolveRunKeys", () => {
       ok: false,
       reason: "trial_disabled",
     });
+  });
+
+  it("keeps the trial off on Vercel unless both Supabase variables are set", () => {
+    const url = "https://project.supabase.co";
+    const key = "sb_secret_fake-for-tests-only"; // gitleaks:allow
+    const halves: Record<string, string>[] = [{}, { SUPABASE_URL: url }, { SUPABASE_SECRET_KEY: key }];
+    for (const supabase of halves) {
+      const env = ownerEnv({ VERCEL: "1", ...supabase });
+      expect(resolveRunKeys({ mode: "trial" }, env)).toEqual({ ok: false, reason: "trial_disabled" });
+      expect(trialRefusal(env)).toBe("trial_disabled");
+      // Only the trial: a visitor's own keys still run.
+      expect(resolveRunKeys({ mode: "byok", nebiusApiKey: "v-neb", tavilyApiKey: "v-tav" }, env)).toMatchObject({
+        ok: true,
+      });
+    }
+    const shared = ownerEnv({ VERCEL: "1", SUPABASE_URL: url, SUPABASE_SECRET_KEY: key });
+    expect(resolveRunKeys({ mode: "trial" }, shared)).toMatchObject({ ok: true, keys: { source: "owner" } });
+    expect(trialRefusal(shared)).toBeNull();
+  });
+
+  it("keeps the trial on off Vercel without Supabase, where one process keeps the counts", () => {
+    expect(resolveRunKeys({ mode: "trial" }, ownerEnv())).toMatchObject({ ok: true, keys: { source: "owner" } });
+    expect(trialRefusal(ownerEnv())).toBeNull();
+  });
+
+  it("gives the page the same answer as the API", () => {
+    const off: Record<string, string>[] = [
+      { TRIAL_RUNS_ENABLED: "false" },
+      { LIVE_RUNS_ENABLED: "false" },
+      { VERCEL: "1" },
+      { NEBIUS_API_KEY: "" },
+    ];
+    for (const overrides of off) {
+      const env = ownerEnv(overrides);
+      const resolved = resolveRunKeys({ mode: "trial" }, env);
+      expect(resolved.ok).toBe(false);
+      expect(trialRefusal(env)).toBe(resolved.ok ? null : resolved.reason);
+    }
   });
 
   it("reports missing owner keys for trial runs", () => {
