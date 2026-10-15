@@ -74,7 +74,7 @@ export function HowItWorks({ rejections, cases }: { rejections: CheckerRejection
   const { rejected, rescued, crossedOut, example } = rejections;
 
   return (
-    <section id="how" aria-labelledby="how-title" className="scroll-mt-6">
+    <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-6">
       <h2 id="how-title" className="font-serif text-3xl font-semibold">
         How it works
       </h2>
