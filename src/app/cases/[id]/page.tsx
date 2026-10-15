@@ -1,24 +1,17 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-
 import type { Metadata, ResolvingMetadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CASES, findCase } from "@/cases/cases";
+import { KNOWN } from "@/cases/known";
 import { CaseReplay } from "@/components/case-replay";
 import { KnownAnswer } from "@/components/known-answer";
 import { SiteFooter } from "@/components/site-footer";
 import { HEADLINE } from "@/components/verdict-card";
-import { parseEvalCases } from "@/eval/cases";
 import { plural } from "@/lib/plural";
 
 // Every case page is built ahead of time, so the test set is read at build time only.
 export const dynamicParams = false;
-
-const KNOWN = new Map(
-  parseEvalCases(readFileSync(path.join(process.cwd(), "eval", "quotes.jsonl"), "utf8")).map((c) => [c.id, c]),
-);
 
 export function generateStaticParams() {
   return CASES.map(({ caseId }) => ({ id: caseId }));

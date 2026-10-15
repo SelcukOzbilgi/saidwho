@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { EvalCase } from "../eval/cases";
-import { KnownAnswer } from "./known-answer";
+import { KnownAnswer, knownMatch } from "./known-answer";
 
 const known: EvalCase = {
   id: "faster-horses",
@@ -31,5 +31,21 @@ describe("KnownAnswer", () => {
     expect(render("misattributed")).toContain("Misattributed to Henry Ford");
     expect(render("correct")).toContain("Correctly credited to Henry Ford");
     expect(render("contested")).toContain("Credit to Henry Ford is contested");
+  });
+});
+
+describe("knownMatch", () => {
+  it("compares the run's verdict with the test set's, and says when there is none", () => {
+    expect(knownMatch(known, "no_known_source")).toBe("same");
+    expect(knownMatch(known, "misattributed")).toBe("differs");
+    expect(knownMatch(known, null)).toBe("none");
+  });
+
+  it("is what the box at the end of a case says", () => {
+    const box = (reached: EvalCase["verdict"] | null) =>
+      renderToStaticMarkup(createElement(KnownAnswer, { known, reached }));
+    expect(box("no_known_source")).toContain("Same verdict as this run");
+    expect(box("misattributed")).toContain("This run&#x27;s verdict differs");
+    expect(box(null)).toContain("This run gave no verdict");
   });
 });
