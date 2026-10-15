@@ -19,6 +19,13 @@ describe("plainNote", () => {
       "As cited by pages. Later credit Einstein.",
     );
   });
+
+  it("drops ids in full-width brackets and keeps one at the end of a URL", () => {
+    expect(plainNote("Seen in a 1983 novel【n3】 and later （n5, n7） online.")).toBe("Seen in a 1983 novel and later online.");
+    expect(plainNote("The scan is at https://example.org/scans/n3 and n4 agrees.")).toBe(
+      "The scan is at https://example.org/scans/n3 and agrees.",
+    );
+  });
 });
 
 describe("trailOf", () => {
