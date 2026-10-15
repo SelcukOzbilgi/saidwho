@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
@@ -49,13 +48,7 @@ export default async function RunPage({ params }: PageProps<"/runs/[id]">) {
   const ranOn = new Date(run.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6 sm:py-14">
-      <nav className="text-sm">
-        <Link href="/" className="text-muted underline-offset-4 hover:text-foreground hover:underline">
-          ← Said Who<span className="text-accent">?</span>
-        </Link>
-      </nav>
-
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 pt-4 pb-10 sm:px-6 sm:pt-6 sm:pb-14">
       <p className="text-sm text-muted">
         A saved run, made on {ranOn}.
         {left.length > 0 && ` Left out of the search, so the trail had to be found elsewhere: ${left.join(", ")}.`}

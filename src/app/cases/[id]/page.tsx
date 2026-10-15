@@ -1,5 +1,4 @@
 import type { Metadata, ResolvingMetadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CASES, findCase } from "@/cases/cases";
@@ -53,13 +52,7 @@ export default async function CasePage({ params }: PageProps<"/cases/[id]">) {
   const ranOn = new Date(found.ranAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6 sm:py-14">
-      <nav className="text-sm">
-        <Link href="/" className="text-muted underline-offset-4 hover:text-foreground hover:underline">
-          ← Said Who<span className="text-accent">?</span>
-        </Link>
-      </nav>
-
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 pt-4 pb-10 sm:px-6 sm:pt-6 sm:pb-14">
       {/* The run log's first line names the sites that were left out. */}
       <p className="text-sm text-muted">
         A recorded run from {ranOn}
