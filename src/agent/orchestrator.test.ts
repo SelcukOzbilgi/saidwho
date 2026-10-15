@@ -6,7 +6,7 @@ import type { TavilyClient } from "../lib/server/providers/tavily";
 import { type RunEvent, runEventSchema, standingVerdict } from "./events";
 import { MAX_JUDGE_CALLS } from "./judge";
 import { everyStepOn, MODELS, type ModelPolicy } from "./models";
-import { investigate, LIBRARY_SITES } from "./orchestrator";
+import { investigate, LIBRARY_SITES, overlongFields } from "./orchestrator";
 import type { GenealogistOutput, JudgeOutput, PlannerOutput, ReaderOutput } from "./schemas";
 
 const QUOTE = "Insanity is doing the same thing over and over again and expecting different results";
@@ -1478,5 +1478,15 @@ describe("investigate", () => {
     const events = await run({ nebius, signal: AbortSignal.abort() });
     expect(nebius.calls).toEqual([]);
     expect(types(events)).toEqual(["started", "aborted", "done"]);
+  });
+});
+
+describe("overlongFields", () => {
+  it("names each text field over 300 characters, and nothing for a reading within the cap", () => {
+    expect(overlongFields(READ)).toEqual([]);
+    expect(overlongFields({ ...READ, exact_snippet: "x".repeat(300) })).toEqual([]);
+    expect(overlongFields({ ...READ, exact_snippet: "x".repeat(301), cited_source: "y".repeat(400) })).toEqual(["exact_snippet", "cited_source"]);
+    // A reading that found no quote can still carry a field that long.
+    expect(overlongFields({ ...READ, contains_quote: false, exact_snippet: null, page_date: "z".repeat(301) })).toEqual(["page_date"]);
   });
 });

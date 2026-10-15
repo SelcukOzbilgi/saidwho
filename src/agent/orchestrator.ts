@@ -15,7 +15,7 @@ import { selectPassages } from "./passages";
 import { citedWork, judge } from "./judge";
 import { mayHoldWork, namesWork } from "./library-pages";
 import { broaden, queryKey, shapeQuery, tidyModelText } from "./queries";
-import { cleanDate, genealogistOutputSchema, plannerOutputSchema, type PlannerOutput, readerOutputSchema } from "./schemas";
+import { cleanDate, genealogistOutputSchema, plannerOutputSchema, type PlannerOutput, readerOutputSchema, type ReaderOutput } from "./schemas";
 import { callStructured, type StructuredResult, worthRetrying } from "./structured";
 import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, normalizeText } from "./verifier";
 
@@ -26,7 +26,7 @@ export const ANSWER_SITES = ["quoteinvestigator.com", "wikiquote.org", "wikipedi
 const MAX_QUERIES = 5;
 const RESULTS_PER_QUERY = 5;
 const MAX_PAGES = 20;
-const READER_CHARS = 6_000;
+export const READER_CHARS = 6_000;
 // Reader fields longer than this are dropped, and titles cut to it: they may be page
 // text, which is never stored.
 const MAX_FIELD_CHARS = 300;
@@ -62,7 +62,8 @@ export const READER_PROMPT =
   "contains_quote: the page contains the saying or a close variant. " +
   "exact_snippet: the sentence with the saying, copied character for character from the page, at most 300 characters; null if absent. " +
   "attributed_to: who the page credits, or null. page_date: when this page was published. " +
-  "cited_source: an earlier work the page names as where the saying appeared, with cited_source_date. " +
+  "cited_source: the earlier work the page says the sentence in exact_snippet first appeared in, with cited_source_date; a translation of it counts. " +
+  "Never a work the page names only for another passage or an older idea. " +
   "Dates as YYYY, YYYY-MM or YYYY-MM-DD; null when the page does not say. Never guess.";
 
 const GENEALOGIST_PROMPT =
@@ -126,6 +127,15 @@ const cleanVariants = (raw: readonly string[]): string[] => {
   }
   return out;
 };
+
+// The reader's text fields that are over MAX_FIELD_CHARS, by name. Any one sends
+// the page to a second reader.
+export function overlongFields(reading: ReaderOutput): (keyof ReaderOutput)[] {
+  return (Object.keys(reading) as (keyof ReaderOutput)[]).filter((key) => {
+    const value = reading[key];
+    return typeof value === "string" && value.length > MAX_FIELD_CHARS;
+  });
+}
 
 export const hostOf = (url: string): string => {
   try {
@@ -367,7 +377,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     const leadNote = lead
       ? `\nLead: this page turned up in a search for ${lead.work}${lead.year ? ` (${lead.year})` : ""}, a work an earlier page names as a source. ` +
         "If this page is that work or a copy of it, put the date this page gives for the work in page_date. " +
-        "Use cited_source only for an earlier work this page itself names as where the saying appeared."
+        "Use cited_source only for an earlier work this page itself names as where the sentence in exact_snippet first appeared."
       : "";
     const pageText = `${page.title}\n${page.text}`;
 
@@ -399,8 +409,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       // Every text field is stored as returned, so every one is capped, dates included.
       // This comes first: a field that long means the reading went wrong, even
       // one that says the page has no quote, so it is worth a second reader.
-      const fields = Object.values(read.data).filter((value) => typeof value === "string");
-      if (fields.some((field) => field.length > MAX_FIELD_CHARS)) {
+      if (overlongFields(read.data).length > 0) {
         report("too_long");
         return { node: null, retry: "a field was too long to be a quote" };
       }
