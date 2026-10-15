@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { atBottom, jumpToEnd } from "../lib/log-follow";
-import type { LogEntry, Tone } from "../lib/run-state";
+import type { Agent, LogEntry, Tone } from "../lib/run-state";
 import { TierChip } from "./tier-chip";
 
 const DOT: Record<Tone, string> = {
@@ -11,6 +11,18 @@ const DOT: Record<Tone, string> = {
   good: "bg-good",
   warn: "bg-warn",
   bad: "bg-bad",
+};
+
+// What each name in the log does, in the order a run reaches them. The model each
+// call ran on is shown on its line, so it isn't repeated here.
+export const AGENT_ROLE: Record<Agent, string> = {
+  Run: "The run itself: when it started, which sites it left out, and when it stopped.",
+  Planner: "Writes the search: other wordings of the quote, who might have said it, and the queries.",
+  Search: "Web search through Tavily, which brings back the pages to read.",
+  Reader: "Reads one page and copies the quote word for word, with who the page credits, its date and any older work it names.",
+  Checker: "Plain code, no model. Checks every copied line against the page text, allowing small differences in wording, and crosses out what it can't find there. It also corrects a verdict's earliest date or page when the pages don't back it.",
+  Genealogist: "Picks older works the confirmed pages name and looks for them in digital libraries, for up to two rounds.",
+  Judge: "Weighs only the confirmed pages and gives the verdict, which code checks before it stands.",
 };
 
 // What each agent did, in order, with the model it ran on and what the call cost.
@@ -35,9 +47,24 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
 
   return (
     <section aria-label="Run log" className="self-start rounded-xl border border-line bg-card">
-      <h2 className="border-b border-line px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted">
-        What the agents did
-      </h2>
+      <div className="relative border-b border-line">
+        <h2 className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted">What the agents did</h2>
+        {/* The toggle sits on the heading's line; the list opens under it. */}
+        <details className="group">
+          <summary className="absolute top-1 right-2 flex min-h-7 cursor-pointer list-none items-center rounded px-2 text-xs text-muted underline decoration-line underline-offset-2 hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">Who does what</span>
+            <span className="hidden group-open:inline">Hide</span>
+          </summary>
+          <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-2 gap-y-1.5 px-4 pb-3 text-xs">
+            {Object.entries(AGENT_ROLE).map(([agent, role]) => (
+              <div key={agent} className="contents">
+                <dt className="font-medium">{agent}</dt>
+                <dd className="text-foreground/85">{role}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      </div>
       <ol
         ref={list}
         onScroll={(event) => {

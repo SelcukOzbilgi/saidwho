@@ -47,7 +47,7 @@ export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes
                 </span>
                 <a
                   href={`#node-${node.id}`}
-                  className="truncate underline decoration-line underline-offset-2 hover:decoration-foreground"
+                  className="-my-1 truncate py-1 underline decoration-line underline-offset-2 hover:decoration-foreground"
                 >
                   <span className="font-mono">{node.id}</span> {node.host}
                 </a>

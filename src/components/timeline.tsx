@@ -116,7 +116,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
         )}
         {node.foundVia && (
           <Row label="Found via">
-            <a href={`#node-${node.foundVia.node}`} className="underline decoration-line underline-offset-2 hover:decoration-foreground">
+            <a href={`#node-${node.foundVia.node}`} className="py-1 underline decoration-line underline-offset-2 hover:decoration-foreground">
               {node.foundVia.node}
             </a>
             , looking for {unmark(node.foundVia.work)}

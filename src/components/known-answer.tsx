@@ -13,10 +13,29 @@ const KNOWN_LABEL: Record<JudgeOutput["verdict"], (name: string) => string> = {
   no_known_source: (name) => `No known source for ${name}`,
 };
 
+export type KnownMatch = "same" | "differs" | "none";
+
+// Whether a run's verdict is the one the test set records. Only the verdict is
+// compared, not the earliest trace.
+export const knownMatch = (known: EvalCase, reached: JudgeOutput["verdict"] | null): KnownMatch =>
+  reached === null ? "none" : reached === known.verdict ? "same" : "differs";
+
+export const MATCH_LOOK: Record<KnownMatch, string> = {
+  same: "bg-good/15 text-good",
+  differs: "bg-warn/15 text-warn",
+  none: "bg-foreground/10 text-muted",
+};
+
+const MATCH_WORDS: Record<KnownMatch, string> = {
+  same: "Same verdict as this run",
+  differs: "This run's verdict differs",
+  none: "This run gave no verdict",
+};
+
 // What the test set records for this quote, set next to what the run found.
 export function KnownAnswer({ known, reached }: { known: EvalCase; reached: JudgeOutput["verdict"] | null }) {
   const { work, author, date } = known.earliest;
-  const same = reached === known.verdict;
+  const match = knownMatch(known, reached);
 
   return (
     <section aria-label="The known answer" className="rounded-xl border border-dashed border-line p-5 text-sm">
@@ -25,9 +44,7 @@ export function KnownAnswer({ known, reached }: { known: EvalCase; reached: Judg
         <span className={`font-medium uppercase tracking-wider ${VERDICT_LOOK[known.verdict]}`}>
           {KNOWN_LABEL[known.verdict](known.popular_attribution)}
         </span>
-        <span className={`ml-auto rounded-full px-2 py-0.5 ${same ? "bg-good/15 text-good" : "bg-warn/15 text-warn"}`}>
-          {same ? "Same verdict as this run" : reached ? "This run's verdict differs" : "This run gave no verdict"}
-        </span>
+        <span className={`ml-auto rounded-full px-2 py-0.5 ${MATCH_LOOK[match]}`}>{MATCH_WORDS[match]}</span>
       </div>
       <p className="mt-2">
         Earliest known: {work}
@@ -40,7 +57,7 @@ export function KnownAnswer({ known, reached }: { known: EvalCase; reached: Judg
         {known.references.map((url, i) => (
           <span key={url}>
             {i > 0 && ", "}
-            <a href={url} rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
+            <a href={url} rel="noopener noreferrer" className="py-1 underline underline-offset-2 hover:text-foreground">
               {hostOf(url)}
             </a>
           </span>

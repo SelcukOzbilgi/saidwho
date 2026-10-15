@@ -1,9 +1,19 @@
 import Link from "next/link";
 
 import type { ExampleCase } from "../cases/cases";
+import { KNOWN } from "../cases/known";
 import { plural } from "../lib/plural";
 import { verdictWords } from "../lib/run-state";
+import { type KnownMatch, knownMatch, MATCH_LOOK } from "./known-answer";
 import { VERDICT_LOOK } from "./verdict-card";
+
+// Said on each card, so a first look shows which runs got the test set's answer
+// and which didn't. The case page gives the known answer itself at the end.
+const MATCH_CHIP: Record<KnownMatch, string> = {
+  same: "Matches the known answer",
+  differs: "Differs from the known answer",
+  none: "No verdict to compare",
+};
 
 export function CaseGallery({ cases, title = "Finished cases" }: { cases: readonly ExampleCase[]; title?: string }) {
   return (
@@ -19,6 +29,8 @@ export function CaseGallery({ cases, title = "Finished cases" }: { cases: readon
       <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cases.map(({ caseId, run }) => {
           const verdict = run.verdict?.output.verdict;
+          const known = KNOWN.get(caseId);
+          const match = known && knownMatch(known, verdict ?? null);
           const confirmed = run.nodes.filter((n) => n.check.status !== "not_found").length;
           return (
             <li key={caseId}>
@@ -33,8 +45,11 @@ export function CaseGallery({ cases, title = "Finished cases" }: { cases: readon
                 </span>
                 <span className="line-clamp-3 font-serif text-lg leading-snug">“{run.quote}”</span>
                 <span className="text-sm text-muted">Credited to {run.popularAttribution ?? "no one in particular"}</span>
-                <span className="mt-auto pt-2 font-mono text-xs text-muted tabular-nums">
-                  {plural(confirmed, "source")} · ${run.nebiusUsd.toFixed(4)} · {run.seconds}s
+                <span className="mt-auto flex flex-col items-start gap-2 pt-2">
+                  {match && <span className={`rounded-full px-2 py-0.5 text-xs ${MATCH_LOOK[match]}`}>{MATCH_CHIP[match]}</span>}
+                  <span className="font-mono text-xs text-muted tabular-nums">
+                    {plural(confirmed, "source")} · ${run.nebiusUsd.toFixed(4)} · {run.seconds}s
+                  </span>
                 </span>
               </Link>
             </li>
