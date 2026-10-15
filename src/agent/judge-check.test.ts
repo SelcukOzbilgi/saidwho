@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EvidenceNode } from "./events";
-import { canonicalId, checkVerdict, earlierDate, retryNote } from "./judge-check";
+import { canonicalId, checkVerdict, earlierDate, LOW_OVERLAP, otherOrigin, retryNote, wordingOverlap } from "./judge-check";
 import { type JudgeOutput, MAX_JUDGE_FIELD_CHARS, MAX_RATIONALE_CHARS } from "./schemas";
 
 const node = (id: string, dates: { pageDate?: string; citedSourceDate?: string } = {}): EvidenceNode => {
@@ -247,5 +247,55 @@ describe("earlierDate", () => {
     expect(earlierDate("2013-12", "2013")).toBe(false);
     expect(earlierDate("2013", "2013")).toBe(false);
     expect(earlierDate("2014", "2013-12")).toBe(false);
+  });
+});
+
+describe("wordingOverlap", () => {
+  // Earliest pages from the third eval, against the saying they were taken for.
+  it("scores the saying in other words or another language low", () => {
+    expect(wordingOverlap("The only thing we have to fear is fear itself.", "Nothing is terrible except fear itself. [Nil terribile nisi ipse timor.]")).toBeLessThan(LOW_OVERLAP);
+    expect(
+      wordingOverlap(
+        "If I had asked people what they wanted, they would have said faster horses.",
+        "if Henry Ford canvassed people on whether or not he should build a motor car, they'd probably tell him what they really wanted was a faster horse",
+      ),
+    ).toBeLessThan(LOW_OVERLAP);
+    expect(wordingOverlap("Let them eat cake.", "Qu'ils mangent de la brioche,")).toBe(0);
+  });
+
+  it("scores a variant, a part of the saying or the saying inside a longer passage high", () => {
+    expect(
+      wordingOverlap(
+        "Do not go where the path may lead, go instead where there is no path and leave a trail.",
+        "I will not follow where the path may lead, but I will go where there is no path, and I will leave a trail.",
+      ),
+    ).toBeGreaterThanOrEqual(LOW_OVERLAP);
+    expect(wordingOverlap("Ladies and gentlemen of the class of '97: Wear sunscreen.", "Wear sunscreen.")).toBe(1);
+    expect(wordingOverlap("İlim ilim bilmektir, ilim kendin bilmektir.", "ILIM ILIM BILMEKTIR, ILIM KENDIN BILMEKTIR.")).toBe(1);
+    expect(wordingOverlap("Hayatta en hakiki mürşit ilimdir.", "Atatürk’ün \"Hayatta en hakiki mürşit ilimdir.\" sözü")).toBe(1);
+  });
+});
+
+describe("otherOrigin", () => {
+  const QUOTE = "The only thing we have to fear is fear itself.";
+  const bacon = (attributedTo: string | null): EvidenceNode => {
+    const page = node("n16", { pageDate: "1605" });
+    return { ...page, attributedTo, reader: { ...page.reader, exact_snippet: "Nothing is terrible except fear itself." } };
+  };
+  const misattributed: JudgeOutput = { ...VERDICT, verdict: "misattributed", earliest_node: "n16", earliest_date: "1605" };
+
+  it("flags a misattributed verdict on a page worded unlike the saying that credits someone else, or no one", () => {
+    for (const credit of ["Francis Bacon", null]) {
+      expect(otherOrigin(misattributed, [bacon(credit)], QUOTE, "Franklin D. Roosevelt")).toMatchObject({ node: "n16", snippet: "Nothing is terrible except fear itself." });
+    }
+    // A shared "Jr." is no shared name.
+    expect(otherOrigin(misattributed, [bacon("John Smith Jr.")], QUOTE, "Martin Luther King Jr.")).not.toBeNull();
+  });
+
+  it("leaves alone a page that credits the usual name, another verdict, and a page worded like the saying", () => {
+    expect(otherOrigin(misattributed, [bacon("President Roosevelt")], QUOTE, "Franklin D. Roosevelt")).toBeNull();
+    expect(otherOrigin({ ...misattributed, verdict: "correct" }, [bacon(null)], QUOTE, "Franklin D. Roosevelt")).toBeNull();
+    const fdr = { ...bacon(null), reader: { ...bacon(null).reader, exact_snippet: "the only thing we have to fear is fear itself" } };
+    expect(otherOrigin(misattributed, [fdr], QUOTE, "Franklin D. Roosevelt")).toBeNull();
   });
 });

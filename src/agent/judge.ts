@@ -5,7 +5,7 @@
 
 import type { NebiusClient } from "../lib/server/providers/nebius";
 import type { EvidenceNode, RunEvent } from "./events";
-import { checkVerdict, citedDateNote, earlierDate, retryNote } from "./judge-check";
+import { checkVerdict, citedDateNote, earlierDate, type OtherOrigin, otherOrigin, otherOriginNote, retryNote } from "./judge-check";
 import type { ModelPolicy, ModelSpec, Tier, TokenUsage } from "./models";
 import { boundedCompactJudgeOutputSchema, boundedJudgeOutputSchema, compactJudgeOutputSchema, judgeOutputSchema } from "./schemas";
 import { callStructured, type FailureCause, type StructuredResult, worthRetrying } from "./structured";
@@ -100,13 +100,16 @@ export type JudgeStep = {
   // True once the run must not start another paid call.
   mustStop: () => boolean;
   // Another system prompt, and main's checks only (see checkVerdict), for
-  // replays that compare them.
+  // replays that compare them. originCheck off leaves out the second judge for
+  // an earliest page worded unlike the saying (see otherOrigin).
   prompt?: string;
   checks?: boolean;
+  originCheck?: boolean;
 };
 
 export async function judge(step: JudgeStep): Promise<void> {
   const { nebius, models, quote, credit, verified, citedWorks, onEvent, spend, mustStop, prompt = JUDGE_PROMPT, checks = true } = step;
+  const originCheck = checks && (step.originCheck ?? true);
   const baseUser = judgeUser(quote, credit, verified, citedWorks);
   const allowedIds = verified.map((n) => n.id);
 
@@ -115,8 +118,9 @@ export async function judge(step: JudgeStep): Promise<void> {
   // last verdict was set aside.
   // A verdict that stands can still be worth asking about once more (recheck).
   // recheck holds what the second judge was asked about: the first verdict's
-  // earliest page, the page's own date it gave, and the earlier date the page cites.
-  type Asked = { node: string; given: string; cited: string };
+  // earliest page, the page's own date it gave, and the earlier date the page
+  // cites; or an earliest page worded unlike the saying; or both.
+  type Asked = { date: { node: string; given: string; cited: string } | null; origin: OtherOrigin | null };
   type JudgeAttempt = { model: ModelSpec; thinking: boolean; compact: boolean; bounded: boolean; note: string | null; recheck: Asked | null };
   type Recheck = { reason: string; note: string; asked: Asked };
   type JudgeOutcome =
@@ -155,11 +159,23 @@ export async function judge(step: JudgeStep): Promise<void> {
     // source in turn. The same date again, the same page by its own date, a later
     // date or none at all (a year no page backs is cleared to none) leave the
     // first verdict as the answer.
-    const moved = (date: string | null, asked: Asked) => date !== null && earlierDate(date, asked.given);
-    const notTaken =
-      recheck !== null && !moved(verdict.earliest_date, recheck)
-        ? `it gives no supported date earlier than the ${recheck.given} it was asked about, on ${recheck.node}, which cites ${recheck.cited}`
-        : undefined;
+    // Asked about an earliest page worded unlike the saying, it is taken when it
+    // names another page or gives another verdict; the same page, or none, as a
+    // misattribution again leaves the first. Asked about both, either answer
+    // takes it, since a page with the saying itself is often later.
+    const moved = (date: string | null, asked: NonNullable<Asked["date"]>) => date !== null && earlierDate(date, asked.given);
+    const answered = (asked: OtherOrigin) =>
+      verdict.verdict !== "misattributed" || (verdict.earliest_node !== null && verdict.earliest_node !== asked.node);
+    const unanswered: string[] = [];
+    if (recheck?.date && !moved(verdict.earliest_date, recheck.date)) {
+      const { given, node, cited } = recheck.date;
+      unanswered.push(`it gives no supported date earlier than the ${given} it was asked about, on ${node}, which cites ${cited}`);
+    }
+    if (recheck?.origin && !answered(recheck.origin)) {
+      unanswered.push(`it rests on ${recheck.origin.node} as another origin again, the page it was asked about`);
+    }
+    const asked = recheck ? [recheck.date, recheck.origin].filter((a) => a !== null).length : 0;
+    const notTaken = asked > 0 && unanswered.length === asked ? unanswered.join(", and ") : undefined;
     onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds, ...(fixes.length > 0 && { fixes }), ...(notTaken && { notTaken }) });
     // Either way the run has had its one second judge, so this ends the judging.
     if (notTaken) return { stands: false, cause: "unsupported", reason: `the second verdict ${notTaken}`, note: null };
@@ -171,16 +187,20 @@ export async function judge(step: JudgeStep): Promise<void> {
         note: retryNote(unknownIds, allowedIds),
       };
     }
-    if (pageDateOverCited === null) return { stands: true, recheck: null };
-    const { node, given, cited } = pageDateOverCited;
-    return {
-      stands: true,
-      recheck: {
-        reason: `the verdict dates ${node} by the page's own date ${given}, though ${node} names a source dated ${cited}`,
-        note: citedDateNote(pageDateOverCited),
-        asked: pageDateOverCited,
-      },
-    };
+    const origin = originCheck ? otherOrigin(verdict, verified, quote, credit) : null;
+    if (pageDateOverCited === null && origin === null) return { stands: true, recheck: null };
+    const reasons: string[] = [];
+    const notes: string[] = [];
+    if (pageDateOverCited) {
+      const { node, given, cited } = pageDateOverCited;
+      reasons.push(`the verdict dates ${node} by the page's own date ${given}, though ${node} names a source dated ${cited}`);
+      notes.push(citedDateNote(pageDateOverCited));
+    }
+    if (origin) {
+      reasons.push(`the verdict rests on ${origin.node} as another origin, though its snippet shares little of the saying's wording (${origin.overlap.toFixed(2)})`);
+      notes.push(otherOriginNote(origin));
+    }
+    return { stands: true, recheck: { reason: reasons.join("; "), note: notes.join("\n\n"), asked: { date: pageDateOverCited, origin } } };
   };
 
   // What to try after a judge that didn't give a verdict that stands, or null to

@@ -22,6 +22,8 @@
 //   main   main 603995a's prompt, checks and Checker rules
 //   new    this code's
 //   item3  this code's, with the prompt saying a related older idea is no variant
+//   noorigin  this code's, without the second judge for an earliest page worded
+//             unlike the saying (see otherOrigin in judge-check.ts)
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname } from "node:path";
@@ -91,11 +93,12 @@ const MAIN_READER_PROMPT =
 
 const ITEM3 = "An older passage with a related idea, a fable, or a longer text the saying may sum up is not a variant with the same meaning. ";
 
-type Variant = { evidence: Rules; prompt: string; checks: boolean };
+type Variant = { evidence: Rules; prompt: string; checks: boolean; originCheck?: boolean };
 const VARIANTS: Record<string, Variant> = {
   main: { evidence: "main", prompt: MAIN_JUDGE_PROMPT, checks: false },
   new: { evidence: "new", prompt: JUDGE_PROMPT, checks: true },
   item3: { evidence: "new", prompt: JUDGE_PROMPT.replace("earliest_node: ", `${ITEM3}earliest_node: `), checks: true },
+  noorigin: { evidence: "new", prompt: JUDGE_PROMPT, checks: true, originCheck: false },
 };
 
 const VALUE_FLAGS = new Set(["logs", "cache", "set", "only", "variants", "samples", "judge", "concurrency", "max-usd", "out", "reread"]);
@@ -289,6 +292,7 @@ async function main(): Promise<void> {
         citedWorks: ev.citedWorks,
         prompt: v.prompt,
         checks: v.checks,
+        originCheck: v.originCheck,
         onEvent: (e) => events.push(e),
         spend: <T>(model: ModelSpec, r: StructuredResult<T>) => {
           const costUsd = r.tokens ? estimateCostUsd(model, r.tokens) : r.costUsd;
