@@ -77,6 +77,7 @@ Under the steps, the page shows what the run cost on Nebius and what the same ca
 |-----|---------|
 | Planner | NVIDIA Nemotron 3 Ultra |
 | Readers | NVIDIA Nemotron 3.5 Lightning, and Nemotron 3 Super for a page read again |
+| Genealogist | NVIDIA Nemotron 3 Super, to pick which cited works to look for |
 | Judge | NVIDIA Nemotron 3 Super, and Nemotron 3 Ultra when a verdict fails a check |
 | Search and page text | Tavily |
 | Checker | Plain TypeScript |
@@ -195,7 +196,7 @@ This runs one quote from the test set and prints each step, the verdict and what
 pnpm eval
 ```
 
-This runs every quote in the test set three ways and scores each run against the known answer: the way the app runs it, with every step on Nemotron 3 Ultra, and with every step on Nemotron 3.5 Lightning. The scores go to `eval/results.md`. `--setup cascade` runs only the app's way, and `--only insanity-same-thing,be-the-change` runs only those quotes. Each run is saved to `.runs/eval/`, and a quote that already has a log there isn't run again, so a stopped eval picks up where it left off. One quote run the app's way costs about half a cent of Nebius and 6 Tavily credits.
+This runs every quote in the test set three ways and scores each run against the known answer: the way the app runs it, with every step on Nemotron 3 Ultra, and with every step on Nemotron 3.5 Lightning. The scores go to `eval/results.md`. `--setup cascade` runs only the app's way, and `--only insanity-same-thing,be-the-change` runs only those quotes. Each run is saved to `.runs/eval/`, and a quote that already has a log there isn't run again, so a stopped eval picks up where it left off. In the third eval, one quote run the app's way cost about three quarters of a cent of Nebius ($0.0076) and about 6 Tavily credits (118 for the twenty).
 
 ### Adding an example case
 
@@ -220,10 +221,28 @@ src/app/          the pages and the /api/investigate route
 src/components/   the form, timeline, verdict card and case replay
 src/cases/        the ten finished example cases
 src/lib/          run state, streaming, and server code (keys, budget, limits, providers)
-src/eval/         the test set's format, and how a run is scored against it
-eval/             the test set of 20 quotes with known origins
+src/eval/         the test sets' format, how a run is scored, the eval's arguments, run logs,
+                  results files and code fingerprints, and the spending cap and evidence
+                  filters scripts/rejudge.ts uses
+eval/             the test set of 20 quotes and the held-out set of 10, their scores, and
+                  the script that runs the eval as a Nebius Serverless AI job
 supabase/         the tables for saved runs, the trial budget and per-visitor limits
-scripts/          the command-line investigation, the eval and the smoke tests
+scripts/          the command-line investigation, the eval and the smoke tests, plus
+                  rejudge.ts, which judges saved runs again (see eval/README.md),
+                  saved-runs.ts, which rebuilds what a saved run's Judge saw, and the
+                  setup of the pre-commit secret scan
+docs/             the README's pictures; social-preview.jpg is the GitHub repository's
+                  preview image
+```
+
+Each step in How it works, and where its code is:
+
+```text
+Planner, Readers, Genealogist   src/agent/orchestrator.ts (the Genealogist's library
+                                page rules are in library-pages.ts)
+Search                          src/agent/orchestrator.ts, with query checks in queries.ts
+Checker                         src/agent/verifier.ts
+Judge                           src/agent/judge.ts, and its checks in judge-check.ts
 ```
 
 ## Security
