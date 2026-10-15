@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 
 import { type RunEvent, runEventSchema } from "../agent/events";
+import type { Tier } from "../agent/models";
 import { type CodeFingerprint, codeFingerprintSchema } from "./fingerprint";
 import type { EvalSet } from "./sets";
 
@@ -38,4 +39,25 @@ export function logPaths(runs: URL, set: EvalSet): LogPaths {
     log: (setup, caseId) => new URL(`${caseId}.json`, dir(setup)),
     failed: (setup, caseId) => new URL(`${caseId}.failed.json`, dir(setup)),
   };
+}
+
+// A page a run read, as scripts/rejudge.ts --reread names it: by the node it gave
+// ("n13"), by its place among the run's page readings ("#5" for the fifth, a second
+// reading included), or by any other text in its URL. Each page once, with the tier
+// that read it first, the node it gave if any, and the cited work it was found
+// for, if a lead found it.
+export type ReadPage = { url: string; host: string; tier: Tier; node: string | null; lookingFor: string | null };
+
+export function readPages(events: readonly RunEvent[], target: string): ReadPage[] {
+  const reads = events.flatMap((e) => (e.type === "page_read" ? [e] : []));
+  const nodes = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
+  let urls: string[];
+  if (/^n\d+$/.test(target)) urls = nodes.filter((n) => n.id === target).map((n) => n.url);
+  else if (/^#\d+$/.test(target)) urls = reads.filter((_, i) => i + 1 === Number(target.slice(1))).map((r) => r.url);
+  else urls = reads.filter((r) => r.url.includes(target)).map((r) => r.url);
+  return [...new Set(urls)].flatMap((url) => {
+    const first = reads.find((r) => r.url === url);
+    if (!first) return [];
+    return [{ url, host: first.host, tier: first.tier, node: nodes.find((n) => n.url === url)?.id ?? null, lookingFor: first.lookingFor ?? null }];
+  });
 }
