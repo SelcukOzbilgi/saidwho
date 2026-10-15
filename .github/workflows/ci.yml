@@ -24,6 +24,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # Builds with no provider keys, the way a fresh clone would.
+      - run: pnpm build
 
   secrets:
     runs-on: ubuntu-latest
