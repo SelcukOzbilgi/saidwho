@@ -95,9 +95,15 @@ describe("earliestTrace", () => {
     expect(earliestTrace(output, nodes)).toEqual({ trace: "1980, Narcotics Anonymous literature", via: "style.mla.org" });
   });
 
-  it("names only the page when the year isn't that of a work the page cites", () => {
+  it("names only the page when the year is the page's own, not that of a work it cites", () => {
+    const { output, nodes } = saved("en-hakiki-mursit");
+    expect(earliestTrace(output, nodes)).toEqual({ trace: "2019", via: "ackizyurdu.com" });
+  });
+
+  it("names no page that doesn't carry the Judge's year", () => {
+    // The Judge gave 1999 but pointed to an hbr.org page from 2011.
     const { output, nodes } = saved("faster-horses");
-    expect(earliestTrace(output, nodes)).toEqual({ trace: "1999", via: "hbr.org" });
+    expect(earliestTrace(output, nodes)).toEqual({ trace: "1999", via: null });
   });
 
   it("names no page the Checker didn't confirm", () => {

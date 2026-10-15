@@ -25,7 +25,8 @@ export const HEADLINE: Record<JudgeOutput["verdict"], (name: string | null) => s
 // The earliest trace line: who and when, as the Judge gave them. The Judge often
 // leaves the author empty, and a bare year says nothing about where it was seen,
 // so then the line names the page the Judge pointed to, if the Checker confirmed
-// it, and the work that page cites when the year is that work's. The cited work
+// it and the page itself carries that year, and the work that page cites when
+// the year is that work's. The cited work
 // is the reader's words, so the page it came from is always named with it.
 // null when the Judge gave neither author nor date.
 export function earliestTrace(
@@ -36,7 +37,7 @@ export function earliestTrace(
   if (!author && !date) return null;
   if (author) return { trace: [author, date].filter(Boolean).join(", "), via: null };
   const node = nodes.find((n) => n.id === id && n.check.status !== "not_found");
-  if (!node) return { trace: date!, via: null };
+  if (!node || node.date?.slice(0, 4) !== date!.slice(0, 4)) return { trace: date!, via: null };
   const work = node.reader.cited_source;
   const workYear = node.citedSourceDate?.slice(0, 4);
   return { trace: work && workYear === date!.slice(0, 4) ? `${date}, ${work}` : date!, via: node.host };
