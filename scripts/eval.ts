@@ -1,5 +1,5 @@
 // Runs the test set through the agent and scores each run against the known answer.
-// Run: pnpm eval [--set main|holdout] [--setup cascade,ultra,lightning] [--only id,id] [--replay-plan <runs dir>] [--report]
+// Run: pnpm eval [--set main|holdout] [--setup cascade,ultra,lightning] [--only id,id] [--replay-plan <runs dir>] [--cache <dir>] [--report]
 // Any other argument stops the eval, so a typo can't run the main set by mistake.
 //
 // --set picks the quotes: main (eval/quotes.jsonl, the default) or holdout
@@ -34,10 +34,14 @@
 // why it stays out of git. Both sets share it. The same query then gets the same
 // pages in every setup, and a search is paid for once. Each run still reports the
 // credits its searches cost when they were made, which is what a live run would spend.
+// --cache <dir> reads and writes that cache directory instead, such as another
+// checkout's, so a test in a new worktree doesn't pay again for searches made there.
+// New searches are added to it.
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type { RunEvent } from "../src/agent/events";
 import { CASCADE, everyStepOn, MODELS, type ModelPolicy } from "../src/agent/models";
@@ -73,7 +77,7 @@ const SETUPS: Record<string, { label: string; about: string; models: ModelPolicy
 
 const REPO = fileURLToPath(new URL("../", import.meta.url));
 const RUNS = new URL("../.runs/", import.meta.url);
-const CACHE = new URL("eval/search-cache/", RUNS);
+const DEFAULT_CACHE = new URL("eval/search-cache/", RUNS);
 // Spoiled runs in a row before the eval stops, so an outage doesn't use up the run.
 const MAX_SPOILED_IN_A_ROW = 3;
 
@@ -90,12 +94,12 @@ function writeWhole(url: URL, text: string): void {
 const readLog = (paths: LogPaths, setup: string, caseId: string): RunLog | null => readRunLog(paths.log(setup, caseId));
 
 // Only searches that worked are kept; a failed one is tried again next time.
-function cachedSearch(tavily: TavilyClient, spent: { credits: number }): TavilyClient {
+function cachedSearch(tavily: TavilyClient, cache: URL, spent: { credits: number }): TavilyClient {
   return {
     ...tavily,
     search: async (query, options) => {
       const key = createHash("sha256").update(JSON.stringify([query, options ?? null])).digest("hex");
-      const url = new URL(`${key}.json`, CACHE);
+      const url = new URL(`${key}.json`, cache);
       if (existsSync(url)) return JSON.parse(readFileSync(url, "utf8"));
       const result = await tavily.search(query, options);
       if (result.ok) {
@@ -149,9 +153,13 @@ async function main(): Promise<void> {
   const nebius = createNebiusClient({ apiKey: keys.NEBIUS_API_KEY, baseURL: env.NEBIUS_BASE_URL });
   const code = codeFingerprint(gitIn(REPO));
   console.log(`Set: ${set.name} (eval/${set.file})\nCode: ${codeLabel(code)}`);
+  const cache = args.cache === null ? DEFAULT_CACHE : pathToFileURL(`${resolve(args.cache)}/`);
+  // A mistyped --cache would otherwise start an empty cache and pay for every search.
+  if (args.cache !== null && !existsSync(cache)) throw new Error(`no search cache at ${fileURLToPath(cache)}`);
+  console.log(`Search cache: ${fileURLToPath(cache)}`);
   const spent = { credits: 0 };
-  const tavily = cachedSearch(createTavilyClient({ apiKey: keys.TAVILY_API_KEY }), spent);
-  mkdirSync(CACHE, { recursive: true });
+  const tavily = cachedSearch(createTavilyClient({ apiKey: keys.TAVILY_API_KEY }), cache, spent);
+  mkdirSync(cache, { recursive: true });
   for (const setup of setups) mkdirSync(paths.dir(setup), { recursive: true });
 
   let nebiusUsd = 0;

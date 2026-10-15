@@ -164,13 +164,15 @@ async function run(
     name?: string | null;
     models?: ModelPolicy;
     plan?: PlannerOutput;
+    quote?: string;
   } = {},
 ) {
   const events: RunEvent[] = [];
+  const input = { ...INPUT, quote: options.quote ?? QUOTE };
   await investigate({
     nebius: options.nebius ?? fakeNebius(),
     tavily: options.tavily ?? fakeTavily(),
-    input: options.name === undefined ? INPUT : { ...INPUT, popularAttribution: options.name },
+    input: options.name === undefined ? input : { ...input, popularAttribution: options.name },
     maxUsd: options.maxUsd,
     signal: options.signal,
     models: options.models,
@@ -1398,6 +1400,42 @@ describe("investigate", () => {
       expect(queries).toHaveLength(2);
       expect(queries[1]).toMatch(/^"[^"]+" origin$/);
       expect(events.find((e) => e.type === "planned")).not.toHaveProperty("rejectedQueries");
+    });
+
+    // A saying of ten words or fewer, so a query quoting all of it isn't cut to a fragment.
+    const CAKE = "Let them eat cake.";
+
+    it("never sends a query that only quotes the whole saying again with generic words, and lists it", async () => {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const planned = ['"Let them eat cake" origin first appearance', '"Let them eat cake"', '"Let them eat cake" Rousseau Confessions 1765'];
+      const nebius = fakeNebius({ plan: () => ({ ...PLAN, queries: planned }) });
+      const events = await run({ nebius, tavily, quote: CAKE });
+      // The planner's own exact-quote query is the run's first search, so it goes once and isn't listed.
+      expect(queries).toEqual([`"${CAKE}"`, '"Let them eat cake" Rousseau Confessions 1765']);
+      expect(events.find((e) => e.type === "planned")).toMatchObject({ droppedRequotes: ['"Let them eat cake" origin first appearance'] });
+      expect(events.find((e) => e.type === "planned")).not.toHaveProperty("rejectedQueries");
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
+    });
+
+    it("gives a dropped requote's place to the next planner query", async () => {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const useful = ["Rousseau Confessions brioche 1765", "Marie Antoinette cake myth 1843", "Alphonse Karr cake 1843", "brioche princess 1760s"];
+      const nebius = fakeNebius({ plan: () => ({ ...PLAN, queries: ['"Let them eat cake" earliest appearance', ...useful] }) });
+      await run({ nebius, tavily, quote: CAKE });
+      // Five searches still: the exact quote and all four other planner queries.
+      expect(queries).toEqual([`"${CAKE}"`, ...useful]);
+    });
+
+    it("plans again when every planner query was a requote", async () => {
+      const { tavily, queries } = tavilyFor(() => [NEWS]);
+      const requotes = { ...PLAN, queries: ['"Let them eat cake" origin', '"Let them eat cake" earliest newspaper'] };
+      const nebius = fakeNebius({ plan: ({ thinking }) => (thinking ? requotes : { ...PLAN, queries: ["Rousseau Confessions brioche 1765"] }) });
+      const events = await run({ nebius, tavily, quote: CAKE });
+      expect(events.find((e) => e.type === "escalated")).toMatchObject({ step: "plan", reason: "the plan gave no search besides the exact quote" });
+      expect(nebius.log.filter((c) => c.name === "plan").map((c) => c.thinking)).toEqual([true, false]);
+      expect(queries).toEqual([`"${CAKE}"`, "Rousseau Confessions brioche 1765"]);
+      const plans = events.filter((e) => e.type === "planned");
+      expect(plans.at(-1)).toMatchObject({ droppedRequotes: requotes.queries });
     });
 
     it("follows a quoted search that finds nothing with a looser one, and stops at five searches", async () => {

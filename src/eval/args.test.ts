@@ -11,7 +11,7 @@ import { EVAL_SETS } from "./sets";
 
 describe("parseEvalArgs", () => {
   it("runs the main set, every setup and every quote by default", () => {
-    expect(parseEvalArgs([])).toEqual({ set: EVAL_SETS.main, only: null, setups: null, report: false, replayPlan: null });
+    expect(parseEvalArgs([])).toEqual({ set: EVAL_SETS.main, only: null, setups: null, report: false, replayPlan: null, cache: null });
   });
 
   it("reads each list, in any order", () => {
@@ -21,6 +21,7 @@ describe("parseEvalArgs", () => {
       setups: ["cascade", "ultra"],
       report: true,
       replayPlan: null,
+      cache: null,
     });
     expect(parseEvalArgs(["--", "--set", "holdout"]).set).toBe(EVAL_SETS.holdout);
   });
@@ -37,15 +38,24 @@ describe("parseEvalArgs", () => {
       replayPlan: ".runs/eval-holdout",
       setups: ["cascade"],
     });
-    expect(() => parseEvalArgs(["--replay-plan"])).toThrow(/needs a runs directory/);
-    expect(() => parseEvalArgs(["--replay-plan", ""])).toThrow(/needs a runs directory/);
-    expect(() => parseEvalArgs(["--replay-plan", "  "])).toThrow(/needs a runs directory/);
-    expect(() => parseEvalArgs(["--replay-plan", "--setup", "cascade"])).toThrow(/needs a runs directory/);
+    expect(() => parseEvalArgs(["--replay-plan"])).toThrow(/--replay-plan needs a directory/);
+    expect(() => parseEvalArgs(["--replay-plan", ""])).toThrow(/--replay-plan needs a directory/);
+    expect(() => parseEvalArgs(["--replay-plan", "  "])).toThrow(/--replay-plan needs a directory/);
+    expect(() => parseEvalArgs(["--replay-plan", "--setup", "cascade"])).toThrow(/--replay-plan needs a directory/);
     expect(() => parseEvalArgs(["--replay-plan", "a", "--replay-plan", "b"])).toThrow(/given twice/);
     expect(() => parseEvalArgs(["--replay-plans", "a"])).toThrow(/unknown argument --replay-plans/);
   });
 
-  it("stops at a list that is missing, empty, repeated or names more than one set", () => {
+  it("takes one search cache directory", () => {
+    const cache = "/Users/someone/saidwho-evalrun/.runs/eval/search-cache";
+    expect(parseEvalArgs(["--only", "think-you-can", "--setup", "cascade", "--cache", cache])).toMatchObject({ cache, only: ["think-you-can"] });
+    expect(() => parseEvalArgs(["--cache"])).toThrow(/--cache needs a directory/);
+    expect(() => parseEvalArgs(["--cache", " "])).toThrow(/--cache needs a directory/);
+    expect(() => parseEvalArgs(["--cache", "--only", "x"])).toThrow(/--cache needs a directory/);
+    expect(() => parseEvalArgs(["--cache", "a", "--cache", "b"])).toThrow(/--cache is given twice/);
+  });
+
+    it("stops at a list that is missing, empty, repeated or names more than one set", () => {
     expect(() => parseEvalArgs(["--set"])).toThrow(/needs a comma-separated list/);
     expect(() => parseEvalArgs(["--set", "--setup", "cascade"])).toThrow(/--set needs/);
     expect(() => parseEvalArgs(["--only", ","])).toThrow(/--only needs/);

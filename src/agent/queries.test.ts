@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { broaden, cleanQuery, isValidQuery, queryKey, shapeQuery, shortenQuotedSpans, tidyModelText } from "./queries";
+import { broaden, cleanQuery, isExtraRequote, isRequoteQuery, isValidQuery, queryKey, shapeQuery, shortenQuotedSpans, tidyModelText } from "./queries";
 
 describe("cleanQuery", () => {
   it("collapses whitespace and keeps real queries in any language", () => {
@@ -86,5 +86,56 @@ describe("tidyModelText and shapeQuery", () => {
     expect(shapeQuery('"Do not go where the path may lead, go instead where there is no path and leave a trail." origin')).toBe(
       '"not go where the path may lead, go" origin',
     );
+  });
+});
+
+describe("isRequoteQuery", () => {
+  it("matches the planner queries of the third eval that quoted the whole saying with only generic words", () => {
+    const cases: [string, string][] = [
+      ['earliest appearance "Be yourself; everyone else is already taken"', "Be yourself; everyone else is already taken."],
+      ['origin "Be yourself; everyone else is already taken"', "Be yourself; everyone else is already taken."],
+      ['"Je pense, donc je suis" première apparition', "Je pense, donc je suis"],
+      ['"Je pense, donc je suis" origine citation', "Je pense, donc je suis"],
+      ['first publication "Premature optimization is the root of all evil"', "Premature optimization is the root of all evil"],
+      ['"Be the change you wish to see in the world" earliest appearance', "Be the change you wish to see in the world"],
+      ['"Hayatta en hakiki mürşit ilimdir" ilk ne zaman söylendi', "Hayatta en hakiki mürşit ilimdir"],
+      ['"Imagination is more important than knowledge" earliest newspaper', "Imagination is more important than knowledge"],
+      ['"Let them eat cake" origin first appearance', "Let them eat cake"],
+      ['"Well-behaved women seldom make history" earliest appearance', "Well-behaved women seldom make history"],
+    ];
+    for (const [query, quote] of cases) expect(isRequoteQuery(query, quote), query).toBe(true);
+  });
+
+  it("matches the exact-quote search too, which callers skip by identity", () => {
+    expect(isRequoteQuery('"Let them eat cake"', "Let them eat cake")).toBe(true);
+  });
+
+  it("keeps a query with a year, a name, another word, another quoted part or a fragment of the saying", () => {
+    const quote = "Let them eat cake";
+    expect(isRequoteQuery('"Let them eat cake" origin 1765', quote)).toBe(false);
+    expect(isRequoteQuery('"Let them eat cake" 1760s', quote)).toBe(false);
+    expect(isRequoteQuery('"Let them eat cake" Rousseau Confessions', quote)).toBe(false);
+    expect(isRequoteQuery('"Let them eat cake" brioche origin', quote)).toBe(false);
+    expect(isRequoteQuery('"Let them eat cake" "Marie Antoinette"', quote)).toBe(false);
+    expect(isRequoteQuery("Let them eat cake origin", quote)).toBe(false);
+    expect(isRequoteQuery('"eat cake" origin', quote)).toBe(false);
+    expect(isRequoteQuery('Henry Ford "you\'re right" quote 1947 Reader\'s Digest', "Whether you think you can, or you think you can't, you're right")).toBe(false);
+  });
+
+  it("never matches a long saying's planner queries once shapeQuery has cut the quoted part", () => {
+    const quote = "Twenty years from now you will be more disappointed by the things that you didn't do than by the ones you did do";
+    const shaped = shapeQuery(`"${quote}" earliest appearance`);
+    expect(shaped).not.toBeNull();
+    expect(isRequoteQuery(shaped ?? "", quote)).toBe(false);
+  });
+});
+
+describe("isExtraRequote", () => {
+  it("matches a requote but not the exact-quote search, however its punctuation differs", () => {
+    const quote = "Let them eat cake.";
+    expect(isExtraRequote('"Let them eat cake" origin', quote)).toBe(true);
+    expect(isExtraRequote('"Let them eat cake."', quote)).toBe(false);
+    expect(isExtraRequote('"let them eat cake"', quote)).toBe(false);
+    expect(isExtraRequote('"Let them eat cake" 1765', quote)).toBe(false);
   });
 });

@@ -19,6 +19,13 @@
 //                           run's page readings (#5), or part of a URL, so a page
 //                           the run read but didn't keep can be read too
 //   [--prompts main,new]    the reader prompts --reread compares (see READER_VARIANTS)
+//   [--drop-searches requote] [--drop-hosts facebook.com,reddit.com]
+//                           judge every variant on evidence with some pages left
+//                           out (see src/eval/evidence-filter.ts); with --evidence,
+//                           show what that leaves out of each run, compared with
+//                           the same rules unfiltered, and whether the logged
+//                           verdict rested on it
+//   [--changed-only]        with a filter, judge only the runs whose evidence it changes
 //   [--readers lightning,super]  the tiers --reread reads on; by default the one
 //                           that first read the page in that run
 // Any other argument stops the replay before it pays for anything, and every call,
@@ -51,6 +58,7 @@ import { createNebiusClient } from "../src/lib/server/providers/nebius";
 import { redactSecrets } from "../src/lib/server/safe-error";
 import { CAP_REACHED, capSpend } from "../src/eval/budget";
 import { pickSet } from "../src/eval/sets";
+import { type EvidenceFilter, filterLabel, filtersAnything, NO_FILTER, parseEvidenceFilter } from "../src/eval/evidence-filter";
 import { type Evidence, firstPageOf, loadRuns, rebuildEvidence, type Rules, type SavedRun, SearchCache } from "./saved-runs";
 
 // main 603995a's Judge prompt, word for word.
@@ -134,8 +142,10 @@ function describeReading(data: ReaderOutput, page: { title: string; text: string
   );
 }
 
-const VALUE_FLAGS = new Set(["logs", "cache", "set", "only", "variants", "samples", "judge", "concurrency", "max-usd", "out", "reread", "readers", "prompts"]);
-const SWITCHES = new Set(["evidence", "show-input"]);
+const VALUE_FLAGS = new Set([
+  "logs", "cache", "set", "only", "variants", "samples", "judge", "concurrency", "max-usd", "out", "reread", "readers", "prompts", "drop-searches", "drop-hosts",
+]);
+const SWITCHES = new Set(["evidence", "show-input", "changed-only"]);
 
 function parseArgs(argv: readonly string[]): { values: Map<string, string>; switches: Set<string> } {
   const values = new Map<string, string>();
@@ -184,6 +194,38 @@ function describeDifferences(run: SavedRun, main: Evidence, next: Evidence): str
   return lines;
 }
 
+// What a filter leaves out of one run's evidence, against the same rules
+// unfiltered, and which of the logged verdict's pages it takes away.
+function describeDrops(run: SavedRun, before: Evidence, after: Evidence): string[] {
+  const lines: string[] = [];
+  for (const query of after.dropped.searches) lines.push(`  search dropped: ${query}`);
+  const confirmedBefore = new Set(before.verified.map((n) => n.id));
+  const verdict = standingVerdict(run.events)?.verdict;
+  const roles = (id: string) =>
+    [
+      verdict?.earliest_node === id && "earliest",
+      verdict?.misattribution_node === id && "misattribution",
+      verdict?.lineage?.some((step) => step.node === id) && "lineage",
+    ].filter(Boolean);
+  for (const [id, why] of after.dropped.nodes) {
+    const node = before.verified.find((n) => n.id === id);
+    const role = roles(id);
+    const what = confirmedBefore.has(id) ? `confirmed, ${node?.host}${role.length ? `, verdict's ${role.join(" and ")}` : ""}` : "not confirmed";
+    lines.push(`  - ${id} (${why}): ${what}`);
+  }
+  if (after.dropped.leads) lines.push(`  ${after.dropped.leads} leads from dropped pages not followed`);
+  for (const line of describeDifferences(run, before, after)) if (!/no longer confirmed|cited works differ/.test(line)) lines.push(line);
+  // A page kept through another search is read on that search's text, which can
+  // cross it out; say so apart from the drops.
+  const keptIds = new Set(after.verified.map((n) => n.id));
+  for (const id of confirmedBefore) if (!keptIds.has(id) && !after.dropped.nodes.has(id)) lines.push(`  ! ${id} kept but no longer confirmed on the kept search's text`);
+  return lines;
+}
+
+// Whether a filter changes what the Judge would see.
+const sameEvidence = (a: Evidence, b: Evidence) =>
+  JSON.stringify([a.verified, a.citedWorks]) === JSON.stringify([b.verified, b.citedWorks]);
+
 async function pool<T>(items: readonly T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
   let next = 0;
   await Promise.all(
@@ -215,23 +257,48 @@ async function main(): Promise<void> {
   const cacheDir = flag("cache");
   if (!cacheDir) throw new Error("--cache needs the eval's search cache directory");
   const cache = new SearchCache(cacheDir);
+  const filter = parseEvidenceFilter(flag("drop-searches"), flag("drop-hosts"));
+  if (args.switches.has("changed-only") && !filtersAnything(filter)) throw new Error("--changed-only needs --drop-searches or --drop-hosts");
   const only = flag("only")?.split(",") ?? null;
-  const runs = loadRuns(dirs).filter((r) => !only || only.includes(r.caseId));
+  const loaded = loadRuns(dirs).filter((r) => !only || only.includes(r.caseId));
   const variantNames = list("variants", ["main", "new"]);
   for (const name of variantNames) if (!Object.hasOwn(VARIANTS, name)) throw new Error(`no variant called ${name}; use ${Object.keys(VARIANTS).join(", ")}`);
   const set = pickSet(flag("set") === null ? null : list("set", []));
   const cases = new Map<string, EvalCase>(
     parseEvalCases(readFileSync(new URL(`../eval/${set.file}`, import.meta.url), "utf8")).map((c) => [c.id, c]),
   );
-  const unknown = [...new Set(runs.filter((r) => !cases.has(r.caseId)).map((r) => r.caseId))];
+  const unknown = [...new Set(loaded.filter((r) => !cases.has(r.caseId)).map((r) => r.caseId))];
   if (unknown.length) console.log(`Not in eval/${set.file}, so not scored: ${unknown.join(", ")}. Pass --set for the set they came from.`);
 
   const evidence = new Map<string, Evidence>();
-  const evidenceOf = (run: SavedRun, rules: Rules) => {
-    const key = `${rules}|${run.path}`;
-    if (!evidence.has(key)) evidence.set(key, rebuildEvidence(run, rules, cache));
+  const evidenceWith = (run: SavedRun, rules: Rules, using: EvidenceFilter) => {
+    const key = `${rules}|${filterLabel(using)}|${run.path}`;
+    if (!evidence.has(key)) evidence.set(key, rebuildEvidence(run, rules, cache, using));
     return evidence.get(key) as Evidence;
   };
+  // Every judging and every --evidence listing goes through the filter.
+  const evidenceOf = (run: SavedRun, rules: Rules) => evidenceWith(run, rules, filter);
+  const ruleSets = [...new Set(variantNames.map((name) => VARIANTS[name].evidence))];
+  const changes = (run: SavedRun) => ruleSets.some((rules) => !sameEvidence(evidenceWith(run, rules, NO_FILTER), evidenceOf(run, rules)));
+  const runs = args.switches.has("changed-only") ? loaded.filter(changes) : loaded;
+  if (args.switches.has("changed-only")) console.log(`The filter (${filterLabel(filter)}) changes the evidence of ${runs.length} of ${loaded.length} runs.`);
+
+  if (args.switches.has("evidence") && filtersAnything(filter)) {
+    let changed = 0;
+    for (const run of loaded) {
+      for (const rules of ruleSets) {
+        const before = evidenceWith(run, rules, NO_FILTER);
+        const after = evidenceOf(run, rules);
+        const lines = describeDrops(run, before, after);
+        if (lines.length === 0) continue;
+        const same = sameEvidence(before, after);
+        if (!same) changed++;
+        console.log(`${labelOf(run)}/${run.caseId} (${rules}${same ? ", the Judge sees the same evidence" : ""})\n${lines.join("\n")}`);
+      }
+    }
+    console.log(`\nThe filter (${filterLabel(filter)}) changes the Judge's evidence in ${changed} of ${loaded.length * ruleSets.length} run and rules pairs.`);
+    return;
+  }
 
   if (args.switches.has("evidence")) {
     let changed = 0;
@@ -322,7 +389,10 @@ async function main(): Promise<void> {
   type Outcome = { label: string; caseId: string; variant: string; sample: number; events: RunEvent[]; usd: number; cut: boolean };
   const outcomes: Outcome[] = [];
   const tasks = runs.flatMap((run) => Array.from({ length: samples }, (_, sample) => variantNames.map((variant) => ({ run, sample, variant })))).flat();
-  console.log(`${tasks.length} judgings: ${runs.length} runs, ${variantNames.join(" and ")}, ${samples} samples each, at most $${maxUsd}.`);
+  console.log(
+    `${tasks.length} judgings: ${runs.length} runs, ${variantNames.join(" and ")}, ${samples} samples each, at most $${maxUsd}` +
+      (filtersAnything(filter) ? `, pages left out: ${filterLabel(filter)}.` : "."),
+  );
   // Evidence the cache can't rebuild in full keeps the run's logged readings for
   // the pages it lacks, so those runs are named before anything is judged.
   for (const run of runs) {

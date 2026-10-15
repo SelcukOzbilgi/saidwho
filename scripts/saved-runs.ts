@@ -23,7 +23,8 @@ import { type CitedWork, citedWork } from "../src/agent/judge";
 import { mayHoldWork, namesWork } from "../src/agent/library-pages";
 import { hostOf, LIBRARY_SITES } from "../src/agent/orchestrator";
 import { cleanDate, type PlannerOutput } from "../src/agent/schemas";
-import { carriesSaying, checkSnippet, keepsCitedDate, keptDates, matchSnippet, normalizeText, type Span } from "../src/agent/verifier";
+import { carriesSaying, checkSnippet, keepsCitedDate, keptDates, matchSnippet, mentionsName, normalizeText, type Span } from "../src/agent/verifier";
+import { applyFilter, type DropReason, type EvidenceFilter, NO_FILTER, onHosts } from "../src/eval/evidence-filter";
 
 export type Rules = "main" | "new";
 
@@ -140,6 +141,9 @@ export type Evidence = {
   citedWorks: CitedWork[];
   // Pages whose text the cache didn't have, and lead searches it didn't have.
   missing: { pages: number; leads: number };
+  // What the evidence filter left out: the first-round searches it dropped, the
+  // nodes and why (see evidence-filter.ts), and the leads from dropped nodes.
+  dropped: { searches: string[]; nodes: Map<string, DropReason>; leads: number };
 };
 
 const order = (id: string) => Number(id.slice(1));
@@ -168,7 +172,7 @@ export function firstPageOf(run: SavedRun, url: string, cache: SearchCache): Pag
   return null;
 }
 
-export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache): Evidence {
+export function rebuildEvidence(run: SavedRun, rules: Rules, cache: Pick<SearchCache, "results">, filter: EvidenceFilter = NO_FILTER): Evidence {
   const { events } = run;
   const started = events.find((e) => e.type === "started");
   if (!started || started.type !== "started") throw new Error(`${run.path}: no started event`);
@@ -193,24 +197,41 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache)
     if (!resultsOf.has(key)) resultsOf.set(key, cache.results(query, excluded, library));
     return resultsOf.get(key) ?? null;
   };
-  // Every text the run got for each page, and the first, which its reader saw.
+  // What the filter leaves out. A page a dropped search returned stays when a
+  // kept one returned it with text too, read on the kept search's text.
+  const nodes = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
+  const firstRound = searches.filter((s) => !s.library);
+  const withText = (query: string) => (results(query, false) ?? []).flatMap((r) => (r.rawContent && !isExcluded(r.url) ? [r.url] : []));
+  const dropped = applyFilter(
+    quote,
+    firstRound.map((s) => ({ query: s.query, urls: withText(s.query) })),
+    nodes,
+    filter,
+  );
+  const droppedQueries = new Set([...dropped.searches].map((i) => firstRound[i].query));
+  // Leads and the pages each one's search returned. A lead from a page the filter
+  // dropped was never followed, so its search was never made.
+  const allLeads = events.flatMap((e) => (e.type === "traced" ? e.leads : []));
+  const leads = allLeads.filter((lead) => !dropped.nodes.has(lead.fromNode));
+  const keptLeadQueries = new Set(leads.map((lead) => lead.query));
+  const canceledQueries = new Set(allLeads.flatMap((lead) => (keptLeadQueries.has(lead.query) ? [] : [lead.query])));
+  // Every text the run got for each page from the searches the filter keeps, and
+  // the first, which its reader saw.
   const textsOf = new Map<string, string[]>();
   const firstPage = new Map<string, Page>();
   for (const { query, library } of searches) {
+    if (library ? canceledQueries.has(query) : droppedQueries.has(query)) continue;
     for (const r of results(query, library) ?? []) {
       if (!r.rawContent) continue;
       textsOf.set(r.url, [...new Set([...(textsOf.get(r.url) ?? []), r.rawContent])]);
       if (!library && !firstPage.has(r.url)) firstPage.set(r.url, { title: r.title, text: r.rawContent });
     }
   }
-  // Leads and the pages each one's search returned.
-  const leads = events.flatMap((e) => (e.type === "traced" ? e.leads : []));
   const leadResults = new Map(leads.map((lead) => [lead.work, searches.some((s) => s.library && s.query === lead.query) ? results(lead.query, true) : null]));
   for (const lead of leads) if (searches.some((s) => s.library && s.query === lead.query) && leadResults.get(lead.work) === null) missing.leads++;
 
   // The nodes, checked again under the rules.
-  const nodes = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
-  const rebuilt = nodes.map((logged) => {
+  const rebuilt = nodes.filter((n) => !dropped.nodes.has(n.id)).map((logged) => {
     const fromLead = logged.foundVia ? (leadResults.get(logged.foundVia.work) ?? []).find((r) => r.url === logged.url && r.rawContent) : undefined;
     const page: Page | undefined = fromLead ? { title: fromLead.title, text: fromLead.rawContent ?? "" } : firstPage.get(logged.url);
     if (!page) {
@@ -225,14 +246,24 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache)
         ? { status: "not_found", score: match.score, reason: "not_the_saying" }
         : { status: match.status, score: match.score };
     const dates = rules === "main" ? mainDates(reading, page, match.span) : keptDates(reading, page, match.span);
-    return { ...logged, check, ...dates, date: dates.citedSourceDate ?? dates.pageDate };
+    // The credit too, as the reader's is kept: only when the page names it.
+    const credit = reading.attributed_to;
+    const attributedTo = credit && mentionsName(credit, `${page.title}\n${page.text}`) ? credit : null;
+    return { ...logged, check, attributedTo, ...dates, date: dates.citedSourceDate ?? dates.pageDate };
   });
   const confirmed = rebuilt.filter((n) => n.check.status !== "not_found");
 
   // The cited works, settled as the orchestrator settles them.
-  const reads = events.flatMap((e) => (e.type === "page_read" ? [e] : []));
+  // Only the readings the filter keeps: none from a canceled lead's search, and
+  // no first-round reading of a page whose node it dropped.
+  const keptNodes = nodes.filter((n) => !dropped.nodes.has(n.id));
+  const nodeUrls = new Set(keptNodes.map((n) => n.url));
+  const droppedUrls = new Set(nodes.flatMap((n) => (dropped.nodes.has(n.id) && !nodeUrls.has(n.url) ? [n.url] : [])));
+  const keptWorks = new Set(leads.map((lead) => lead.work));
+  const reads = events.flatMap((e) =>
+    e.type === "page_read" && (e.lookingFor === undefined ? !droppedUrls.has(e.url) : keptWorks.has(e.lookingFor)) ? [e] : [],
+  );
   const readUrls = new Set(reads.map((r) => r.url));
-  const nodeUrls = new Set(nodes.map((n) => n.url));
   const noQuoteUrls = new Set(reads.filter((r) => r.outcome === "no_quote" && !nodeUrls.has(r.url)).map((r) => r.url));
   const quoteWords = normalizeText(quote).split(" ").length;
   const aboutAsLong = (snippet: string) => {
@@ -245,7 +276,8 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache)
   const citedWorks = leads.flatMap((lead): CitedWork[] => {
     const found = leadResults.get(lead.work);
     if (!found) return [];
-    const usable = found.filter((r) => !isExcluded(r.url));
+    // A page on a dropped host never reached a reader, so it counts neither way.
+    const usable = found.filter((r) => !isExcluded(r.url) && !onHosts(r.url, filter.hosts));
     const urls = usable.map((r) => r.url);
     if (urls.some((url) => readUrls.has(url) && !noQuoteUrls.has(url))) return [];
     if (urls.some((url) => (textsOf.get(url) ?? []).some(holdsSaying))) return [];
@@ -265,5 +297,12 @@ export function rebuildEvidence(run: SavedRun, rules: Rules, cache: SearchCache)
     return pages.length ? [citedWork(lead.fromNode, lead.work, pages)] : [];
   });
 
-  return { quote, credit, verified: confirmed.sort((a, b) => order(a.id) - order(b.id)), citedWorks, missing };
+  return {
+    quote,
+    credit,
+    verified: confirmed.sort((a, b) => order(a.id) - order(b.id)),
+    citedWorks,
+    missing,
+    dropped: { searches: [...droppedQueries], nodes: dropped.nodes, leads: allLeads.length - leads.length },
+  };
 }
