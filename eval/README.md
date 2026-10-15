@@ -37,22 +37,34 @@ To check a fix on the same searches as an earlier run, `--replay-plan <runs dir>
 
 `--cache <dir>` uses another search cache, such as the one in a checkout that already ran the eval, so a test in a fresh worktree pays only for searches that cache doesn't have. The directory must exist, and new searches are added to it.
 
+## Judging saved runs again
+
+`scripts/rejudge.ts` judges saved eval runs again without searching or fetching any page. It rebuilds each run's evidence from its log and the eval's search cache, runs only the Judge, several times per run since the Judge samples at a temperature of 0.6, and scores each verdict against the known answer. That measures a change to the Judge's prompt or checks on the same evidence. It compares variants: `main` is the prompt, checks and Checker rules of commit `603995a`, the code of the second eval, kept for comparison, and `new` is the current code. The header of the file lists the others and every option.
+
+It makes paid Nebius calls with the `NEBIUS_API_KEY` in the env file you give it, and never spends more than `--max-usd` together ($1 by default). `--evidence` only shows how the variants' evidence differs and makes no calls. It has no `pnpm` alias yet, so run it with node:
+
+```bash
+node --env-file=.env.local --conditions=react-server --import tsx scripts/rejudge.ts \
+  --logs .runs/eval/cascade --cache .runs/eval/search-cache --variants main,new --samples 3
+```
+
 ## Running the eval on Nebius Serverless AI Jobs
 
-The full eval takes about an hour, so it can run as a [Serverless AI job](https://docs.nebius.com/serverless/jobs/manage) instead of on a laptop. The job uses the public Node.js image, clones this repo and runs [`job.sh`](job.sh), so there's no image to build.
+The full eval takes about an hour, so it can run as a [Serverless AI job](https://docs.nebius.com/serverless/jobs/manage) instead of on a laptop. The job uses the public Node.js image, clones this repo, checks out the commit you reviewed and runs [`job.sh`](job.sh), so there's no image to build. With a commit checked out, the job runs the code you reviewed rather than whatever the default branch holds when it starts, and the scores belong to a known commit. This path hasn't been run end to end yet.
 
 1. Install the [Nebius AI Cloud CLI](https://docs.nebius.com/cli) and log in.
 2. In the Nebius console, create a secret named `saidwho-eval-keys` with two keys, `NEBIUS_API_KEY` and `TAVILY_API_KEY`, so the keys never appear in a command.
 3. Optionally, create an Object Storage bucket for the runs and scores, here `saidwho-eval`.
-4. Start the job. `--env-secret` names the secret from step 2, never a key:
+4. Start the job. Set `COMMIT` to the full hash of the commit you reviewed, which must be on GitHub. `--env-secret` names the secret from step 2, never a key:
 
 ```bash
 SECRET=saidwho-eval-keys
+COMMIT=...   # the full hash of the commit you reviewed
 nebius ai job create \
   --name saidwho-eval \
   --image node:24-bookworm \
   --container-command bash \
-  --args "-c 'git clone https://github.com/SelcukOzbilgi/saidwho.git /work && bash /work/eval/job.sh'" \
+  --args "-c 'git clone https://github.com/SelcukOzbilgi/saidwho.git /work && git -C /work checkout --detach $COMMIT && bash /work/eval/job.sh'" \
   --platform cpu-d3 \
   --preset 2vcpu-8gb \
   --timeout 3h \
