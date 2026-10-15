@@ -1,4 +1,4 @@
-import { isRequoteQuery, queryKey } from "../agent/queries";
+import { isExtraRequote } from "../agent/queries";
 
 // Leaves pages out of a saved run's evidence, so scripts/rejudge.ts can judge it
 // again as if some searches had never been made or some hosts had been excluded.
@@ -65,10 +65,7 @@ export type Dropped = {
 };
 
 export function applyFilter(quote: string, searches: readonly LoggedSearch[], nodes: readonly LoggedNode[], filter: EvidenceFilter): Dropped {
-  const exact = queryKey(`"${quote}"`);
-  const droppedSearches = new Set(
-    filter.requote ? searches.flatMap((s, i) => (queryKey(s.query) !== exact && isRequoteQuery(s.query, quote) ? [i] : [])) : [],
-  );
+  const droppedSearches = new Set(filter.requote ? searches.flatMap((s, i) => (isExtraRequote(s.query, quote) ? [i] : [])) : []);
   const keptUrls = new Set(searches.flatMap((s, i) => (droppedSearches.has(i) ? [] : s.urls)));
   const droppedOnlyUrls = new Set(searches.flatMap((s, i) => (droppedSearches.has(i) ? s.urls.filter((u) => !keptUrls.has(u)) : [])));
   const dropped = new Map<string, DropReason>();

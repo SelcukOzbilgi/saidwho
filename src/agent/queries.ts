@@ -107,6 +107,12 @@ export function isRequoteQuery(query: string, quote: string): boolean {
   return rest === "" || rest.split(" ").every((word) => GENERIC_ORIGIN_WORDS.has(word));
 }
 
+// A requote other than the exact-quote search, which every run makes anyway.
+// The run leaves these out (see shape in the orchestrator), and rejudge.ts
+// --drop-searches requote drops the same ones from a saved run.
+export const isExtraRequote = (query: string, quote: string): boolean =>
+  queryKey(query) !== queryKey(`"${quote}"`) && isRequoteQuery(query, quote);
+
 // What to search next when a query with quotes found nothing: the same query
 // with long quoted spans cut to a fragment, or, when none is long, with the
 // quotes taken off. null when the query has no quotes to loosen.

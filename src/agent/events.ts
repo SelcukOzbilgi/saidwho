@@ -67,6 +67,9 @@ export const runEventSchema = z.discriminatedUnion("type", [
     // Queries the planner wrote that can't be a search (see cleanQuery), never
     // sent. Only when there are some.
     rejectedQueries: z.array(z.string()).optional(),
+    // Planner queries that only quote the whole saying again with generic origin
+    // words (see isRequoteQuery), never sent. Only when there are some.
+    droppedRequotes: z.array(z.string()).optional(),
     // Set when the eval reused a saved run's plan instead of asking the planner.
     replayed: z.literal(true).optional(),
   }),

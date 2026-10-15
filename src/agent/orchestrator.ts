@@ -14,7 +14,7 @@ import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { citedWork, judge } from "./judge";
 import { mayHoldWork, namesWork } from "./library-pages";
-import { broaden, queryKey, shapeQuery, tidyModelText } from "./queries";
+import { broaden, isExtraRequote, queryKey, shapeQuery, tidyModelText } from "./queries";
 import { cleanDate, genealogistOutputSchema, plannerOutputSchema, type PlannerOutput, readerOutputSchema, type ReaderOutput } from "./schemas";
 import { callStructured, type StructuredResult, worthRetrying } from "./structured";
 import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, normalizeText } from "./verifier";
@@ -210,8 +210,10 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "List other wordings it may have appeared in (older phrasings, translations into its likely original language), " +
       "people it may really come from, and up to five web search queries. " +
       "The search engine does not support operators such as site:, before:, after:, OR or year ranges; write plain queries. " +
-      "Start with the saying in double quotes, then queries about its origin and first appearance " +
-      "(for example: earliest newspaper, book or speech where it appeared), and one per candidate author. " +
+      "Start with the saying in double quotes, then queries about its origin and first appearance, and one per candidate author. " +
+      "Make one or two of them name the earliest source you suspect (a person, newspaper, magazine, book or speech) " +
+      "with its year or decade. A query that only repeats the whole saying with words like origin or earliest appearance " +
+      "finds nothing the exact-quote search doesn't, so it is dropped. " +
       "Pages often word a long saying a little differently, so when it is longer than ten words, " +
       "quote only a distinctive part of six to ten words in those later queries, or leave the quotes off. " +
       "usual_attribution: only when no credit is given, the person the saying is most often credited to, name only; " +
@@ -224,13 +226,25 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // (or returns nothing). Each query is shaped and checked first: a long quoted
   // span in one is cut to a distinctive part, so a query that is long only
   // because it quotes a whole passage still goes, and one that can't be a search
-  // is dropped and listed in the planned event.
+  // is dropped and listed in the planned event. So is a requote, a query that
+  // quotes the whole saying again with only generic origin words (see
+  // isRequoteQuery): in the saved runs such searches found little the
+  // exact-quote search hadn't. The drop comes before the cut to MAX_QUERIES, so
+  // the planner query after it takes its place rather than the run searching less.
   const shape = (plans: readonly PlannerOutput[]) => {
     const rejectedQueries: string[] = [];
+    const droppedRequotes: string[] = [];
     const plannedQueries = plans.flatMap((p) => p.queries).flatMap((raw) => {
       const query = shapeQuery(raw);
-      if (query === null) rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
-      return query === null ? [] : [query];
+      if (query === null) {
+        rejectedQueries.push(raw.slice(0, MAX_FIELD_CHARS));
+        return [];
+      }
+      if (isExtraRequote(query, quote)) {
+        if (!droppedRequotes.includes(query)) droppedRequotes.push(query);
+        return [];
+      }
+      return [query];
     });
     const queries = [`"${quote}"`, ...plannedQueries]
       .filter((q, i, all) => all.findIndex((other) => queryKey(other) === queryKey(q)) === i)
@@ -243,6 +257,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       queries,
       foundAttribution: found,
       ...(rejectedQueries.length > 0 && { rejectedQueries }),
+      ...(droppedRequotes.length > 0 && { droppedRequotes }),
     };
   };
 

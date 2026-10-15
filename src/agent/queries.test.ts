@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { broaden, cleanQuery, isRequoteQuery, isValidQuery, queryKey, shapeQuery, shortenQuotedSpans, tidyModelText } from "./queries";
+import { broaden, cleanQuery, isExtraRequote, isRequoteQuery, isValidQuery, queryKey, shapeQuery, shortenQuotedSpans, tidyModelText } from "./queries";
 
 describe("cleanQuery", () => {
   it("collapses whitespace and keeps real queries in any language", () => {
@@ -127,5 +127,15 @@ describe("isRequoteQuery", () => {
     const shaped = shapeQuery(`"${quote}" earliest appearance`);
     expect(shaped).not.toBeNull();
     expect(isRequoteQuery(shaped ?? "", quote)).toBe(false);
+  });
+});
+
+describe("isExtraRequote", () => {
+  it("matches a requote but not the exact-quote search, however its punctuation differs", () => {
+    const quote = "Let them eat cake.";
+    expect(isExtraRequote('"Let them eat cake" origin', quote)).toBe(true);
+    expect(isExtraRequote('"Let them eat cake."', quote)).toBe(false);
+    expect(isExtraRequote('"let them eat cake"', quote)).toBe(false);
+    expect(isExtraRequote('"Let them eat cake" 1765', quote)).toBe(false);
   });
 });
