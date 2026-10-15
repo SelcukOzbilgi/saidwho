@@ -76,6 +76,14 @@ describe("FeaturedCase", () => {
     expect(untimed).toContain(`$${featured!.run.nebiusUsd.toFixed(4)}`);
   });
 
+  it("says how much cheaper the run was than the same calls at Ultra prices, from the run's own figures", () => {
+    const text = renderToStaticMarkup(createElement(FeaturedCase, { example: featured! })).replace(/<[^>]+>/g, "");
+    const ratio = Math.round(featured!.run.ultraUsd! / featured!.run.nebiusUsd);
+    expect(text).toContain(`${ratio}x cheaper than the same calls at Nemotron 3 Ultra prices`);
+    const example = { ...featured!, run: { ...featured!.run, ultraUsd: null } };
+    expect(renderToStaticMarkup(createElement(FeaturedCase, { example }))).not.toContain("cheaper");
+  });
+
   it("renders nothing for a case without a verdict", () => {
     const noVerdict = CASES.find((c) => !c.run.verdict);
     const example = noVerdict ?? { ...featured!, run: { ...featured!.run, verdict: null } };

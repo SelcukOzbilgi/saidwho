@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { ultraRatio } from "../lib/cost";
+import { MODEL_NAME } from "../lib/model-name";
 import { plural } from "../lib/plural";
 import type { Phase, RunState } from "../lib/run-state";
 
@@ -61,10 +63,27 @@ export function Progress({ running, aside, phase, finished, searches, pages, rea
         })}
       </ol>
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <Cost {...cost} />
+        <div className="flex flex-col gap-1">
+          {/* Only once the run is over: while it runs, the Ultra-priced plan alone makes the gap look small. */}
+          {finished && <UltraSaving nebiusUsd={cost.nebiusUsd} ultraUsd={cost.ultraUsd} />}
+          <Cost {...cost} />
+        </div>
         {aside}
       </div>
     </div>
+  );
+}
+
+// The gap between the run's cost and the same calls at Ultra's prices, said
+// once in words, since the figures in the cost line are easy to read past.
+export function UltraSaving({ nebiusUsd, ultraUsd }: Pick<RunState, "nebiusUsd" | "ultraUsd">) {
+  const ratio = ultraRatio(nebiusUsd, ultraUsd);
+  if (ratio === null) return null;
+  return (
+    <p className="text-sm">
+      <strong className="font-semibold text-accent-ink tabular-nums">{ratio}x cheaper</strong> than the same calls at{" "}
+      {MODEL_NAME.ultra} prices
+    </p>
   );
 }
 

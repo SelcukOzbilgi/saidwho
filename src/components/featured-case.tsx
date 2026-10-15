@@ -4,6 +4,7 @@ import type { EvidenceNode } from "../agent/events";
 import { type LineageStep, MAX_LINEAGE_STEPS } from "../agent/schemas";
 import type { ExampleCase } from "../cases/cases";
 import { type RunState, verdictWords } from "../lib/run-state";
+import { UltraSaving } from "./progress";
 import { unmark } from "./timeline";
 import { HEADLINE, VERDICT_LOOK } from "./verdict-card";
 
@@ -143,10 +144,13 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
         >
           Run your own quote
         </a>
-        <span className="font-mono text-xs text-muted tabular-nums sm:ml-auto">
-          {sources} source{sources === 1 ? "" : "s"} · ${run.nebiusUsd.toFixed(4)}
-          {run.seconds !== null && ` · ${run.seconds}s`}
-        </span>
+        <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
+          <UltraSaving nebiusUsd={run.nebiusUsd} ultraUsd={run.ultraUsd} />
+          <span className="font-mono text-xs text-muted tabular-nums">
+            {sources} source{sources === 1 ? "" : "s"} · ${run.nebiusUsd.toFixed(4)} on Nebius
+            {run.seconds !== null && ` · ${run.seconds}s`}
+          </span>
+        </div>
       </div>
     </section>
   );
