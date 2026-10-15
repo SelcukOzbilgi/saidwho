@@ -66,6 +66,8 @@ describe("readPages", () => {
     expect(readPages(events, "c-span")).toEqual(readPages(events, "#8"));
     expect(readPages(events, "#99")).toEqual([]);
     expect(readPages(events, "#0")).toEqual([]);
+    expect(readPages(events, "")).toEqual([]);
+    expect(readPages(events, "  ")).toEqual([]);
   });
 
   it("gives every page whose URL matches, each once, with the tier that read it first and the lead it was found for", () => {

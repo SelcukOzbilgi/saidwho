@@ -272,6 +272,8 @@ async function main(): Promise<void> {
     for (const target of reread.split(",")) {
       const at = target.indexOf(":");
       const [caseId, pageName] = [target.slice(0, at), target.slice(at + 1)];
+      // An empty page name would match every page the run read, each one paid for.
+      if (at < 1 || pageName.trim() === "") throw new Error(`--reread takes case:page, such as be-the-change:n13; got "${target}"`);
       for (const run of runs.filter((r) => r.caseId === caseId)) {
         const read = readPages(run.events, pageName);
         if (read.length === 0) console.log(`${labelOf(run)}/${caseId} ${pageName}: the run read no such page`);

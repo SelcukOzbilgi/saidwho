@@ -49,6 +49,8 @@ export function logPaths(runs: URL, set: EvalSet): LogPaths {
 export type ReadPage = { url: string; host: string; tier: Tier; node: string | null; lookingFor: string | null };
 
 export function readPages(events: readonly RunEvent[], target: string): ReadPage[] {
+  // Every URL holds the empty string, so an empty target names no page.
+  if (target.trim() === "") return [];
   const reads = events.flatMap((e) => (e.type === "page_read" ? [e] : []));
   const nodes = events.flatMap((e) => (e.type === "node_added" ? [e.node] : []));
   let urls: string[];
