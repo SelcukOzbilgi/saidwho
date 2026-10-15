@@ -77,6 +77,36 @@ export function shortenQuotedSpans(query: string): string {
 // null when it can't be a search (see cleanQuery).
 export const shapeQuery = (raw: string): string | null => cleanQuery(shortenQuotedSpans(tidyModelText(raw)));
 
+// Words a query may add to a quoted saying without asking for anything a search
+// for the saying alone wouldn't find: origin, first appearance, source, credit,
+// in English, French, German and Turkish, compared after normalizeText.
+const GENERIC_ORIGIN_WORDS = new Set(
+  (
+    "earliest first appearance appeared origin origins source sources quote quotation citation printed published publication " +
+    "newspaper book speech magazine verified true real meaning history myth misattributed misattribution attributed attribution " +
+    "who said original apocryphal première apparition origine ilk ne zaman söylendi kaynak kaynaklı mı erstveröffentlichung quelle"
+  )
+    .split(" ")
+    .map(normalizeText),
+);
+const YEAR = /\b(1\d{3}|20[0-2]\d)s?\b/;
+
+// A query that quotes the whole saying again and adds only generic origin words
+// ('"Let them eat cake" origin first appearance'): no year, no name, no other
+// quoted part. In the saved runs such planner queries mostly returned pages the
+// exact-quote search had already found (rule A in the search analysis of
+// 2026-10-15). The exact-quote search itself ('"<saying>"') matches too, so a
+// caller skips it by identity. A long saying's quoted fragment (see
+// shapeQuery) is not the whole saying and doesn't match.
+export function isRequoteQuery(query: string, quote: string): boolean {
+  const spans = [...query.matchAll(/"([^"]+)"/g)].map((m) => normalizeText(m[1]));
+  const saying = normalizeText(quote);
+  if (spans.length === 0 || saying === "" || spans.some((span) => span !== saying)) return false;
+  if (YEAR.test(query)) return false;
+  const rest = normalizeText(query.replace(/"[^"]+"/g, " "));
+  return rest === "" || rest.split(" ").every((word) => GENERIC_ORIGIN_WORDS.has(word));
+}
+
 // What to search next when a query with quotes found nothing: the same query
 // with long quoted spans cut to a fragment, or, when none is long, with the
 // quotes taken off. null when the query has no quotes to loosen.
