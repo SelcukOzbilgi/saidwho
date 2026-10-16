@@ -169,8 +169,11 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         tavilyCredits: state.tavilyCredits + (event.credits ?? 0),
         log: log("Search", `${plural(event.results, "result")} for ${event.query}`),
       };
-    case "search_failed":
-      return { ...state, phase: state.phase === "tracing" ? "tracing" : "searching", noVerdict: null, log: log("Search", `Search failed (${event.reason}): ${event.query}`, "bad") };
+    case "search_failed": {
+      // The stored reason is a bare error kind; every search goes to Tavily.
+      const why = event.reason === "auth" ? "the Tavily API key was rejected" : event.reason;
+      return { ...state, phase: state.phase === "tracing" ? "tracing" : "searching", noVerdict: null, log: log("Search", `Search failed (${why}): ${event.query}`, "bad") };
+    }
     case "pages_ready": {
       const dropped = event.droppedExcluded ? `, ${event.droppedExcluded} from excluded sites dropped` : "";
       // A Genealogist round's pages count on top of the ones already found.

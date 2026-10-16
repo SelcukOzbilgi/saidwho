@@ -28,7 +28,7 @@ describe("toSafeError", () => {
       provider: "nebius",
       kind: "auth",
       status: 401,
-      message: "The API key was rejected.",
+      message: "The Nebius API key was rejected.",
     });
   });
 
@@ -38,8 +38,10 @@ describe("toSafeError", () => {
     expect(safe.status).toBe(429);
   });
 
-  it("classifies Tavily auth messages without a status", () => {
-    expect(toSafeError("tavily", new Error("Unauthorized: missing or invalid API key.")).kind).toBe("auth");
+  it("classifies Tavily auth messages without a status, and names Tavily", () => {
+    const safe = toSafeError("tavily", new Error("Unauthorized: missing or invalid API key."));
+    expect(safe.kind).toBe("auth");
+    expect(safe.message).toBe("The Tavily API key was rejected.");
   });
 
   it("keeps a redacted detail for bad requests", () => {

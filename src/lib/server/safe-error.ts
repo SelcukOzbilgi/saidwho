@@ -25,8 +25,11 @@ export type SafeProviderError = {
   detail?: string;
 };
 
-const MESSAGES: Record<ErrorKind, string> = {
-  auth: "The API key was rejected.",
+const PROVIDER_NAME: Record<Provider, string> = { nebius: "Nebius", tavily: "Tavily" };
+
+// The auth message names the provider, so a visitor with two keys knows which
+// one to fix.
+const MESSAGES: Record<Exclude<ErrorKind, "auth">, string> = {
   rate_limit: "Too many requests; slow down.",
   quota: "Out of credits or over the plan limit.",
   bad_request: "The provider rejected the request.",
@@ -99,7 +102,8 @@ export function toSafeError(
   const name = err instanceof Error ? err.name : "";
   const rawMessage = err instanceof Error ? err.message : "";
   const kind = classify(status, name, rawMessage);
-  const base: SafeProviderError = { provider, kind, status, message: MESSAGES[kind] };
+  const message = kind === "auth" ? `The ${PROVIDER_NAME[provider]} API key was rejected.` : MESSAGES[kind];
+  const base: SafeProviderError = { provider, kind, status, message };
   if (!DETAIL_KINDS.has(kind) || !rawMessage) return base;
   return { ...base, detail: redactSecrets(rawMessage, secrets).slice(0, MAX_DETAIL_LENGTH) };
 }

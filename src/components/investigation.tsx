@@ -11,7 +11,8 @@ import { RunView } from "./run-view";
 // What went wrong, keyed by the codes POST /api/investigate returns, plus a few
 // the page finds on its own.
 const PROBLEMS: Record<string, string> = {
-  invalid_request: "Both the quote and the name are needed: up to 500 and 200 characters.",
+  invalid_request:
+    "Check what you entered: a quote of up to 500 characters, a name of up to 200 if you add one, and keys (up to 512 characters) or an access code (up to 200) in plain keyboard characters with no spaces.",
   invalid_json: "The page sent something the server could not read. Reload and try again.",
   expected_json: "The page sent something the server could not read. Reload and try again.",
   body_too_large: "That's too long to look up.",
