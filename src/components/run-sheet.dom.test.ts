@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { act, createElement } from "react";
+import { act, type ComponentProps, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,7 +21,12 @@ async function mount() {
   root = createRoot(container);
   await act(async () =>
     root!.render(
-      createElement(RunSheet, { tab: "Run your own", children: createElement("textarea", { "aria-label": "The quote" }) }),
+      createElement(
+        RunSheet,
+        // The children come as the third argument, which the props type can't see.
+        { tab: "Run your own" } as ComponentProps<typeof RunSheet>,
+        createElement("textarea", { "aria-label": "The quote" }),
+      ),
     ),
   );
 }
