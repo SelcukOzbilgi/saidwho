@@ -102,7 +102,6 @@ export function Hero({ featured }: { featured: ExampleCase | undefined }) {
                           {char}
                         </span>
                       ))}
-                      <span className="hero-caret ml-0.5 inline-block h-[0.9em] w-px translate-y-[0.1em] bg-accent-ink" style={at(AT.origin)} />
                     </span>
                     {earliest.via && <span className="mt-1 block font-sans text-sm text-muted">via {earliest.via}</span>}
                   </dd>

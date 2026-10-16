@@ -186,13 +186,6 @@ body {
   animation: hero-char 1ms linear both;
   animation-delay: calc(var(--at) + var(--c) * 24ms);
 }
-.hero-trace[data-play] .hero-caret {
-  animation: hero-caret 1.6s steps(1) both;
-  animation-delay: var(--at);
-}
-.hero-caret {
-  opacity: 0;
-}
 .hero-replay {
   display: none;
 }
@@ -218,17 +211,6 @@ body {
 }
 @keyframes hero-char {
   from {
-    opacity: 0;
-  }
-}
-@keyframes hero-caret {
-  0%,
-  50% {
-    opacity: 1;
-  }
-  25%,
-  75%,
-  100% {
     opacity: 0;
   }
 }
