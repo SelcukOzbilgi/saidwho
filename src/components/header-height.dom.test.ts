@@ -105,6 +105,16 @@ describe("HeaderHeight", () => {
     }
   });
 
+  it("doesn't throw on a #fragment that isn't valid percent-encoding", async () => {
+    window.history.replaceState(null, "", "/#%E0");
+    try {
+      await mount();
+      expect(headerHeight()).toBe("61px");
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
+  });
+
   it("clears what it set when it unmounts", async () => {
     await mount();
     await act(async () => root!.unmount());

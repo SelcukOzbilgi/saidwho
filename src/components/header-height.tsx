@@ -21,16 +21,16 @@ export function HeaderHeight() {
       root.style.setProperty("--site-header-height", tall ? "0px" : `${header.offsetHeight}px`);
     };
     update();
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    window.addEventListener("resize", update);
     // The browser jumped to the #section before the height was measured. If the
     // header now covers its top, jump again with the measured padding.
-    const target = window.location.hash && document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    const target = hashTarget();
     if (target) {
       const top = target.getBoundingClientRect().top;
       if (top >= 0 && top < header.offsetHeight) target.scrollIntoView();
     }
-    const observer = new ResizeObserver(update);
-    observer.observe(header);
-    window.addEventListener("resize", update);
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", update);
@@ -40,4 +40,16 @@ export function HeaderHeight() {
   }, []);
 
   return <span ref={probe} hidden />;
+}
+
+// The element the URL's #fragment points at. A fragment that isn't valid
+// percent-encoding, like "#%E0", is looked up as typed instead of throwing.
+function hashTarget() {
+  const raw = window.location.hash.slice(1);
+  if (!raw) return null;
+  let id = raw;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {}
+  return document.getElementById(id);
 }
