@@ -19,8 +19,9 @@ function subscribe(onChange: () => void) {
 const serverTheme = (): Theme => "light";
 
 // The new theme spreads from the button as a growing circle, so the switch
-// reads as caused by the click. Browsers without view transitions, and anyone
-// who asked for less motion, get the new colors at once.
+// reads as caused by the click; the clip-path reveal is the one in
+// arunachalam's Animated Theme Toggler on 21st.dev. Browsers without view
+// transitions, and anyone who asked for less motion, get the new colors at once.
 export function switchTheme(origin: HTMLElement | null) {
   const next: Theme = currentTheme() === "dark" ? "light" : "dark";
   const root = document.documentElement;
@@ -28,8 +29,11 @@ export function switchTheme(origin: HTMLElement | null) {
     applyTheme(next);
     return;
   }
-  // The CSS that turns off the default crossfade only applies while this is set.
-  root.dataset.themeSwitch = "";
+  // The CSS that turns off the default crossfade only applies while this is
+  // set. Each switch tags it, so a quick second click isn't cut short when the
+  // first one ends.
+  const tag = String(Date.now() + Math.random());
+  root.dataset.themeSwitch = tag;
   const transition = document.startViewTransition(() => applyTheme(next));
   transition.ready
     .then(() => {
@@ -44,12 +48,15 @@ export function switchTheme(origin: HTMLElement | null) {
     })
     // A transition skipped by the browser still switched the theme.
     .catch(() => {});
-  transition.finished.finally(() => delete root.dataset.themeSwitch);
+  transition.finished.finally(() => {
+    if (root.dataset.themeSwitch === tag) delete root.dataset.themeSwitch;
+  });
 }
 
 // A round button with a sun that turns into a moon: the rays fold away and a
-// shadow slides across the disc. The shapes come from 000h's theme toggle on
-// 21st.dev; here plain CSS moves them, keyed on data-theme (see Shell in globals.css).
+// shadow circle, masking the disc, slides across it to leave a crescent. The
+// rays follow 000h's theme toggle on 21st.dev; plain CSS moves the parts,
+// keyed on data-theme (see Shell in globals.css).
 export function ThemeToggle({ className }: { className?: string }) {
   const theme = useSyncExternalStore(subscribe, currentTheme, serverTheme);
   const button = useRef<HTMLButtonElement>(null);
