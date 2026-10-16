@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { EvalNumbers, LATEST, THREE_WAY } from "./eval-numbers";
+import { EvalNumbers, LATEST, parseScore, THREE_WAY } from "./eval-numbers";
 
 // A summary table row's cells, by its label, from a result file pnpm eval wrote.
 function row(file: string, label: string): string[] {
@@ -44,5 +44,22 @@ describe("EvalNumbers", () => {
       expect(html).toContain(`href="https://github.com/SelcukOzbilgi/saidwho/blob/main/${file}"`);
     }
     expect(html).not.toContain("—");
+  });
+
+  it("renders every score in full, so the numbers that count up read right without JavaScript", () => {
+    const text = renderToStaticMarkup(createElement(EvalNumbers)).replace(/<[^>]+>/g, "");
+    for (const set of [LATEST.test, LATEST.holdout]) {
+      expect(text).toContain(set.verdicts);
+      expect(text).toContain(set.years);
+    }
+  });
+});
+
+describe("parseScore", () => {
+  it("reads a score's two numbers, and nothing that isn't one", () => {
+    expect(parseScore("13 of 20")).toEqual({ got: 13, of: 20 });
+    expect(parseScore("0 of 10")).toEqual({ got: 0, of: 10 });
+    expect(parseScore("$0.0076")).toBeNull();
+    expect(parseScore("13 of")).toBeNull();
   });
 });

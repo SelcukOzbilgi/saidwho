@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useReducer, useRef, useState } from "react";
+import { type ReactNode, useEffect, useReducer, useRef, useState } from "react";
 
 import type { RunEvent } from "../agent/events";
 import { initialRunState, reduceRun, type RunState } from "../lib/run-state";
 import { readRunStream } from "../lib/run-stream";
 import { QuoteForm, type QuoteRequest } from "./quote-form";
+import { RunSheet } from "./run-sheet";
 import { RunView } from "./run-view";
 
 // What went wrong, keyed by the codes POST /api/investigate returns, plus a few
@@ -59,10 +60,15 @@ export function Investigation({
   trialOpen,
   needsCode,
   savesRuns,
+  tab,
+  intro,
 }: {
   trialOpen: boolean;
   needsCode: boolean;
   savesRuns: boolean;
+  // The section's heading, set on the form's tab, and a line under it.
+  tab: ReactNode;
+  intro?: ReactNode;
 }) {
   const [run, dispatch] = useReducer(reducer, initialRunState);
   const [status, setStatus] = useState<Status>("idle");
@@ -155,7 +161,7 @@ export function Investigation({
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="rounded-sm border border-line bg-card/60 p-5 shadow-sm sm:p-6">
+      <RunSheet tab={tab} intro={intro}>
         <QuoteForm
           trialOpen={trialOpen}
           needsCode={needsCode}
@@ -164,7 +170,7 @@ export function Investigation({
           onStart={start}
           onStop={() => controller.current?.abort()}
         />
-      </div>
+      </RunSheet>
 
       {problem && (
         <p role="alert" className="rounded-sm border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
