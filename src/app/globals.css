@@ -50,6 +50,18 @@
   --font-serif: var(--font-newsreader);
 }
 
+/* The site header sticks to the top, so a jump to #cases or #run stops below it.
+   It wraps to two rows on a phone and fits one row from the sm width up. */
+html {
+  scroll-padding-top: 6.5rem;
+}
+
+@media (min-width: 40rem) {
+  html {
+    scroll-padding-top: 5rem;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
