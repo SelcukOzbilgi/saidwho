@@ -34,17 +34,16 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
       {/* Years read left to right, then down, oldest first. A year takes as many
           columns as it has cards, up to a full row, so a year with one page shares
           its row with the next ones instead of leaving the rest of it empty. As a
-          run adds pages, the cards after a new one glide to their new places. */}
-      {/* During a run each card comes in as it is found, so only a finished page's list reveals as a whole. */}
+          run adds pages, the cards after a new one glide to their new places. During
+          a run each card comes in as it is found, so only a finished page's list
+          reveals as it scrolls into view. */}
       <RevealList playFresh={false} each className="grid gap-x-3 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
         <Arrivals>
           {years.map((column) => {
             const holdsEarliest = column.nodes.some((node) => node.id === marks.earliest);
             return (
               <Enter as="li" layout key={column.label} className={`min-w-0 ${SPAN[Math.min(column.nodes.length, 3)]}`}>
-                <div
-                  className="reveal-item mb-3 flex items-center gap-2"
-                >
+                <div className="reveal-item mb-3 flex items-center gap-2">
                   <span
                     className={`font-serif text-2xl font-semibold tabular-nums transition-colors duration-300 ${holdsEarliest ? "text-accent-ink" : ""}`}
                   >
