@@ -9,14 +9,15 @@ import { type ReactNode, useEffect, useRef } from "react";
 // is just open: someone reading down the page didn't ask to type yet. Without
 // JavaScript, or with reduced motion, it never folds.
 
-// The header sends this when its "Run your own" link is clicked.
+// Another part of the page can send this to open the sheet without a link.
 export const OPEN_RUN = "saidwho:open-run";
 
-// A link to the sheet that asks it to open. The hash alone isn't enough: when
-// the address already ends in #run, clicking it again fires no hashchange.
+// A link to the sheet. RunSheet opens for any click on a #run link on the
+// page, which covers a second click when the hash is already #run and fires no
+// hashchange.
 export function OpenRunLink({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <a href="#run" onClick={() => window.dispatchEvent(new Event(OPEN_RUN))} className={className}>
+    <a href="#run" className={className}>
       {children}
     </a>
   );
@@ -43,19 +44,26 @@ export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: Rea
     let lastAsked = -Infinity;
 
     const focusQuote = () => sheet.querySelector<HTMLTextAreaElement>("textarea:not(:disabled)")?.focus({ preventScroll: true });
+    const inView = () => {
+      const box = sheet.getBoundingClientRect();
+      return box.top < window.innerHeight && box.bottom > 0;
+    };
     const onEnd = (event: AnimationEvent) => {
       if (event.target === panel && event.animationName === "run-unfold") focusQuote();
     };
-    const play = () => {
+    // seen: false when the wait ran out instead. The sheet still unfolds, but
+    // the cursor only goes in if it is on screen by then, so a visitor who has
+    // scrolled away doesn't type into a field they can't see.
+    const play = (seen = true) => {
       observer?.disconnect();
       clearTimers();
       sheet.dataset.open = "play";
       timers.push(
-        setTimeout(focusQuote, UNFOLD_MS),
+        setTimeout(() => (seen || inView()) && focusQuote(), UNFOLD_MS),
         setTimeout(() => delete sheet.dataset.open, ROWS_MS),
       );
     };
-    const open = () => {
+    const open = (onLoad = false) => {
       // A click on a #run link sends the event and changes the hash: one opening, not two.
       const now = Date.now();
       if (now - lastAsked < 800) return;
@@ -63,8 +71,10 @@ export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: Rea
       observer?.disconnect();
       clearTimers();
       // Without the unfold the cursor goes straight in, a moment after the click,
-      // since following the #run link itself would take the focus back.
-      if (!panel || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // since following the #run link itself would take the focus back. A page
+      // opened on #run has shown the sheet before this runs, so folding it then
+      // would only make it blink.
+      if (!panel || window.matchMedia("(prefers-reduced-motion: reduce)").matches || (onLoad && inView())) {
         timers.push(setTimeout(focusQuote, 50));
         return;
       }
@@ -77,20 +87,33 @@ export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: Rea
         { rootMargin: "0px 0px -30% 0px" },
       );
       observer.observe(sheet);
-      timers.push(setTimeout(play, WAIT_MS));
+      timers.push(setTimeout(() => play(false), WAIT_MS));
     };
     const onHash = () => {
       if (window.location.hash === "#run") open();
     };
+    const onAsk = () => open();
+    // Any link to #run on this page opens the sheet, the header's included. A
+    // Next Link changes the hash without a hashchange, so the click is the only
+    // sign of it. Watched while it is captured, before a Link can stop it.
+    const onClick = (event: MouseEvent) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!link || (link.target && link.target !== "_self")) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin === window.location.origin && url.pathname === window.location.pathname && url.hash === "#run") open();
+    };
 
     panel?.addEventListener("animationend", onEnd);
-    window.addEventListener(OPEN_RUN, open);
+    window.addEventListener(OPEN_RUN, onAsk);
     window.addEventListener("hashchange", onHash);
-    onHash();
+    document.addEventListener("click", onClick, true);
+    if (window.location.hash === "#run") open(true);
     return () => {
       panel?.removeEventListener("animationend", onEnd);
-      window.removeEventListener(OPEN_RUN, open);
+      window.removeEventListener(OPEN_RUN, onAsk);
       window.removeEventListener("hashchange", onHash);
+      document.removeEventListener("click", onClick, true);
       observer?.disconnect();
       clearTimers();
       delete sheet.dataset.open;

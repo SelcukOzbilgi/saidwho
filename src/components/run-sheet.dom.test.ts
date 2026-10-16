@@ -32,6 +32,9 @@ async function mount() {
 }
 
 const sheet = () => document.querySelector<HTMLElement>(".run-sheet")!;
+// happy-dom puts every box at 0 by 0, which reads as off screen; this moves the sheet into view or out of it.
+const onScreen = (yes: boolean) =>
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ top: yes ? 100 : 5_000, bottom: yes ? 600 : 5_500 } as DOMRect);
 const quote = () => document.querySelector("textarea")!;
 
 beforeEach(() => {
@@ -80,13 +83,47 @@ describe("RunSheet", () => {
     expect(sheet().dataset.open).toBeUndefined();
   });
 
-  it("opens anyway if the sheet never reports coming into view", async () => {
+  it("opens anyway if the sheet never reports coming into view, with the cursor only if it is on screen", async () => {
     await mount();
+    onScreen(true);
     await act(async () => void window.dispatchEvent(new Event(OPEN_RUN)));
     expect(sheet().dataset.open).toBe("wait");
     await act(async () => vi.advanceTimersByTime(3_000));
     expect(sheet().dataset.open).toBe("play");
     await act(async () => vi.advanceTimersByTime(1_500));
+    expect(document.activeElement).toBe(quote());
+
+    quote().blur();
+    onScreen(false);
+    await act(async () => void window.dispatchEvent(new Event(OPEN_RUN)));
+    await act(async () => vi.advanceTimersByTime(3_000));
+    expect(sheet().dataset.open).toBe("play");
+    await act(async () => vi.advanceTimersByTime(1_500));
+    expect(document.activeElement).not.toBe(quote());
+  });
+
+  it("opens for a click on any link to #run on this page, such as the header's", async () => {
+    await mount();
+    const link = document.createElement("a");
+    link.href = "/#run";
+    link.addEventListener("click", (event) => event.preventDefault());
+    document.body.append(link);
+    await act(async () => link.click());
+    expect(sheet().dataset.open).toBe("wait");
+
+    await act(async () => vi.advanceTimersByTime(3_000));
+    await act(async () => vi.advanceTimersByTime(1_500));
+    link.href = "/cases/x#run";
+    await act(async () => link.click());
+    expect(sheet().dataset.open).toBeUndefined();
+  });
+
+  it("doesn't fold a sheet the page opened on #run has already shown, and moves the cursor in", async () => {
+    window.history.replaceState(null, "", "/#run");
+    onScreen(true);
+    await mount();
+    expect(sheet().dataset.open).toBeUndefined();
+    await act(async () => vi.advanceTimersByTime(100));
     expect(document.activeElement).toBe(quote());
   });
 
