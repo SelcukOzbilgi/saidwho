@@ -24,7 +24,7 @@ export function SiteHeader() {
       />
       {/* A soft halo in the page color keeps the name and links readable when
           something dark, like the run button, passes under the glass. */}
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 px-4 py-1 text-sm [text-shadow:0_0_4px_var(--background),0_0_10px_var(--background)] sm:px-6 sm:py-2">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 px-4 py-1 text-sm [text-shadow:0_0_1px_var(--background),0_0_2px_var(--background),0_0_2px_var(--background),0_0_4px_var(--background),0_0_10px_var(--background)] sm:px-6 sm:py-2">
         <Link href="/" className="inline-block py-2 font-serif text-lg font-semibold">
           <Wordmark />
         </Link>
