@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Newsreader, Schibsted_Grotesk } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
+import { THEME_COLORS } from "@/components/theme";
 import { SITE_URL } from "@/lib/site";
 
 import "./globals.css";
@@ -40,11 +41,13 @@ export const metadata: Metadata = {
 };
 
 // The browser bar takes the page's paper color, the same --background as globals.css.
-// It follows the system setting; a theme picked on the page doesn't reach it.
+// It starts from the system setting; once the page runs, ThemeToggle gives both
+// tags the color of the theme on the page, so a theme picked there reaches it
+// too, and does it again whenever a route change puts these defaults back.
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f4ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#14130f" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
   ],
 };
 
