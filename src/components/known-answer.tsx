@@ -38,7 +38,7 @@ export function KnownAnswer({ known, reached }: { known: EvalCase; reached: Judg
   const match = knownMatch(known, reached);
 
   return (
-    <section aria-label="The known answer" className="rounded-xl border border-dashed border-line p-5 text-sm">
+    <section aria-label="The known answer" className="rounded-sm border border-dashed border-line p-5 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-medium uppercase tracking-wider text-muted">The known answer</span>
         <span className={`font-medium uppercase tracking-wider ${VERDICT_LOOK[known.verdict]}`}>

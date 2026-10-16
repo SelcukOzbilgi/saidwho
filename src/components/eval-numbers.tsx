@@ -38,7 +38,7 @@ function FileLink({ file, children }: { file: string; children: string }) {
 
 function SetCard({ title, scores }: { title: string; scores: Scores & { quotes: number } }) {
   return (
-    <div className="rounded-xl border border-line bg-card p-4">
+    <div className="rounded-sm border border-line bg-card p-4">
       <h3 className="text-xs font-medium uppercase tracking-wider text-muted">
         {title} · {scores.quotes} quotes
       </h3>
@@ -89,7 +89,7 @@ export function EvalNumbers() {
         <FileLink file={LATEST.holdout.file}>held-out set</FileLink>.
       </p>
 
-      <div className="mt-8 rounded-xl border border-line bg-card p-4 sm:p-5">
+      <div className="mt-8 rounded-sm border border-line bg-card p-4 sm:p-5">
         <h3 className="font-medium">
           As many right verdicts as every step on Ultra, at about a tenth of the Nebius cost
         </h3>

@@ -46,7 +46,7 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
   }, [log.length]);
 
   return (
-    <section aria-label="Run log" className="self-start rounded-xl border border-line bg-card">
+    <section aria-label="Run log" className="self-start rounded-sm border border-line bg-card">
       <div className="relative border-b border-line">
         <h2 className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted">What the agents did</h2>
         {/* The toggle sits on the heading's line; the list opens under it. */}

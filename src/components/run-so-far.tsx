@@ -29,7 +29,7 @@ export function RunSoFar({ phase, plan, searches, pages, readUrls, nodes, announ
   };
 
   return (
-    <section aria-label="The run so far" className="rounded-xl border border-dashed border-line bg-card/60 p-5">
+    <section aria-label="The run so far" className="rounded-sm border border-dashed border-line bg-card/60 p-5">
       <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted">
         <span className="size-2 rounded-full bg-accent motion-safe:animate-pulse" aria-hidden />
         Under way

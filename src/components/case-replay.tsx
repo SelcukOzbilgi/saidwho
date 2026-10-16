@@ -33,7 +33,7 @@ export function CaseReplay({ events, afterVerdict }: { events: readonly RunEvent
           <button
             type="button"
             onClick={() => setShown(playing ? events.length : 1)}
-            className="rounded-lg border border-foreground px-4 py-2 text-sm font-medium hover:bg-foreground hover:text-background"
+            className="rounded-sm border border-foreground px-4 py-2 text-sm font-medium hover:bg-foreground hover:text-background"
           >
             {playing ? "Skip to the end" : "Watch it run again"}
           </button>

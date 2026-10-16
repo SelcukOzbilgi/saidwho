@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* The theme is a data-theme attribute on <html>, set before the first paint by
+   the script in layout.tsx and switched by ThemeToggle. Style with the color
+   tokens below; a dark: class follows the same attribute. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Paper and ink, with the banner's marker orange, tick green and cross red.
    Green, red and amber are set to read as small text on their own tints;
    the bright orange stays for marks, and --accent-ink is its readable text color. */
@@ -16,21 +21,21 @@
   --good: #236814;
   --bad: #b0291f;
   --warn: #7d5400;
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #14130f;
-    --foreground: #ece8df;
-    --card: #1d1b17;
-    --muted: #a39d90;
-    --line: #34312a;
-    --accent: #f59a45;
-    --accent-ink: #f59a45;
-    --good: #6cc24a;
-    --bad: #f37066;
-    --warn: #e5b23a;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #14130f;
+  --foreground: #ece8df;
+  --card: #1d1b17;
+  --muted: #a39d90;
+  --line: #34312a;
+  --accent: #f59a45;
+  --accent-ink: #f59a45;
+  --good: #6cc24a;
+  --bad: #f37066;
+  --warn: #e5b23a;
 }
 
 @theme inline {
@@ -45,8 +50,8 @@
   --color-good: var(--good);
   --color-bad: var(--bad);
   --color-warn: var(--warn);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans-face);
+  --font-mono: var(--font-mono-face);
   --font-serif: var(--font-newsreader);
 }
 
@@ -55,6 +60,14 @@
    allows for two rows on a phone and one from the sm width up. */
 html {
   scroll-padding-top: var(--site-header-height, 6.5rem);
+  /* Jumps to a section on this page glide there; layout.tsx keeps route changes instant. */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 @media (min-width: 40rem) {

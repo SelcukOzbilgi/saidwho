@@ -40,7 +40,7 @@ export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes
                 <span className="hidden sm:inline">→</span>
               </span>
             )}
-            <div className="arrive h-full rounded-xl border border-line bg-card p-3 shadow-sm sm:w-60 sm:shrink-0">
+            <div className="arrive h-full rounded-sm border border-line bg-card p-3 shadow-sm sm:w-60 sm:shrink-0">
               <div className="flex items-center gap-2 text-xs text-muted">
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${CHANGE[step.change].look}`}>
                   {CHANGE[step.change].label}

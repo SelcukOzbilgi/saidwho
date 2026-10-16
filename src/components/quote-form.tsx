@@ -98,7 +98,7 @@ const LANGUAGES = [
 
 // A visible ring for keyboard focus, on top of the darker border any focus gets.
 const FIELD =
-  "w-full rounded-lg border border-line bg-card outline-none focus:border-foreground/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-accent-ink";
+  "w-full rounded-sm border border-line bg-card outline-none focus:border-foreground/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-accent-ink";
 
 type Props = {
   trialOpen: boolean;
@@ -259,7 +259,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
         </div>
       </div>
 
-      <fieldset disabled={running} className="rounded-lg border border-line p-3">
+      <fieldset disabled={running} className="rounded-sm border border-line p-3">
         <legend className="px-1 text-sm font-medium">Who pays for the run</legend>
         <div className="flex flex-wrap gap-x-5 text-sm">
           <label className={`flex items-center gap-2 py-1.5 ${trialOpen ? "" : "text-muted"}`}>
@@ -306,7 +306,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
           <button
             type="button"
             onClick={onStop}
-            className="rounded-lg border border-foreground px-5 py-2.5 font-medium hover:bg-foreground hover:text-background"
+            className="rounded-sm border border-foreground px-5 py-2.5 font-medium hover:bg-foreground hover:text-background"
           >
             Stop
           </button>
@@ -315,7 +315,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
             type="submit"
             disabled={!ready}
             aria-describedby={`${id}-why`}
-            className="shrink-0 rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent hover:text-on-accent disabled:opacity-40 disabled:hover:bg-foreground disabled:hover:text-background"
+            className="shrink-0 rounded-sm bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent hover:text-on-accent disabled:opacity-40 disabled:hover:bg-foreground disabled:hover:text-background"
           >
             Find the source
           </button>

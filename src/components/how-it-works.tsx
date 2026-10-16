@@ -88,7 +88,7 @@ export function HowItWorks({ rejections, cases }: { rejections: CheckerRejection
         {STEPS.map((step, i) => (
           <li
             key={step.name}
-            className={`flex flex-col gap-2 rounded-xl border bg-card p-4 ${step.name === "Checker" ? "border-bad/40" : "border-line"}`}
+            className={`flex flex-col gap-2 rounded-sm border bg-card p-4 ${step.name === "Checker" ? "border-bad/40" : "border-line"}`}
           >
             <h3 className="flex items-baseline gap-2">
               <span className="font-mono text-xs text-muted tabular-nums">{i + 1}</span>

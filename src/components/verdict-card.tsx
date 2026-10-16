@@ -50,7 +50,7 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
   // without one it always says why.
   if (!verdict) {
     return (
-      <section className="rounded-xl border border-line bg-card p-5">
+      <section className="rounded-sm border border-line bg-card p-5">
         <p className="text-xs font-medium uppercase tracking-wider text-muted">No verdict</p>
         <p className="mt-1 text-lg">
           {noVerdict
@@ -70,7 +70,7 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
   const earliest = earliestTrace(output, nodes);
 
   return (
-    <section aria-label="Verdict" className="arrive rounded-xl border border-line bg-card p-5 shadow-sm">
+    <section aria-label="Verdict" className="arrive rounded-sm border border-line bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <span className={`font-medium uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>{verdictWords(output.verdict)}</span>
         <span>· {output.confidence} confidence</span>

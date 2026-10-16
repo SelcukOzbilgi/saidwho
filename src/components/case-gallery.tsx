@@ -36,7 +36,7 @@ export function CaseGallery({ cases, title = "Finished cases" }: { cases: readon
             <li key={caseId}>
               <Link
                 href={`/cases/${caseId}`}
-                className="flex h-full flex-col gap-2 rounded-xl border border-line bg-card p-4 transition-colors hover:border-foreground/40"
+                className="flex h-full flex-col gap-2 rounded-sm border border-line bg-card p-4 transition-colors hover:border-foreground/40"
               >
                 <span
                   className={`text-xs font-medium uppercase tracking-wider ${verdict ? VERDICT_LOOK[verdict] : "text-muted"}`}

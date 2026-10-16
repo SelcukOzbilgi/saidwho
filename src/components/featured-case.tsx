@@ -63,7 +63,7 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
   const earliest = earliestTrace(output, run.nodes);
 
   return (
-    <section aria-labelledby="featured-title" className="rounded-2xl border border-line bg-card/60 p-5 shadow-sm sm:p-6">
+    <section aria-labelledby="featured-title" className="rounded-sm border border-line bg-card/60 p-5 shadow-sm sm:p-6">
       <p className="text-sm text-muted">One finished run, saved as it happened</p>
       <blockquote
         lang={run.language ?? undefined}
@@ -111,7 +111,7 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
                 <li key={`${node.id}-${i}`}>
                   <Link
                     href={`${href}#node-${node.id}`}
-                    className="block rounded-xl border border-line bg-card p-3 transition-colors hover:border-foreground/40"
+                    className="block rounded-sm border border-line bg-card p-3 transition-colors hover:border-foreground/40"
                   >
                     <span className="flex items-center gap-2 text-xs text-muted">
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${CHANGE[change].look}`}>
@@ -136,13 +136,13 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
       <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
         <Link
           href={href}
-          className="rounded-lg bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent hover:text-on-accent"
+          className="rounded-sm bg-foreground px-5 py-2.5 font-medium text-background hover:bg-accent hover:text-on-accent"
         >
           See every step
         </Link>
         <a
           href="#run"
-          className="rounded-lg border border-foreground px-5 py-2.5 font-medium hover:bg-foreground hover:text-background"
+          className="rounded-sm border border-foreground px-5 py-2.5 font-medium hover:bg-foreground hover:text-background"
         >
           Run your own quote
         </a>

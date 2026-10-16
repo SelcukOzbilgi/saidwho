@@ -155,7 +155,7 @@ export function Investigation({
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="rounded-2xl border border-line bg-card/60 p-5 shadow-sm sm:p-6">
+      <div className="rounded-sm border border-line bg-card/60 p-5 shadow-sm sm:p-6">
         <QuoteForm
           trialOpen={trialOpen}
           needsCode={needsCode}
@@ -167,7 +167,7 @@ export function Investigation({
       </div>
 
       {problem && (
-        <p role="alert" className="rounded-lg border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
+        <p role="alert" className="rounded-sm border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
           {PROBLEMS[problem]}
         </p>
       )}
@@ -202,7 +202,7 @@ function SavedLink({ id }: { id: string }) {
       <button
         type="button"
         onClick={() => navigator.clipboard.writeText(url).then(() => setCopied(true), () => {})}
-        className="rounded-md border border-line px-2 py-0.5 text-xs hover:border-foreground"
+        className="rounded-sm border border-line px-2 py-0.5 text-xs hover:border-foreground"
       >
         {copied ? "Copied" : "Copy link"}
       </button>

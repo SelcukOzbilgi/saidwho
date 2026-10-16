@@ -87,7 +87,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
   return (
     <article
       id={`node-${node.id}`}
-      className={`arrive flex h-full scroll-mt-24 flex-col rounded-xl border bg-card p-4 shadow-sm target:ring-2 target:ring-accent ${ring} ${crossed ? "opacity-60" : ""}`}
+      className={`arrive flex h-full scroll-mt-24 flex-col rounded-sm border bg-card p-4 shadow-sm target:ring-2 target:ring-accent ${ring} ${crossed ? "opacity-60" : ""}`}
     >
       <header className="mb-2 flex items-center gap-2 text-xs text-muted">
         <span className="font-mono">{node.id}</span>
