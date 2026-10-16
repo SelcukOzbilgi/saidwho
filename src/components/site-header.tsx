@@ -20,7 +20,7 @@ export function SiteHeader() {
           every row of the header, however many it wraps to, has the full glass. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -bottom-6 -z-10 bg-background/60 backdrop-blur-md backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)]"
+        className="pointer-events-none absolute inset-x-0 top-0 -bottom-6 -z-10 bg-background/55 backdrop-blur-[10px] backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)]"
       />
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 px-4 py-1 text-sm sm:px-6 sm:py-2">
         <Link href="/" className="inline-block py-2 font-serif text-lg font-semibold">
