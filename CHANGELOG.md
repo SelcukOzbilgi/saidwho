@@ -6,10 +6,18 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ### Added
 - Each example case has its own share image with its verdict, the quote, who it's usually credited to and what the run found, and a saved run's preview is titled with its quote (#46)
+- `pnpm rejudge` runs `scripts/rejudge.ts`, and CI builds the app on every pull request (#50)
 
 ### Changed
 - Gandhi's case was recorded again on the new Planner and now credits Arleen Lorrance's 1974 book (#44)
 - Links point at saidwho.online (#47)
+- The home page names saidwho.online as its canonical address (#48)
+- Error messages say which key was rejected and what a valid request looks like, and button text stays readable on hover (#49)
+- CI pins each GitHub Action to a commit, and Dependabot keeps them updated (#50)
+
+### Fixed
+- A trial run finishes inside the function's 300 s limit: it stops starting new work after 180 s, every Nebius call has a time limit, and a Tavily search stops being waited on after 60 s (#51)
+- On Vercel the trial stays off until both Supabase variables are set, so the daily budget is shared by every server (#51)
 
 ## [0.7.0] - 2026-10-15
 

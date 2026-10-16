@@ -41,10 +41,10 @@ To check a fix on the same searches as an earlier run, `--replay-plan <runs dir>
 
 `scripts/rejudge.ts` judges saved eval runs again without searching or fetching any page. It rebuilds each run's evidence from its log and the eval's search cache, runs only the Judge (or, with `--reread`, the Readers on chosen pages), several times per run since the Judge samples at a temperature of 0.6, and scores each verdict against the known answer. That measures a change to the Judge's prompt or checks on the same evidence. It compares variants: `main` is the prompt, checks and Checker rules of commit `603995a`, the code of the second eval, kept for comparison, and `new` is the current code. The header of the file lists the other variants and the main options.
 
-It makes paid Nebius calls with the `NEBIUS_API_KEY` in the env file you give it, and never spends more than `--max-usd` together ($1 by default). `--evidence` only shows how the variants' evidence differs and makes no calls. Combined with `--drop-searches` or `--drop-hosts`, it shows instead what that filter leaves out of each run's evidence, compared with the same rules unfiltered, not how `main` and `new` differ. It has no `pnpm` alias yet, so run it with node:
+It makes paid Nebius calls with the `NEBIUS_API_KEY` in `.env.local`, and never spends more than `--max-usd` together ($1 by default). `--evidence` only shows how the variants' evidence differs and makes no calls. Combined with `--drop-searches` or `--drop-hosts`, it shows instead what that filter leaves out of each run's evidence, compared with the same rules unfiltered, not how `main` and `new` differ. Run it with `pnpm rejudge`:
 
 ```bash
-node --env-file=.env.local --conditions=react-server --import tsx scripts/rejudge.ts \
+pnpm rejudge \
   --logs .runs/eval/cascade --cache .runs/eval/search-cache --variants main,new --samples 3
 ```
 
