@@ -4,6 +4,8 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-16
+
 ### Added
 - Each example case has its own share image with its verdict, the quote, who it's usually credited to and what the run found, and a saved run's preview is titled with its quote (#46)
 - `pnpm rejudge` runs `scripts/rejudge.ts`, and CI builds the app on every pull request (#50)
@@ -112,7 +114,8 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 - The eval set of 20 quotes with known origins (#3)
 - `pnpm investigate <case-id>`, the first end-to-end investigation (#5)
 
-[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.4.0...v0.5.0
