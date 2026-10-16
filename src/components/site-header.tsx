@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Wordmark } from "./logo-mark";
+
 const NAV = [
   { href: "/#cases", label: "Cases" },
   { href: "/#run", label: "Run your own" },
@@ -12,7 +14,7 @@ export function SiteHeader() {
   return (
     <header className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 px-4 pt-2 text-sm sm:px-6 sm:pt-4">
       <Link href="/" className="inline-block py-2 font-serif text-lg font-semibold">
-        Said Who<span className="text-accent">?</span>
+        <Wordmark />
       </Link>
       <nav aria-label="Site" className="-mx-2 flex flex-wrap items-center text-muted">
         {NAV.map(({ href, label }) => (

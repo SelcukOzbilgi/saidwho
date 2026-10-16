@@ -8,6 +8,7 @@ import { EvalNumbers } from "../components/eval-numbers";
 import { FeaturedCase } from "../components/featured-case";
 import { HowItWorks } from "../components/how-it-works";
 import { Investigation } from "../components/investigation";
+import { Wordmark } from "../components/logo-mark";
 import { SiteFooter } from "../components/site-footer";
 import { env } from "../lib/server/env";
 import { TRIAL_RESERVE_USD } from "../lib/server/investigate-handler";
@@ -37,7 +38,7 @@ export default async function Home() {
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-4 pb-10 sm:px-6 sm:pt-6 sm:pb-14">
       <header className="max-w-2xl">
         <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
-          Said Who<span className="text-accent">?</span>
+          <Wordmark />
         </h1>
         <p className="mt-2 text-lg leading-7 sm:mt-3 sm:text-xl sm:leading-8">
           Ask a chatbot where a quote comes from and it will often guess a source. Said Who? goes and finds the pages
