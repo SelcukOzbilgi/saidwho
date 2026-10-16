@@ -88,7 +88,7 @@ const CHIP =
 // One choice of the who-pays control. The text takes the page color over the
 // thumb when its radio is checked, and the ring shows while the keyboard is on it.
 const SEGMENT =
-  "relative z-10 flex cursor-pointer items-center justify-center rounded-sm px-3 py-2 text-center leading-snug text-muted transition-colors duration-200 hover:text-foreground has-checked:text-background has-disabled:cursor-not-allowed has-disabled:text-muted/70 has-disabled:hover:text-muted/70 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent-ink";
+  "relative z-10 flex cursor-pointer items-center justify-center rounded-sm px-3 py-2 text-center leading-snug text-muted transition-colors duration-200 hover:text-foreground has-checked:text-background has-disabled:cursor-not-allowed [&:has(:disabled):not(:has(:checked))]:text-muted/70 [&:has(:disabled):not(:has(:checked))]:hover:text-muted/70 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent-ink";
 
 
 const LANGUAGES = [
