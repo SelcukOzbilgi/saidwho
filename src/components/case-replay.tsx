@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { type KeyboardEvent, type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { RunEvent } from "../agent/events";
 import { initialRunState, reduceRun } from "../lib/run-state";
@@ -68,7 +68,9 @@ type ControlProps = {
 };
 
 // The replay's controls. One button stays put throughout, starting the replay and
-// then pausing it, so keyboard focus isn't lost when the replay starts or ends.
+// then pausing it. The bar and "Skip to the end" go when the replay ends, however
+// it ends, and focus on them moves to that button, so a keyboard user isn't left
+// at the top of the page.
 // The bar beside it shows how far the replay has got, and moves it when dragged;
 // a drag holds the replay still and lets it carry on from the new place.
 function ReplayControl({ shown, total, paused, onStart, onPause, onSeek }: ControlProps) {
@@ -126,65 +128,82 @@ function ReplayControl({ shown, total, paused, onStart, onPause, onSeek }: Contr
 
       <Arrivals>
         {replaying && (
-          <Enter key="bar" rise={0} className="flex items-center gap-3">
-            <div
-              role="slider"
-              tabIndex={0}
-              aria-label="Replay position"
-              aria-valuemin={1}
-              aria-valuemax={total}
-              aria-valuenow={shown}
-              aria-valuetext={`Event ${shown} of ${total}`}
-              onPointerDown={(event) => {
-                event.currentTarget.setPointerCapture(event.pointerId);
-                // Held still while dragging, so the replay doesn't pull away from the pointer.
-                resume.current = !paused;
-                onPause(true);
-                seekTo(event);
-              }}
-              onPointerMove={(event) => {
-                if (event.currentTarget.hasPointerCapture(event.pointerId)) seekTo(event);
-              }}
-              onPointerUp={() => {
-                if (resume.current) onPause(false);
-                resume.current = false;
-              }}
-              onPointerCancel={() => {
-                if (resume.current) onPause(false);
-                resume.current = false;
-              }}
-              onKeyDown={onKey}
-              className="relative flex h-9 w-28 cursor-ew-resize touch-none items-center rounded-sm select-none sm:w-44"
-            >
-              <div className="h-1 w-full overflow-hidden rounded-full bg-line">
-                <div
-                  className="h-full w-full origin-left rounded-full bg-accent transition-transform duration-300 ease-out motion-reduce:transition-none"
-                  style={{ transform: `scaleX(${shown / total})` }}
-                />
-              </div>
-              {/* The handle rides on a full-width layer moved by transform, so it glides with the fill. */}
+          <Enter key="bar" rise={0}>
+            <HandsFocusOn to={main} className="flex items-center gap-3">
               <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 transition-transform duration-300 ease-out motion-reduce:transition-none"
-                style={{ transform: `translateX(${(shown / total) * 100}%)` }}
+                role="slider"
+                tabIndex={0}
+                aria-label="Replay position"
+                aria-valuemin={1}
+                aria-valuemax={total}
+                aria-valuenow={shown}
+                aria-valuetext={`Event ${shown} of ${total}`}
+                onPointerDown={(event) => {
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  // Held still while dragging, so the replay doesn't pull away from the pointer.
+                  resume.current = !paused;
+                  onPause(true);
+                  seekTo(event);
+                }}
+                onPointerMove={(event) => {
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) seekTo(event);
+                }}
+                onPointerUp={() => {
+                  if (resume.current) onPause(false);
+                  resume.current = false;
+                }}
+                onPointerCancel={() => {
+                  if (resume.current) onPause(false);
+                  resume.current = false;
+                }}
+                onKeyDown={onKey}
+                className="relative flex h-9 w-28 cursor-ew-resize touch-none items-center rounded-sm select-none sm:w-44"
               >
-                <span className="absolute top-1/2 left-0 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-accent" />
+                <div className="h-1 w-full overflow-hidden rounded-full bg-line">
+                  <div
+                    className="h-full w-full origin-left rounded-full bg-accent transition-transform duration-300 ease-out motion-reduce:transition-none"
+                    style={{ transform: `scaleX(${shown / total})` }}
+                  />
+                </div>
+                {/* The handle rides on a full-width layer moved by transform, so it glides with the fill. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 transition-transform duration-300 ease-out motion-reduce:transition-none"
+                  style={{ transform: `translateX(${(shown / total) * 100}%)` }}
+                >
+                  <span className="absolute top-1/2 left-0 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-accent" />
+                </div>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onSeek(total);
-                // The bar and this button go once the replay ends; keep focus on the one that stays.
-                main.current?.focus();
-              }}
-              className="py-2 text-sm font-medium underline decoration-line underline-offset-4 hover:decoration-foreground"
-            >
-              Skip to the end
-            </button>
+              <button
+                type="button"
+                onClick={() => onSeek(total)}
+                className="py-2 text-sm font-medium underline decoration-line underline-offset-4 hover:decoration-foreground"
+              >
+                Skip to the end
+              </button>
+            </HandsFocusOn>
           </Enter>
         )}
       </Arrivals>
+    </div>
+  );
+}
+
+// A group that, as it leaves the page while holding focus, gives focus to the
+// element `to` points at. Its cleanup runs before the group's nodes come out, so
+// it can still see where focus is. The page doesn't scroll to the new place.
+function HandsFocusOn({ to, className, children }: { to: RefObject<HTMLElement | null>; className: string; children: ReactNode }) {
+  const group = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = group.current;
+    const target = to.current;
+    return () => {
+      if (node?.contains(document.activeElement)) target?.focus({ preventScroll: true });
+    };
+  }, [to]);
+  return (
+    <div ref={group} className={className}>
+      {children}
     </div>
   );
 }
