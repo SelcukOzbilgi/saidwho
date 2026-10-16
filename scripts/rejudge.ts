@@ -2,7 +2,8 @@
 // evidence is rebuilt from its log and the eval's search cache (see
 // saved-runs.ts), and only the Judge step runs, on Nebius. Several samples per
 // run, since the Judge thinks at temperature 0.6, and several variants in one
-// pass, so a prompt or a check can be compared with main's on the same evidence.
+// pass, so a prompt or a check can be compared on the same evidence with the
+// rules of main 603995a, the second eval's, kept as the "main" variant.
 //
 // Run: pnpm rejudge <arguments>, with NEBIUS_API_KEY in .env.local or the shell, or
 //   node --env-file=<file with NEBIUS_API_KEY> --conditions=react-server --import tsx scripts/rejudge.ts

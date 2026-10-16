@@ -36,7 +36,7 @@ describe("Lineage", () => {
     expect(html).toContain('href="#node-n1"');
   });
 
-  it("leaves out a step on a page the Verifier crossed out", () => {
+  it("leaves out a step on a page the Checker crossed out", () => {
     const html = render(STEPS);
     expect(html).not.toContain("A tidier wording");
     expect(html).not.toContain("Wording changes");

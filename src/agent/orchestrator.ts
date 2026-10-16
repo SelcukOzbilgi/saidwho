@@ -1,6 +1,6 @@
 // One investigation, start to finish:
-// Planner (Ultra) -> Tavily search -> Readers (Lightning) -> Verifier (code)
-// -> Genealogist (Super picks cited works, Tavily finds them, Readers and Verifier check them, up to two rounds)
+// Planner (Ultra) -> Tavily search -> Readers (Lightning) -> Checker (code, verifier.ts)
+// -> Genealogist (Super picks cited works, Tavily finds them, Readers and Checker check them, up to two rounds)
 // -> Judge (Super, then Ultra if needed; see judge.ts).
 // A step whose check fails is tried once more, on a bigger model or with thinking off.
 // The models named here are the cascade's (CASCADE in models.ts); the eval can
@@ -364,7 +364,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   }
   onEvent({ type: "pages_ready", pages: pages.size, droppedExcluded });
 
-  // 3) Readers + 4) Verifier, each node reported as soon as its page is read. Node
+  // 3) Readers + 4) Checker, each node reported as soon as its page is read. Node
   // ids follow search order (n3 is the third page), not which reader finished first,
   // so the same search results always give the judge the same evidence in the same order.
   const nodes: EvidenceNode[] = [];
@@ -469,7 +469,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
     };
 
     // Lightning reads every page. Super reads a page again only when Lightning's
-    // call failed, or it returned a snippet the Verifier could not find, which is
+    // call failed, or it returned a snippet the Checker could not find, which is
     // how a "tidied" quote looks, or one that isn't the saying. The second
     // reading's node replaces the first; when it has none, the first
     // (crossed-out) node stays. Either way a page gives at most one node.
@@ -503,7 +503,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
   // 5) Genealogist. Pages often name an earlier work as where the saying
   // appeared ("this 1995 book quotes a 1981 one"). Super picks the works worth
   // finding, Tavily looks for each, and what turns up goes through the same
-  // Readers and Verifier. A round follows only citations from confirmed nodes
+  // Readers and Checker. A round follows only citations from confirmed nodes
   // the round before found, so a crossed-out reading never sends the run
   // anywhere, and a work is followed once. Ids carry on after the first pages,
   // in lead order and then result order.

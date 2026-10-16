@@ -1,6 +1,7 @@
-// The Verifier is plain code, no model. A reader model can invent a passage that
-// sounds right, so every snippet it returns is checked against the page text the
-// snippet supposedly came from. Anything not found there is rejected.
+// The Checker (the README's name for this step) is plain code, no model. A
+// reader model can invent a passage that sounds right, so every snippet it
+// returns is checked against the page text the snippet supposedly came from.
+// Anything not found there is rejected.
 
 import { cleanDate } from "./schemas";
 
