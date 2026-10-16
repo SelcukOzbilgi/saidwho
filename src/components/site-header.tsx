@@ -14,7 +14,7 @@ const NAV = [
 // the page scrolls under it, and HeaderHeight keeps anchor jumps clear of it.
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-10 data-[tall]:static border-b border-line bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-10 data-[tall]:static border-b border-line/70 bg-background/50 backdrop-blur-md backdrop-saturate-150">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 px-4 py-1 text-sm sm:px-6 sm:py-2">
         <Link href="/" className="inline-block py-2 font-serif text-lg font-semibold">
           <Wordmark />
