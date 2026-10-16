@@ -50,6 +50,19 @@
   --font-serif: var(--font-newsreader);
 }
 
+/* The site header sticks to the top, so a jump to #cases or #run stops below it.
+   HeaderHeight sets the header's measured height; until it runs, the fallback
+   allows for two rows on a phone and one from the sm width up. */
+html {
+  scroll-padding-top: var(--site-header-height, 6.5rem);
+}
+
+@media (min-width: 40rem) {
+  html {
+    scroll-padding-top: var(--site-header-height, 4rem);
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
