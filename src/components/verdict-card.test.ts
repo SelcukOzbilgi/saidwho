@@ -76,6 +76,23 @@ describe("VerdictCard", () => {
     expect(headline("correct", null)).toBe("What the sources show");
     expect(headline("contested", null)).toBe("Where it comes from is contested");
   });
+
+  // The run view wraps it in a list that holds back first-render animation; on
+  // its own it must still send the verdict word as it reads, not its stamp's start.
+  it("renders the verdict word visible on its own, with nothing waiting on an animation", () => {
+    const html = renderToStaticMarkup(
+      createElement(VerdictCard, {
+        verdict: { tier: "super", output: output("misattributed") },
+        noVerdict: null,
+        stopped: null,
+        popularAttribution: "Mahatma Gandhi",
+        nodes: [],
+      }),
+    );
+    expect(html).toContain(">misattributed<");
+    expect(html).not.toMatch(/opacity:\s*0[;"]/);
+    expect(html).not.toContain("scale(");
+  });
 });
 
 describe("earliestTrace", () => {

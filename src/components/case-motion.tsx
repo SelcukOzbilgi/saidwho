@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 // The motion a run view uses, in one place. The rule throughout: what is on the
 // page when it first renders shows as it is, so a finished run reads without
@@ -9,9 +9,25 @@ import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState, 
 // run adds afterwards moves in. Under reduced motion nothing moves.
 
 // Quick out, slow settle: things arrive fast and don't bounce.
-export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
 const moving = (reduced: boolean | null) => reduced !== true;
+
+const noSubscribe = () => () => {};
+
+// Whether this mounted after the page's markup was hydrated. False on the server
+// and while hydrating, so what the server sends is the finished state even when
+// no <Arrivals> above says so; true for anything a run or a replay adds later.
+// Kept from the first render, since motion reads its starting state only once.
+function useMountedLater(): boolean {
+  const live = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+  const [later] = useState(live);
+  return later;
+}
 
 // Children present when this first renders are shown as they are; children added
 // later enter. Nothing gets an exit: when a replay starts over, what it clears
@@ -28,8 +44,6 @@ type EnterProps = {
   // How far below its place it starts, in px.
   rise?: number;
   className?: string;
-  style?: CSSProperties;
-  id?: string;
   "aria-label"?: string;
   children: ReactNode;
 };
@@ -39,11 +53,12 @@ const TAGS = { div: motion.div, li: motion.li, section: motion.section } as cons
 // Fades and rises into place when it mounts after the view has rendered.
 export function Enter({ as = "div", layout = false, delay = 0, rise = 8, children, ...rest }: EnterProps) {
   const moves = moving(useReducedMotion());
+  const later = useMountedLater();
   const Tag = TAGS[as] as typeof motion.div;
   return (
     <Tag
       layout={moves && layout ? "position" : false}
-      initial={moves ? { opacity: 0, y: rise } : false}
+      initial={moves && later ? { opacity: 0, y: rise } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: EASE_OUT, delay, layout: { duration: 0.35, ease: EASE_OUT } }}
       {...rest}
@@ -62,10 +77,11 @@ const STAMP_TIMING = { duration: 0.36, ease: [0.3, 1.35, 0.55, 1], delay: 0.15, 
 
 export function Stamp({ className, children }: { className: string; children: ReactNode }) {
   const moves = moving(useReducedMotion());
+  const later = useMountedLater();
   return (
     <motion.span
       className={`inline-block ${className}`}
-      initial={moves ? STAMP_FROM : false}
+      initial={moves && later ? STAMP_FROM : false}
       animate={STAMP_TO}
       transition={STAMP_TIMING}
     >
@@ -73,8 +89,6 @@ export function Stamp({ className, children }: { className: string; children: Re
     </motion.span>
   );
 }
-
-const noSubscribe = () => () => {};
 
 // Reveals a diagram as it scrolls into view, through the data-reveal attribute
 // and the Case block in globals.css. The server's markup is the finished state.
@@ -87,13 +101,7 @@ const noSubscribe = () => () => {};
 // parts as each scrolls into view, those seen together a beat apart in order.
 export function useReveal<T extends HTMLElement>({ playFresh = true, each = false } = {}) {
   const ref = useRef<T>(null);
-  // False while hydrating the server's markup, true for anything mounted later.
-  const live = useSyncExternalStore(
-    noSubscribe,
-    () => true,
-    () => false,
-  );
-  const [fresh] = useState(live);
+  const fresh = useMountedLater();
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -128,23 +136,20 @@ export function useReveal<T extends HTMLElement>({ playFresh = true, each = fals
 
 // A list whose parts reveal in order as they come into view.
 export function RevealList({
-  as = "ol",
   playFresh = true,
   each = false,
   className,
   children,
 }: {
-  as?: "ol" | "ul";
   playFresh?: boolean;
   each?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   const ref = useReveal<HTMLOListElement>({ playFresh, each });
-  const Tag = as;
   return (
-    <Tag ref={ref} className={className}>
+    <ol ref={ref} className={className}>
       {children}
-    </Tag>
+    </ol>
   );
 }

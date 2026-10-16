@@ -60,4 +60,10 @@ describe("Lineage", () => {
     expect(html.match(/lineage-marker/g)).toHaveLength(2);
     expect(html.match(/lineage-segment/g)).toHaveLength(1);
   });
+
+  it("renders visible on its own, before any script runs", () => {
+    const html = render(STEPS);
+    expect(html).not.toMatch(/opacity:\s*0[;"]/);
+    expect(html).not.toContain("data-reveal");
+  });
 });
