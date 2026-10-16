@@ -7,6 +7,7 @@ import type { ExampleCase } from "../cases/cases";
 import { type RunState, verdictWords } from "../lib/run-state";
 import { UltraSaving } from "./progress";
 import { Reveal } from "./reveal";
+import { CHANGE } from "./lineage";
 import { OpenRunLink } from "./run-sheet";
 import { unmark } from "./timeline";
 import { earliestTrace, HEADLINE, VERDICT_LOOK } from "./verdict-card";
@@ -19,15 +20,6 @@ import { earliestTrace, HEADLINE, VERDICT_LOOK } from "./verdict-card";
 // shows plain text and links to the case page instead.
 
 const TRAIL_STEPS = 3;
-
-// The chip and the dot on the line for each kind of step, the same as the
-// case page's lineage.
-const CHANGE: Record<LineageStep["change"], { label: string; look: string; dot: string }> = {
-  first: { label: "First seen", look: "bg-accent text-on-accent", dot: "bg-accent" },
-  wording: { label: "Wording changes", look: "bg-foreground/10 text-foreground", dot: "bg-foreground/40" },
-  translation: { label: "In another language", look: "bg-warn/15 text-warn", dot: "bg-warn" },
-  credit: { label: "Credit changes", look: "bg-bad/15 text-bad", dot: "bg-bad" },
-};
 
 // The judge's notes cite evidence as n3, [n3], (n3, n5), 【n3】 or "n1, n2, and
 // n7", and sometimes mark titles in Markdown. Here there are no cards to point
@@ -58,7 +50,9 @@ export function trailOf(run: RunState, max: number = TRAIL_STEPS): { steps: Trai
   return { steps: all.slice(0, max), more: Math.max(0, all.length - max) };
 }
 
-export function FeaturedCase({ example }: { example: ExampleCase }) {
+// afterHero: the hero above already shows the quote, the name it is shared
+// under and the earliest trace, so this section starts at the verdict.
+export function FeaturedCase({ example, afterHero = false }: { example: ExampleCase; afterHero?: boolean }) {
   const { caseId, run } = example;
   const output = run.verdict?.output;
   if (!output) return null;
@@ -74,18 +68,24 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
       className="scroll-mt-6 rounded-sm border border-line bg-card p-5 shadow-sm sm:p-8"
     >
       <Reveal>
-        <p className="reveal-up text-sm text-muted">One finished run, saved as it happened</p>
-        <blockquote
-          lang={run.language ?? undefined}
-          dir="auto"
-          className="reveal-up mt-2 font-serif text-2xl leading-snug italic sm:text-3xl"
-        >
-          “{run.quote}”
-        </blockquote>
-        {run.popularAttribution && (
-          <p className="reveal-up mt-1 text-muted">
-            Usually credited to <span className="text-foreground">{run.popularAttribution}</span>
-          </p>
+        <p className="reveal-up text-sm text-muted">
+          {afterHero ? "The run behind that trace, saved as it happened" : "One finished run, saved as it happened"}
+        </p>
+        {!afterHero && (
+          <>
+            <blockquote
+              lang={run.language ?? undefined}
+              dir="auto"
+              className="reveal-up mt-2 font-serif text-2xl leading-snug italic sm:text-3xl"
+            >
+              “{run.quote}”
+            </blockquote>
+            {run.popularAttribution && (
+              <p className="reveal-up mt-1 text-muted">
+                Usually credited to <span className="text-foreground">{run.popularAttribution}</span>
+              </p>
+            )}
+          </>
         )}
 
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
@@ -99,7 +99,7 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
             <h2 id="featured-title" className="mt-1 font-serif text-3xl leading-tight font-semibold">
               {HEADLINE[output.verdict](run.popularAttribution)}
             </h2>
-            {earliest && (
+            {earliest && !afterHero && (
               <p className="mt-3 text-sm">
                 Earliest trace: <strong>{earliest.trace}</strong>
                 {earliest.via && `, via ${earliest.via}`}
@@ -116,25 +116,25 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
               <h3 className="reveal-up mb-4 text-xs font-medium uppercase tracking-wider text-muted" style={{ "--i": 2 } as CSSProperties}>
                 How it got to the version people share
               </h3>
-              {/* A line down the left joins the steps, oldest first, and draws in as they arrive. */}
+              {/* A line down the left joins the steps, oldest first, and draws in as they arrive.
+                  Markers, chips and line are the case page's lineage, so the two read as one thing. */}
               <div className="relative">
                 <span
                   aria-hidden="true"
-                  className="reveal-draw-y absolute top-2 bottom-2 left-[calc(0.3125rem-0.5px)] w-px bg-line"
+                  className="reveal-draw-y absolute top-2.5 bottom-2.5 left-[calc(0.5rem-0.5px)] w-px bg-foreground/25"
                   style={{ "--i": 2 } as CSSProperties}
                 />
                 <ol className="flex flex-col gap-5">
                   {steps.map(({ change, note, node }, i) => (
                     <li
                       key={`${node.id}-${i}`}
-                      className="reveal-up relative pl-7"
+                      className="reveal-up relative grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3"
                       style={{ "--i": i + 3 } as CSSProperties}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={`absolute top-1 left-0 size-2.5 rounded-full ring-4 ring-card ${CHANGE[change].dot}`}
-                      />
-                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                      <span aria-hidden="true" className="relative flex h-5 items-center justify-center">
+                        <span className={`block shrink-0 rounded-full ${CHANGE[change].marker}`} />
+                      </span>
+                      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${CHANGE[change].look}`}>
                           {CHANGE[change].label}
                         </span>
@@ -145,7 +145,7 @@ export function FeaturedCase({ example }: { example: ExampleCase }) {
                           {node.host}
                         </Link>
                       </span>
-                      <span className="mt-1.5 block text-sm leading-snug">{note}</span>
+                      <span className="col-start-2 mt-1.5 block text-sm leading-snug">{note}</span>
                     </li>
                   ))}
                 </ol>

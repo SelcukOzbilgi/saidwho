@@ -19,10 +19,18 @@ const at = (ms: number) => ({ "--at": `${ms}ms` }) as CSSProperties;
 
 const BUTTON = "inline-flex items-center gap-2 rounded-sm px-5 py-3 font-medium transition-colors";
 
-export function Hero({ featured }: { featured: ExampleCase | undefined }) {
+// What the trace card needs from the featured case; without all three the
+// hero shows no card, and the featured section below gives the quote itself.
+export function heroTrace(featured: ExampleCase | undefined) {
   const output = featured?.run.verdict?.output;
   const credit = featured?.run.popularAttribution;
   const earliest = output && featured ? earliestTrace(output, featured.run.nodes) : null;
+  return output && credit && earliest ? { output, credit, earliest } : null;
+}
+
+export function Hero({ featured }: { featured: ExampleCase | undefined }) {
+  const trace = heroTrace(featured);
+  const { output, credit, earliest } = trace ?? {};
 
   return (
     <section

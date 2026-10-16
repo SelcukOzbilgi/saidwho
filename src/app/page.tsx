@@ -6,7 +6,7 @@ import { checkerRejections } from "../cases/checker-rejections";
 import { CaseGallery } from "../components/case-gallery";
 import { EvalNumbers } from "../components/eval-numbers";
 import { FeaturedCase } from "../components/featured-case";
-import { Hero } from "../components/hero";
+import { Hero, heroTrace } from "../components/hero";
 import { HowItWorks } from "../components/how-it-works";
 import { Investigation } from "../components/investigation";
 import { SiteFooter } from "../components/site-footer";
@@ -40,7 +40,7 @@ export default async function Home() {
       <Hero featured={featured} />
 
       {/* What a run ends with comes next, so a first visit sees it before being asked for anything. */}
-      {featured && <FeaturedCase example={featured} />}
+      {featured && <FeaturedCase example={featured} afterHero={heroTrace(featured) !== null} />}
 
       {/* Then how it got there, and how often it gets there, before the rest of the cases. */}
       <HowItWorks rejections={REJECTIONS} cases={CASES.length} />

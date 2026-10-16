@@ -72,6 +72,15 @@ describe("FeaturedCase", () => {
     expect(html).toContain("Earliest trace: <strong>1980, Narcotics Anonymous literature</strong>, via style.mla.org");
   });
 
+  it("leaves the quote, the credit and the earliest trace to the hero when it shows them", () => {
+    const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured!, afterHero: true }));
+    expect(html).not.toContain("<blockquote");
+    expect(html).not.toContain("Usually credited to");
+    expect(html).not.toContain("Earliest trace:");
+    expect(html).toContain("Albert Einstein probably didn&#x27;t say it");
+    expect(html).toContain(`href="/cases/${FEATURED_CASE_ID}#node-${trailOf(featured!.run).steps[0].node.id}"`);
+  });
+
   it("gives the judge's reasoning on every screen size, cut short only on a phone", () => {
     const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured! }));
     const reasoning = plainNote(featured!.run.verdict!.output.rationale);
