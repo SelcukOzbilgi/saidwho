@@ -25,15 +25,22 @@ const serverTheme = (): Theme => "light";
 export function switchTheme(origin: HTMLElement | null) {
   const next: Theme = currentTheme() === "dark" ? "light" : "dark";
   const root = document.documentElement;
-  if (typeof document.startViewTransition !== "function" || matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    applyTheme(next);
-    return;
-  }
-  // The CSS that turns off the default crossfade only applies while this is
-  // set. Each switch tags it, so a quick second click isn't cut short when the
-  // first one ends.
+  // While this is set, the CSS in globals.css turns off color transitions, so
+  // cards with transition-colors don't fade into the new theme after an
+  // instant switch or inside the circle, and the view transition's crossfade
+  // gives way to the reveal. Each switch tags it, so a quick second click
+  // isn't cut short when the first one ends.
   const tag = String(Date.now() + Math.random());
   root.dataset.themeSwitch = tag;
+  const settle = () => {
+    if (root.dataset.themeSwitch === tag) delete root.dataset.themeSwitch;
+  };
+  if (typeof document.startViewTransition !== "function" || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    applyTheme(next);
+    // Two frames, so the new colors are painted before transitions come back.
+    requestAnimationFrame(() => requestAnimationFrame(settle));
+    return;
+  }
   const transition = document.startViewTransition(() => applyTheme(next));
   transition.ready
     .then(() => {
@@ -48,9 +55,7 @@ export function switchTheme(origin: HTMLElement | null) {
     })
     // A transition skipped by the browser still switched the theme.
     .catch(() => {});
-  transition.finished.finally(() => {
-    if (root.dataset.themeSwitch === tag) delete root.dataset.themeSwitch;
-  });
+  transition.finished.finally(settle);
 }
 
 // A round button with a sun that turns into a moon: the rays fold away and a
@@ -63,8 +68,21 @@ export function ThemeToggle({ className }: { className?: string }) {
   const mask = useId();
 
   // A theme saved on an earlier visit may differ from the system setting the
-  // browser bar started with.
-  useEffect(() => syncThemeColor(currentTheme()), []);
+  // browser bar started with, and Next puts the tags back to their media-based
+  // colors on every route change. The header stays mounted across routes, so
+  // it watches <head> and gives the tags the page's theme again whenever they
+  // change. syncThemeColor only writes a tag that differs, so this settles.
+  useEffect(() => {
+    syncThemeColor(currentTheme());
+    const observer = new MutationObserver(() => syncThemeColor(currentTheme()));
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["content"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <button

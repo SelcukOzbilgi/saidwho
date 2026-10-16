@@ -116,6 +116,16 @@ body {
   z-index: 1;
 }
 
+/* No color fades while the theme switches: cards with transition-colors
+   would otherwise ease into the new theme after the page has already
+   changed, which is motion under reduced motion and a lag inside the circle.
+   The toggle's own icon keeps its sun-to-moon turn. */
+:root[data-theme-switch] *:not(.theme-icon, .theme-icon *),
+:root[data-theme-switch] *:not(.theme-icon, .theme-icon *)::before,
+:root[data-theme-switch] *:not(.theme-icon, .theme-icon *)::after {
+  transition: none !important;
+}
+
 /* The toggle's sun turns into a moon: the disc grows, a shadow slides over
    it and the rays fold in. It follows data-theme, so the icon is right
    before the page hydrates. */

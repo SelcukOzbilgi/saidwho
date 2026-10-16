@@ -42,7 +42,8 @@ export const metadata: Metadata = {
 
 // The browser bar takes the page's paper color, the same --background as globals.css.
 // It starts from the system setting; once the page runs, ThemeToggle gives both
-// tags the color of the theme on the page, so a theme picked there reaches it too.
+// tags the color of the theme on the page, so a theme picked there reaches it
+// too, and does it again whenever a route change puts these defaults back.
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },

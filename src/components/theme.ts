@@ -28,8 +28,10 @@ export function applyTheme(theme: Theme) {
   syncThemeColor(theme);
 }
 
+// Writes only the tags that differ, so the watcher in ThemeToggle, which
+// runs on every change to <head>, doesn't set itself off again.
 export function syncThemeColor(theme: Theme) {
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
-    meta.content = THEME_COLORS[theme];
+    if (meta.content !== THEME_COLORS[theme]) meta.content = THEME_COLORS[theme];
   }
 }

@@ -82,6 +82,24 @@ describe("ThemeToggle", () => {
     expect(colors()).toEqual([THEME_COLORS.light, THEME_COLORS.light]);
   });
 
+  it("gives the browser bar the page's theme again when a route change resets the tags", async () => {
+    document.documentElement.dataset.theme = "dark";
+    await mount();
+    // Next puts the media-based defaults back on a client route change.
+    await act(async () => {
+      document.head.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+      addThemeColorTags();
+      await Promise.resolve();
+    });
+    expect(colors()).toEqual([THEME_COLORS.dark, THEME_COLORS.dark]);
+
+    await act(async () => {
+      document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!.content = THEME_COLORS.light;
+      await Promise.resolve();
+    });
+    expect(colors()).toEqual([THEME_COLORS.dark, THEME_COLORS.dark]);
+  });
+
   it("follows a theme set elsewhere on the page", async () => {
     const button = await mount();
     await act(async () => {
@@ -122,5 +140,9 @@ describe("ThemeToggle", () => {
     await act(async () => button.click());
     expect(startViewTransition).not.toHaveBeenCalled();
     expect(document.documentElement.dataset.theme).toBe("dark");
+    // Color transitions stay off until the new theme is painted, then come back.
+    expect(document.documentElement.hasAttribute("data-theme-switch")).toBe(true);
+    await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(document.documentElement.hasAttribute("data-theme-switch")).toBe(false);
   });
 });
