@@ -99,3 +99,233 @@ body {
     animation: none;
   }
 }
+
+/* Home */
+
+/* Scroll reveals, set by Reveal in reveal.tsx. Without its data-reveal
+   attribute, which it never sets under reduced motion, everything is in place. */
+[data-reveal="wait"] .reveal-up {
+  opacity: 0;
+  transform: translateY(14px);
+}
+[data-reveal="wait"] .reveal-pop {
+  opacity: 0;
+  transform: scale(0.6);
+}
+[data-reveal="wait"] .reveal-draw-y {
+  transform: scaleY(0);
+}
+[data-reveal="wait"] .reveal-draw-x {
+  transform: scaleX(0);
+}
+[data-reveal="in"] :is(.reveal-up, .reveal-pop) {
+  transition:
+    opacity 420ms ease-out,
+    transform 420ms ease-out;
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+[data-reveal="in"] :is(.reveal-draw-y, .reveal-draw-x) {
+  transition: transform 450ms ease-out;
+  transition-delay: calc(var(--i, 0) * 80ms + 120ms);
+}
+.reveal-draw-y {
+  transform-origin: top;
+}
+.reveal-draw-x {
+  transform-origin: left;
+}
+
+/* A strike drawn through text, line by line when it wraps: one background
+   line, laid across the lines of the text end to end, that grows from the left. */
+.strike {
+  background-image: linear-gradient(var(--bad), var(--bad));
+  background-repeat: no-repeat;
+  background-position: 0 58%;
+  background-size: 100% 0.09em;
+}
+[data-reveal="wait"] .strike {
+  background-size: 0% 0.09em;
+}
+[data-reveal="in"] .strike {
+  transition: background-size 700ms ease-out calc(var(--i, 0) * 80ms + 300ms);
+}
+
+/* A marker pen's stroke behind a few words, in the banner's orange. */
+.marker {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    color-mix(in srgb, var(--accent) 22%, transparent)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding-inline: 0.08em;
+  margin-inline: -0.08em;
+}
+
+/* The hero's trace plays once, as the page opens: the credit is struck out and
+   the origin written in. An inline script sets data-play before the first paint,
+   so without JavaScript, or with reduced motion, it shows how it ends. */
+.hero-trace[data-play] .hero-step {
+  animation: hero-step 380ms ease-out both;
+  animation-delay: var(--at);
+}
+.hero-trace[data-play] .strike {
+  animation: hero-strike 420ms ease-out both;
+  animation-delay: var(--at);
+}
+.hero-trace[data-play] .marker {
+  animation: hero-marker 450ms ease-out both;
+  animation-delay: var(--at);
+}
+.hero-trace[data-play] .hero-char {
+  animation: hero-char 1ms linear both;
+  animation-delay: calc(var(--at) + var(--c) * 24ms);
+}
+.hero-trace[data-play] .hero-caret {
+  animation: hero-caret 1.6s steps(1) both;
+  animation-delay: var(--at);
+}
+.hero-caret {
+  opacity: 0;
+}
+.hero-replay {
+  display: none;
+}
+.hero-trace[data-play] .hero-replay {
+  display: inline-flex;
+}
+
+@keyframes hero-step {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes hero-strike {
+  from {
+    background-size: 0% 0.09em;
+  }
+}
+@keyframes hero-marker {
+  from {
+    background-size: 0% 100%;
+  }
+}
+@keyframes hero-char {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hero-caret {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  25%,
+  75%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* How it works: the loop from the Genealogist back to the Readers draws in,
+   then a dot runs it once for each round a run may take. */
+.hiw-loop-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+[data-reveal="wait"] .hiw-loop-path {
+  stroke-dashoffset: 1;
+}
+[data-reveal="in"] .hiw-loop-path {
+  transition: stroke-dashoffset 700ms ease-out 900ms;
+}
+[data-reveal="wait"] .hiw-loop-head {
+  opacity: 0;
+}
+[data-reveal="in"] .hiw-loop-head {
+  transition: opacity 200ms ease-out 1500ms;
+}
+.hiw-loop-dot {
+  display: none;
+}
+[data-reveal="in"] .hiw-loop-dot {
+  display: block;
+  offset-rotate: 0deg;
+  animation: hiw-round 1.4s ease-in-out 1.7s both;
+  animation-iteration-count: var(--rounds, 1);
+}
+@keyframes hiw-round {
+  from {
+    offset-distance: 0%;
+    opacity: 1;
+  }
+  to {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+}
+
+/* Run your own: a tab with a sheet under it. Asked for from the header or a
+   button, the sheet unfolds down from its tab once it is in view (RunSheet sets
+   data-open). Scrolled to, or without JavaScript, it is simply open. */
+.run-sheet[data-open="wait"] .run-panel {
+  clip-path: inset(0 0 100% 0);
+}
+.run-sheet[data-open="wait"] .run-tab {
+  transform: translateY(0.75rem);
+}
+.run-sheet[data-open="play"] .run-tab {
+  animation: run-tab 240ms ease-out both;
+}
+.run-sheet[data-open="play"] .run-panel {
+  animation: run-unfold 460ms cubic-bezier(0.2, 0.7, 0.2, 1) 160ms both;
+}
+.run-sheet[data-open="play"] .run-row {
+  animation: hero-step 320ms ease-out both;
+  animation-delay: calc(360ms + var(--i, 0) * 70ms);
+}
+@keyframes run-tab {
+  from {
+    transform: translateY(0.75rem);
+  }
+}
+@keyframes run-unfold {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Who pays: a thumb under the two choices, on whichever radio is checked. The
+   choices stack on a phone and sit side by side from the sm width up. */
+.seg-thumb {
+  transition: transform 260ms ease-out;
+}
+.seg:has(> label:nth-of-type(2) input:checked) .seg-thumb {
+  transform: translateY(100%);
+}
+@media (min-width: 40rem) {
+  .seg:has(> label:nth-of-type(2) input:checked) .seg-thumb {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-trace *,
+  .run-sheet *,
+  .hiw-loop-dot {
+    animation: none !important;
+  }
+  .seg-thumb,
+  [data-reveal] * {
+    transition: none !important;
+  }
+  .hiw-loop-dot {
+    display: none !important;
+  }
+}
