@@ -71,6 +71,40 @@ describe("HeaderHeight", () => {
     expect(headerHeight()).toBe("61px");
   });
 
+  it("lines up a #section the browser jumped to before the header was measured", async () => {
+    const section = document.createElement("section");
+    section.id = "cases";
+    section.getBoundingClientRect = () => ({ top: 104 }) as DOMRect;
+    section.scrollIntoView = vi.fn();
+    document.body.append(section);
+    window.history.replaceState(null, "", "/#cases");
+    height = 393;
+    window.innerHeight = 1600;
+    try {
+      await mount();
+      expect(section.scrollIntoView).toHaveBeenCalledOnce();
+    } finally {
+      section.remove();
+      window.history.replaceState(null, "", "/");
+    }
+  });
+
+  it("leaves the page alone when the #section is already clear of the header", async () => {
+    const section = document.createElement("section");
+    section.id = "cases";
+    section.getBoundingClientRect = () => ({ top: 85 }) as DOMRect;
+    section.scrollIntoView = vi.fn();
+    document.body.append(section);
+    window.history.replaceState(null, "", "/#cases");
+    try {
+      await mount();
+      expect(section.scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      section.remove();
+      window.history.replaceState(null, "", "/");
+    }
+  });
+
   it("clears what it set when it unmounts", async () => {
     await mount();
     await act(async () => root!.unmount());
