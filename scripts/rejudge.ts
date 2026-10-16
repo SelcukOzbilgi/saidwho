@@ -4,7 +4,8 @@
 // run, since the Judge thinks at temperature 0.6, and several variants in one
 // pass, so a prompt or a check can be compared with main's on the same evidence.
 //
-// Run: node --env-file=<file with NEBIUS_API_KEY> --conditions=react-server --import tsx scripts/rejudge.ts
+// Run: pnpm rejudge <arguments>, with NEBIUS_API_KEY in .env.local or the shell, or
+//   node --env-file=<file with NEBIUS_API_KEY> --conditions=react-server --import tsx scripts/rejudge.ts
 //   --logs <dir>[,<dir>…]   run logs, such as .runs/eval/cascade
 //   --cache <dir>           the eval's search cache, such as .runs/eval/search-cache
 //   [--set main|holdout]    the quotes the runs are scored against (main by default)

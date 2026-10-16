@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { ANSWER_SITES, hostOf } from "../agent/orchestrator";
 import { parseEvalCases } from "../eval/cases";
-import { CASES } from "./cases";
+import { CASES, parseCaseLog } from "./cases";
 
 const evalCases = parseEvalCases(readFileSync(new URL("../../eval/quotes.jsonl", import.meta.url), "utf8"));
 
@@ -31,5 +31,18 @@ describe("example cases", () => {
       e.type === "page_read" ? [e.host] : e.type === "node_added" ? [e.node.host] : [],
     );
     expect(readHosts.filter(isExcluded)).toEqual([]);
+  });
+});
+
+describe("case log format", () => {
+  const { caseId, ranAt, events } = CASES[0];
+  const saved = { caseId, ranAt, events };
+
+  it("reads a log with or without the commit that ran it", () => {
+    expect(parseCaseLog(saved).code).toBeUndefined();
+    // pnpm investigate writes null when the code isn't a git checkout.
+    expect(parseCaseLog({ ...saved, code: null }).code).toBeNull();
+    const code = { commit: "5eb0796", changes: null };
+    expect(parseCaseLog({ ...saved, code }).code).toEqual(code);
   });
 });

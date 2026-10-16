@@ -14,6 +14,7 @@
     "smoke:tavily": "node --env-file=.env.local --conditions=react-server --import tsx scripts/smoke/tavily.ts",
     "investigate": "node --env-file=.env.local --conditions=react-server --import tsx scripts/investigate.ts",
     "eval": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/eval.ts",
+    "rejudge": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/rejudge.ts",
     "prepare": "node scripts/enable-hooks.mjs"
   },
   "dependencies": {
@@ -37,6 +38,9 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": "24.x"
   },
   "packageManager": "pnpm@10.33.0"
 }
