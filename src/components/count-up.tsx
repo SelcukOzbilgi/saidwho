@@ -29,9 +29,20 @@ export function CountUp({ value }: { value: number }) {
     };
   }, [value]);
 
+  // The real number stays in the page for screen readers, find-in-page and
+  // translators, whatever the digits on screen are doing. The digits keep the
+  // width of the final number, so the words after them don't shift as it counts.
   return (
-    <span ref={ref} className="tabular-nums">
-      {value}
-    </span>
+    <>
+      <span className="sr-only">{value}</span>
+      <span
+        ref={ref}
+        aria-hidden="true"
+        className="inline-block text-right tabular-nums"
+        style={{ minWidth: `${String(value).length}ch` }}
+      >
+        {value}
+      </span>
+    </>
   );
 }
