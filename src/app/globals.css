@@ -99,3 +99,54 @@ body {
     animation: none;
   }
 }
+
+/* Shell */
+
+/* The theme switch. While ThemeToggle runs a view transition, the old page
+   stays put under the new one and the new one grows out of the button, in
+   place of the browser's crossfade. Scoped to the switch so other view
+   transitions keep their own animation. */
+:root[data-theme-switch]::view-transition-old(root),
+:root[data-theme-switch]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+:root[data-theme-switch]::view-transition-new(root) {
+  z-index: 1;
+}
+
+/* The toggle's sun turns into a moon: the disc grows, a shadow slides over
+   it and the rays fold in. It follows data-theme, so the icon is right
+   before the page hydrates. */
+.theme-icon :is(.theme-icon-disc, .theme-icon-shade, .theme-icon-rays) {
+  transform-origin: 12px 12px;
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 250ms ease-out;
+}
+
+:root[data-theme="dark"] .theme-icon-disc {
+  transform: scale(1.7);
+}
+
+:root[data-theme="dark"] .theme-icon-shade {
+  transform: translate(-9.33px, 6.33px);
+}
+
+:root[data-theme="dark"] .theme-icon-rays {
+  opacity: 0;
+  transform: rotate(-45deg) scale(0.6);
+}
+
+/* Without the script in layout.tsx there's no data-theme and nothing to
+   switch, so the button stays out of the way. */
+:root:not([data-theme]) .theme-toggle {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-icon :is(.theme-icon-disc, .theme-icon-shade, .theme-icon-rays) {
+    transition: none;
+  }
+}
