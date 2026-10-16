@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CASCADE } from "../agent/models";
+import { TRACE_ROUNDS } from "../agent/orchestrator";
 import { CASES } from "../cases/cases";
 import { checkerRejections } from "../cases/checker-rejections";
 import { MODEL_NAME } from "../lib/model-name";
@@ -45,5 +46,19 @@ describe("HowItWorks", () => {
     const one = text(render({ rejected: 1, rescued: 1, crossedOut: 0, example: null }));
     expect(one).toContain("turned down 1 snippet. 1 passed when");
     expect(one).not.toContain("like this one");
+  });
+
+  it("shows the crossed-out snippet the counts link to, from its saved case, and none without one", () => {
+    const counts = checkerRejections(CASES);
+    const found = CASES.find((c) => c.caseId === counts.example!.caseId)!;
+    const node = found.run.nodes.find((n) => n.id === counts.example!.nodeId)!;
+    const shown = text(render(counts));
+    expect(shown).toContain(node.reader.exact_snippet!.slice(0, 40));
+    expect(shown).toContain(`Crossed out in the case for “${found.run.quote}”: a sentence a Reader copied from ${node.host}.`);
+    expect(text(render({ ...counts, example: null }))).not.toContain("Crossed out in the case");
+  });
+
+  it("says the Genealogist loops back to the Readers for as many rounds as the orchestrator allows", () => {
+    expect(text(render())).toContain(`Back to the Readers, up to ${TRACE_ROUNDS} rounds`);
   });
 });
