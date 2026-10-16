@@ -446,3 +446,61 @@ details[open] .menu-panel {
     display: none !important;
   }
 }
+
+/* Case */
+/* The case page's diagrams reveal in order as they scroll into view. useReveal
+   in case-motion.tsx sets data-reveal on the list: "armed" hides the parts
+   before they are seen, "shown" plays a whole list in, and data-seen plays in
+   one part of a long list. Without JavaScript, or for a list already on screen
+   at load, nothing is set and the markup stays as the server drew it. --i is a
+   lineage step's place in its list. */
+[data-reveal="armed"] :is(.lineage-marker, .lineage-text, .reveal-item:not([data-seen])) {
+  opacity: 0;
+}
+[data-reveal="armed"] .lineage-marker {
+  transform: scale(0.3);
+}
+[data-reveal="armed"] :is(.lineage-text, .reveal-item:not([data-seen])) {
+  transform: translateY(8px);
+}
+[data-reveal="armed"] .lineage-segment {
+  transform: scaleY(0);
+}
+
+/* The lineage goes one step at a time: the marker lands, its words come in, then
+   the line draws down toward the next step. */
+.lineage-segment {
+  transform-origin: top;
+}
+[data-reveal="shown"] .lineage-marker {
+  transition:
+    opacity 200ms ease-out,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 160ms);
+}
+[data-reveal="shown"] .lineage-text {
+  transition:
+    opacity 280ms ease-out,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 160ms + 60ms);
+}
+[data-reveal="shown"] .lineage-segment {
+  transition: transform 220ms ease-out;
+  transition-delay: calc(var(--i, 0) * 160ms + 120ms);
+}
+
+/* Timeline cards come in as each is scrolled to; --wait spaces out those seen together, oldest first. */
+[data-reveal="armed"] .reveal-item[data-seen] {
+  transition:
+    opacity 300ms ease-out,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--wait, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce), print {
+  [data-reveal="armed"] :is(.lineage-marker, .lineage-text, .lineage-segment, .reveal-item) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

@@ -1,5 +1,6 @@
 import { plural } from "../lib/plural";
 import type { Phase, RunState } from "../lib/run-state";
+import { Arrivals, Enter } from "./case-motion";
 
 type Props = Pick<RunState, "phase" | "plan" | "searches" | "pages" | "readUrls" | "nodes"> & {
   // Whether the run log already announces each step to screen readers. A replay's
@@ -34,7 +35,12 @@ export function RunSoFar({ phase, plan, searches, pages, readUrls, nodes, announ
         <span className="size-2 rounded-full bg-accent motion-safe:animate-pulse" aria-hidden />
         Under way
       </p>
-      <h2 className="mt-2 font-serif text-2xl leading-tight font-semibold">{now[phase]}</h2>
+      {/* Each new step's words rise in where the last one's were. */}
+      <Arrivals>
+        <Enter key={phase} rise={6}>
+          <h2 className="mt-2 font-serif text-2xl leading-tight font-semibold">{now[phase]}</h2>
+        </Enter>
+      </Arrivals>
       {!announce && (
         <span className="sr-only" aria-live="polite">
           {STEP[phase]}

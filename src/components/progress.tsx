@@ -53,10 +53,14 @@ export function Progress({ running, aside, phase, finished, searches, pages, rea
           const state = i < at || (i === at && ended) ? "done" : i === at && running ? "now" : "later";
           return (
             <li key={step.phase} aria-current={state === "now" ? "step" : undefined} className="flex items-center gap-2 sm:block">
-              <div
-                className={`h-1 w-6 shrink-0 rounded-full sm:w-auto ${state === "done" ? "bg-foreground" : state === "now" ? "motion-safe:animate-pulse bg-accent" : "bg-line"}`}
-              />
-              <p className={`text-xs font-medium sm:mt-1.5 ${state === "later" ? "text-muted" : ""}`}>{step.label}</p>
+              {/* Each step's bar fills from the left as the run reaches it, and turns from
+                  the marker's orange to ink once the step is done. */}
+              <div className="relative h-1 w-6 shrink-0 overflow-hidden rounded-full bg-line sm:w-auto">
+                <div
+                  className={`absolute inset-0 origin-left rounded-full transition-[scale,background-color] duration-[450ms] ease-out motion-reduce:transition-none ${state === "later" ? "scale-x-0" : "scale-x-100"} ${state === "done" ? "bg-foreground" : "bg-accent"} ${state === "now" ? "motion-safe:animate-pulse" : ""}`}
+                />
+              </div>
+              <p className={`text-xs font-medium transition-colors duration-300 sm:mt-1.5 ${state === "later" ? "text-muted" : ""}`}>{step.label}</p>
               {detail[step.phase] && <p className="text-[11px] text-muted tabular-nums">{detail[step.phase]}</p>}
             </li>
           );
