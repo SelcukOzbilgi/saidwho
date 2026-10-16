@@ -54,4 +54,10 @@ describe("Lineage", () => {
     expect(render(STEPS.slice(0, 2))).toBe("");
     expect(render([])).toBe("");
   });
+
+  it("joins the steps with one line, with a stretch between each pair and none after the last", () => {
+    const html = render(STEPS);
+    expect(html.match(/lineage-marker/g)).toHaveLength(2);
+    expect(html.match(/lineage-segment/g)).toHaveLength(1);
+  });
 });
