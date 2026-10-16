@@ -193,3 +193,22 @@ details[open] .menu-panel {
     animation: none;
   }
 }
+
+/* The footer's star fills with the marker orange and turns one point on hover. */
+.star-nudge-icon {
+  fill: transparent;
+  transition:
+    fill 200ms ease-out,
+    transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.star-nudge:is(:hover, :focus-visible) .star-nudge-icon {
+  fill: var(--accent);
+  transform: rotate(72deg) scale(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-nudge:is(:hover, :focus-visible) .star-nudge-icon {
+    transform: none;
+  }
+}
