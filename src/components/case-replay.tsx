@@ -69,10 +69,13 @@ type ControlProps = {
 
 // The replay's controls. One button stays put throughout, starting the replay and
 // then pausing it, so keyboard focus isn't lost when the replay starts or ends.
-// The bar beside it shows how far the replay has got, and moves it when dragged.
+// The bar beside it shows how far the replay has got, and moves it when dragged;
+// a drag holds the replay still and lets it carry on from the new place.
 function ReplayControl({ shown, total, paused, onStart, onPause, onSeek }: ControlProps) {
   const replaying = shown < total;
   const main = useRef<HTMLButtonElement>(null);
+  // Whether the replay was playing when a drag on the bar began, so it carries on after.
+  const resume = useRef(false);
 
   const seek = (n: number) => onSeek(Math.min(total, Math.max(1, n)));
   const seekTo = (event: PointerEvent<HTMLDivElement>) => {
@@ -134,11 +137,21 @@ function ReplayControl({ shown, total, paused, onStart, onPause, onSeek }: Contr
               aria-valuetext={`Event ${shown} of ${total}`}
               onPointerDown={(event) => {
                 event.currentTarget.setPointerCapture(event.pointerId);
+                // Held still while dragging, so the replay doesn't pull away from the pointer.
+                resume.current = !paused;
                 onPause(true);
                 seekTo(event);
               }}
               onPointerMove={(event) => {
                 if (event.currentTarget.hasPointerCapture(event.pointerId)) seekTo(event);
+              }}
+              onPointerUp={() => {
+                if (resume.current) onPause(false);
+                resume.current = false;
+              }}
+              onPointerCancel={() => {
+                if (resume.current) onPause(false);
+                resume.current = false;
               }}
               onKeyDown={onKey}
               className="relative flex h-9 w-28 cursor-ew-resize touch-none items-center rounded-sm select-none sm:w-44"
