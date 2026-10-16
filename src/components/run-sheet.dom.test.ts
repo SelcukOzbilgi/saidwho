@@ -80,6 +80,16 @@ describe("RunSheet", () => {
     expect(sheet().dataset.open).toBeUndefined();
   });
 
+  it("opens anyway if the sheet never reports coming into view", async () => {
+    await mount();
+    await act(async () => void window.dispatchEvent(new Event(OPEN_RUN)));
+    expect(sheet().dataset.open).toBe("wait");
+    await act(async () => vi.advanceTimersByTime(3_000));
+    expect(sheet().dataset.open).toBe("play");
+    await act(async () => vi.advanceTimersByTime(1_500));
+    expect(document.activeElement).toBe(quote());
+  });
+
   it("opens for a #run link, on load and when the hash changes, but once for a click that does both", async () => {
     window.history.replaceState(null, "", "/#run");
     await mount();

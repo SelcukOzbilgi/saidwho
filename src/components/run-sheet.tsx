@@ -26,6 +26,9 @@ export function OpenRunLink({ className, children }: { className?: string; child
 // browser never reports the animation's end, and when the last row is in.
 const UNFOLD_MS = 700;
 const ROWS_MS = 1_200;
+// If the sheet never reports coming into view, it opens anyway after this long,
+// so a folded sheet can't be left behind its tab.
+const WAIT_MS = 3_000;
 
 export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: ReactNode; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -44,6 +47,8 @@ export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: Rea
       if (event.target === panel && event.animationName === "run-unfold") focusQuote();
     };
     const play = () => {
+      observer?.disconnect();
+      clearTimers();
       sheet.dataset.open = "play";
       timers.push(
         setTimeout(focusQuote, UNFOLD_MS),
@@ -67,13 +72,12 @@ export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: Rea
       // The page may still be gliding down to the sheet; it opens once its top is well in view.
       observer = new IntersectionObserver(
         (entries) => {
-          if (!entries.some((e) => e.isIntersecting)) return;
-          observer?.disconnect();
-          play();
+          if (entries.some((e) => e.isIntersecting)) play();
         },
         { rootMargin: "0px 0px -30% 0px" },
       );
       observer.observe(sheet);
+      timers.push(setTimeout(play, WAIT_MS));
     };
     const onHash = () => {
       if (window.location.hash === "#run") open();
