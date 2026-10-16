@@ -98,7 +98,8 @@ function SetCard({ title, scores, i }: { title: string; scores: Scores & { quote
         </div>
         <div>
           <dt className="text-xs text-muted">Nebius cost and time per quote</dt>
-          <dd className="mt-0.5 font-medium tabular-nums">
+          {/* Proportional figures: Schibsted Grotesk's tabular set gives the decimal point a digit's width. */}
+          <dd className="mt-0.5 font-medium">
             {scores.usdPerQuote} · {scores.time}
           </dd>
         </div>
