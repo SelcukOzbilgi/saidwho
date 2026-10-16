@@ -82,7 +82,10 @@ function crossedOutSnippet(example: CheckerRejections["example"]) {
   const node = found?.run.nodes.find((n) => n.id === example.nodeId);
   if (!found || !node?.reader.exact_snippet) return null;
   const text = node.reader.exact_snippet.trim();
-  const cut = text.length <= 120 ? text : `${text.slice(0, text.lastIndexOf(" ", 120)).replace(/[,;:.]$/, "")}…`;
+  // Cut at the last space before 120 characters, or at 120 when there is no
+  // space late enough (a long URL, or a language written without spaces).
+  const space = text.lastIndexOf(" ", 120);
+  const cut = text.length <= 120 ? text : `${text.slice(0, space > 60 ? space : 120).replace(/[,;:.]$/, "")}…`;
   return { text: cut, host: node.host, quote: found.run.quote };
 }
 
@@ -179,9 +182,7 @@ export function HowItWorks({ rejections, cases }: { rejections: CheckerRejection
                       {checker && snippet && (
                         <figure className="mt-3 rounded-sm border border-dashed border-bad/40 bg-bad/5 px-3 py-2.5">
                           <blockquote className="font-serif text-[15px] leading-snug text-foreground/70">
-                            <s className="strike no-underline" style={{ "--i": i + 2 } as CSSProperties}>
-                              “{snippet.text}”
-                            </s>
+                            <s className="decoration-bad decoration-[0.09em]">“{snippet.text}”</s>
                           </blockquote>
                           <figcaption className="mt-1.5 text-xs text-muted">
                             Crossed out in the case for “{snippet.quote}”: a sentence a Reader copied from {snippet.host}.

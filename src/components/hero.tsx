@@ -17,12 +17,6 @@ import { earliestTrace, HEADLINE, VERDICT_LOOK } from "./verdict-card";
 const AT = { credit: 250, strike: 700, origin: 1150, marker: 2050, verdict: 2250 };
 const at = (ms: number) => ({ "--at": `${ms}ms` }) as CSSProperties;
 
-// Sets data-play on the trace while the page is parsed, before anything is
-// painted, so it starts from its first frame instead of showing its end and
-// jumping back. Without JavaScript, or with reduced motion, it isn't set, and
-// the trace shows how it ends.
-const PLAY = `(function(s){try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)s.previousElementSibling.setAttribute("data-play","")}catch(e){}})(document.currentScript)`;
-
 const BUTTON = "inline-flex items-center gap-2 rounded-sm px-5 py-3 font-medium transition-colors";
 
 export function Hero({ featured }: { featured: ExampleCase | undefined }) {
@@ -63,69 +57,65 @@ export function Hero({ featured }: { featured: ExampleCase | undefined }) {
         </div>
 
         {featured && output && credit && earliest && (
-          <>
-            <figure
-              aria-label="One finished case, in short"
-              // PLAY adds data-play before hydration.
-              suppressHydrationWarning
-              className="hero-trace rounded-sm border border-line bg-card p-5 shadow-sm sm:p-6"
+          <figure
+            aria-label="One finished case, in short"
+            // globals.css plays the trace only where scripts run and motion is welcome.
+            className="hero-trace rounded-sm border border-line bg-card p-5 shadow-sm sm:p-6"
+          >
+            <div className="flex items-center justify-between gap-3 text-xs text-muted">
+              <span>One quote, traced</span>
+              <HeroReplay />
+            </div>
+            <blockquote
+              lang={featured.run.language ?? undefined}
+              dir="auto"
+              className="mt-3 font-serif text-2xl leading-snug italic sm:text-[1.7rem]"
             >
-              <div className="flex items-center justify-between gap-3 text-xs text-muted">
-                <span>One quote, traced</span>
-                <HeroReplay />
+              “{featured.run.quote}”
+            </blockquote>
+
+            <dl className="mt-5 grid gap-4 border-t border-line pt-4">
+              <div className="hero-step" style={at(AT.credit)}>
+                <dt className="text-xs font-medium uppercase tracking-wider text-muted">Usually credited to</dt>
+                <dd className="mt-1 font-serif text-2xl">
+                  {/* s: no longer taken as right. The line is drawn over it, so it can be struck in front of the reader. */}
+                  <s className="strike no-underline" style={at(AT.strike)}>
+                    {credit}
+                  </s>
+                </dd>
               </div>
-              <blockquote
-                lang={featured.run.language ?? undefined}
-                dir="auto"
-                className="mt-3 font-serif text-2xl leading-snug italic sm:text-[1.7rem]"
-              >
-                “{featured.run.quote}”
-              </blockquote>
-
-              <dl className="mt-5 grid gap-4 border-t border-line pt-4">
-                <div className="hero-step" style={at(AT.credit)}>
-                  <dt className="text-xs font-medium uppercase tracking-wider text-muted">Usually credited to</dt>
-                  <dd className="mt-1 font-serif text-2xl">
-                    {/* s: no longer taken as right. The line is drawn, so it can be struck in front of the reader. */}
-                    <s className="strike no-underline" style={at(AT.strike)}>
-                      {credit}
-                    </s>
-                  </dd>
-                </div>
-                <div className="hero-step" style={at(AT.origin - 150)}>
-                  <dt className="text-xs font-medium uppercase tracking-wider text-muted">Earliest trace found</dt>
-                  <dd className="mt-1 font-serif text-2xl text-accent-ink">
-                    <span className="sr-only">{earliest.trace}</span>
-                    <span aria-hidden="true" className="marker" style={at(AT.marker)}>
-                      {Array.from(earliest.trace).map((char, i) => (
-                        <span key={i} className="hero-char" style={{ ...at(AT.origin), "--c": i } as CSSProperties}>
-                          {char}
-                        </span>
-                      ))}
-                    </span>
-                    {earliest.via && <span className="mt-1 block font-sans text-sm text-muted">via {earliest.via}</span>}
-                  </dd>
-                </div>
-              </dl>
-
-              <figcaption className="hero-step mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line pt-4" style={at(AT.verdict)}>
-                <span className="text-sm">
-                  <span className={`font-medium uppercase tracking-wider text-xs ${VERDICT_LOOK[output.verdict]}`}>
-                    {verdictWords(output.verdict)}
+              <div className="hero-step" style={at(AT.origin - 150)}>
+                <dt className="text-xs font-medium uppercase tracking-wider text-muted">Earliest trace found</dt>
+                <dd className="mt-1 font-serif text-2xl text-accent-ink">
+                  <span className="sr-only">{earliest.trace}</span>
+                  <span aria-hidden="true" className="marker" style={at(AT.marker)}>
+                    {Array.from(earliest.trace).map((char, i) => (
+                      <span key={i} className="hero-char" style={{ ...at(AT.origin), "--c": i } as CSSProperties}>
+                        {char}
+                      </span>
+                    ))}
                   </span>
-                  <span className="text-muted"> · {output.confidence} confidence</span>
-                  <span className="mt-0.5 block font-medium">{HEADLINE[output.verdict](credit)}</span>
+                  {earliest.via && <span className="mt-1 block font-sans text-sm text-muted">via {earliest.via}</span>}
+                </dd>
+              </div>
+            </dl>
+
+            <figcaption className="hero-step mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line pt-4" style={at(AT.verdict)}>
+              <span className="text-sm">
+                <span className={`font-medium uppercase tracking-wider text-xs ${VERDICT_LOOK[output.verdict]}`}>
+                  {verdictWords(output.verdict)}
                 </span>
-                <Link
-                  href={`/cases/${featured.caseId}`}
-                  className="text-sm underline decoration-line underline-offset-4 hover:decoration-foreground"
-                >
-                  See every step
-                </Link>
-              </figcaption>
-            </figure>
-            <script dangerouslySetInnerHTML={{ __html: PLAY }} />
-          </>
+                <span className="text-muted"> · {output.confidence} confidence</span>
+                <span className="mt-0.5 block font-medium">{HEADLINE[output.verdict](credit)}</span>
+              </span>
+              <Link
+                href={`/cases/${featured.caseId}`}
+                className="text-sm underline decoration-line underline-offset-4 hover:decoration-foreground"
+              >
+                See every step
+              </Link>
+            </figcaption>
+          </figure>
         )}
       </div>
     </section>

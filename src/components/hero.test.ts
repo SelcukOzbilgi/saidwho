@@ -9,7 +9,7 @@ import { earliestTrace } from "./verdict-card";
 const featured = findCase(FEATURED_CASE_ID)!;
 const render = (example: typeof featured | undefined = featured) =>
   renderToStaticMarkup(createElement(Hero, { featured: example }));
-const text = (html: string) => html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, "");
+const text = (html: string) => html.replace(/<[^>]+>/g, "");
 
 describe("Hero", () => {
   it("names the site in its one h1 and points to a finished case and to the form", () => {
@@ -32,11 +32,11 @@ describe("Hero", () => {
     expect(html).toContain("Albert Einstein probably didn&#x27;t say it");
   });
 
-  it("is rendered as it ends, so it reads without JavaScript; only the inline script starts it playing", () => {
-    const withoutScript = render().replace(/<script[\s\S]*?<\/script>/g, "");
-    expect(withoutScript).not.toContain("data-play");
-    expect(withoutScript).not.toMatch(/opacity:\s*0/);
-    expect(render()).toContain("prefers-reduced-motion: reduce");
+  it("is rendered as it ends, so it reads without JavaScript; only the stylesheet plays it", () => {
+    const html = render();
+    expect(html).not.toContain("<script");
+    expect(html).not.toMatch(/opacity:\s*0/);
+    expect(html).not.toContain("hero-rewind");
   });
 
   it("keeps the name and both lines of copy without a featured case", () => {
