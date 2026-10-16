@@ -51,14 +51,15 @@
 }
 
 /* The site header sticks to the top, so a jump to #cases or #run stops below it.
-   It wraps to two rows on a phone and fits one row from the sm width up. */
+   HeaderHeight sets the header's measured height; until it runs, the fallback
+   allows for two rows on a phone and one from the sm width up. */
 html {
-  scroll-padding-top: 6.5rem;
+  scroll-padding-top: var(--site-header-height, 6.5rem);
 }
 
 @media (min-width: 40rem) {
   html {
-    scroll-padding-top: 5rem;
+    scroll-padding-top: var(--site-header-height, 4rem);
   }
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { HeaderHeight } from "./header-height";
 import { Wordmark } from "./logo-mark";
 
 const NAV = [
@@ -10,10 +11,10 @@ const NAV = [
 
 // A quiet strip on every page, in the same column as the page below it, so a
 // case page has a way back to the rest of the site. It stays at the top while
-// the page scrolls under it; globals.css keeps anchor jumps clear of it.
+// the page scrolls under it, and HeaderHeight keeps anchor jumps clear of it.
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-10 data-[tall]:static border-b border-line bg-background/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 px-4 py-1 text-sm sm:px-6 sm:py-2">
         <Link href="/" className="inline-block py-2 font-serif text-lg font-semibold">
           <Wordmark />
@@ -32,6 +33,7 @@ export function SiteHeader() {
           </a>
         </nav>
       </div>
+      <HeaderHeight />
     </header>
   );
 }
