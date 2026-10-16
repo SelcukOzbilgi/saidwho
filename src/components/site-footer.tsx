@@ -39,7 +39,7 @@ export function SiteFooter() {
           <StarOnGitHub />
         </div>
 
-        <LinkGroup id="footer-site" title="On this site">
+        <LinkGroup id="footer-site" title="On this site" nav>
           {SECTIONS.map(({ id, label }) => (
             <li key={id}>
               <SectionLink id={id} className={link}>
@@ -79,14 +79,17 @@ export function SiteFooter() {
   );
 }
 
-function LinkGroup({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+// Only the site's own sections are navigation; the project and built-on
+// groups point elsewhere, so they stay out of the landmark list.
+function LinkGroup({ id, title, nav, children }: { id: string; title: string; nav?: boolean; children: ReactNode }) {
+  const Group = nav ? "nav" : "div";
   return (
-    <nav aria-labelledby={id}>
+    <Group aria-labelledby={nav ? id : undefined}>
       <p id={id} className="text-xs font-medium tracking-wider text-foreground uppercase">
         {title}
       </p>
       <ul className="mt-3 space-y-1">{children}</ul>
-    </nav>
+    </Group>
   );
 }
 
@@ -98,7 +101,7 @@ function StarOnGitHub() {
     <div className="mt-5">
       <a
         href={REPO_URL}
-        className="star-nudge group inline-flex items-center gap-2.5 rounded-sm border border-line bg-card px-4 py-2.5 font-medium transition-colors duration-150 hover:border-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
+        className="star-nudge inline-flex items-center gap-2.5 rounded-sm border border-line bg-card px-4 py-2.5 font-medium transition-colors duration-150 hover:border-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
       >
         <GitHubMark className="size-[1.1rem]" />
         Star it on GitHub

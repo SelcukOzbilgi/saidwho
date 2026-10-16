@@ -92,7 +92,7 @@ function SectionMenu({
   active,
   onFollow,
 }: {
-  active: string | null;
+  active: SectionId | null;
   onFollow: (id: SectionId) => void;
 }) {
   const menu = useRef<HTMLDetailsElement>(null);
@@ -133,7 +133,8 @@ function SectionMenu({
       </summary>
       <nav
         aria-label="Sections"
-        className="menu-panel absolute top-full right-0 mt-2 w-60 rounded-sm border border-line bg-card p-1.5 text-base"
+        // The bar's text halo is for the glass; on the opaque card it only smudges.
+        className="menu-panel absolute top-full right-0 mt-2 w-60 rounded-sm border border-line bg-card p-1.5 text-base [text-shadow:none]"
       >
         <ul>
           {SECTIONS.map(({ id, label }) => (
