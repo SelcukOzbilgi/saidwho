@@ -57,9 +57,9 @@
 
 /* The site header sticks to the top, so a jump to #cases or #run stops below it.
    HeaderHeight sets the header's measured height; until it runs, the fallback
-   allows for two rows on a phone and one from the sm width up. */
+   is the one-row bar's height, a little taller from the sm width up. */
 html {
-  scroll-padding-top: var(--site-header-height, 6.5rem);
+  scroll-padding-top: var(--site-header-height, 3.5rem);
   /* Jumps to a section on this page glide there; layout.tsx keeps route changes instant. */
   scroll-behavior: smooth;
 }
@@ -72,7 +72,7 @@ html {
 
 @media (min-width: 40rem) {
   html {
-    scroll-padding-top: var(--site-header-height, 4rem);
+    scroll-padding-top: var(--site-header-height, 4.25rem);
   }
 }
 
@@ -148,5 +148,48 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .theme-icon :is(.theme-icon-disc, .theme-icon-shade, .theme-icon-rays) {
     transition: none;
+  }
+}
+
+/* The phone menu's icon crosses into an X and its panel drops in under the bar. */
+.menu-icon {
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-icon-loop {
+  stroke-dasharray: 12 63;
+  transition:
+    stroke-dasharray 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    stroke-dashoffset 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+details[open] .menu-icon {
+  transform: rotate(-45deg);
+}
+
+details[open] .menu-icon-loop {
+  stroke-dasharray: 20 300;
+  stroke-dashoffset: -32.42px;
+}
+
+@keyframes menu-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+details[open] .menu-panel {
+  animation: menu-drop 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-icon,
+  .menu-icon-loop {
+    transition: none;
+  }
+
+  details[open] .menu-panel {
+    animation: none;
   }
 }
