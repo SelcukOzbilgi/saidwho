@@ -152,16 +152,19 @@ body {
 
 /* A marker pen's stroke behind a few words, in the banner's orange. */
 .marker {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--accent) 22%, transparent),
-    color-mix(in srgb, var(--accent) 22%, transparent)
-  );
+  --marker: color-mix(in srgb, var(--accent) 22%, transparent);
+  background-image: linear-gradient(var(--marker), var(--marker));
   background-repeat: no-repeat;
   background-size: 100% 100%;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
   padding-inline: 0.08em;
   margin-inline: -0.08em;
+}
+
+/* On dark paper the same orange reads much stronger, so it goes lighter. */
+:root[data-theme="dark"] .marker {
+  --marker: color-mix(in srgb, var(--accent) 13%, transparent);
 }
 
 /* The hero's trace plays once, as the page opens: the credit is struck out and

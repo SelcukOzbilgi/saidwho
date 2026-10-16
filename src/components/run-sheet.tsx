@@ -37,7 +37,7 @@ export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: Rea
     let observer: IntersectionObserver | null = null;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const clearTimers = () => timers.splice(0).forEach(clearTimeout);
-    let lastAsked = 0;
+    let lastAsked = -Infinity;
 
     const focusQuote = () => sheet.querySelector<HTMLTextAreaElement>("textarea:not(:disabled)")?.focus({ preventScroll: true });
     const onEnd = (event: AnimationEvent) => {
@@ -52,12 +52,17 @@ export function RunSheet({ tab, intro, children }: { tab: ReactNode; intro?: Rea
     };
     const open = () => {
       // A click on a #run link sends the event and changes the hash: one opening, not two.
-      const now = performance.now();
+      const now = Date.now();
       if (now - lastAsked < 800) return;
       lastAsked = now;
       observer?.disconnect();
       clearTimers();
-      if (!panel || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return focusQuote();
+      // Without the unfold the cursor goes straight in, a moment after the click,
+      // since following the #run link itself would take the focus back.
+      if (!panel || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        timers.push(setTimeout(focusQuote, 50));
+        return;
+      }
       sheet.dataset.open = "wait";
       // The page may still be gliding down to the sheet; it opens once its top is well in view.
       observer = new IntersectionObserver(

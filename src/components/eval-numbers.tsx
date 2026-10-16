@@ -143,7 +143,7 @@ export function EvalNumbers() {
             As many right verdicts as every step on Ultra, at about a tenth of the Nebius cost
           </h3>
           <div className="mt-4">
-            <table className="w-full text-left text-sm tabular-nums">
+            <table className="w-full text-left text-sm">
               <thead className="text-xs text-muted">
                 <tr className="border-b border-line">
                   <th scope="col" className="py-2 pr-3 font-normal">
@@ -161,7 +161,8 @@ export function EvalNumbers() {
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              {/* Figures line up, but the header's comma keeps its own width. */}
+              <tbody className="tabular-nums">
                 {THREE_WAY.setups.map((s, i) => (
                   <tr
                     key={s.name}
