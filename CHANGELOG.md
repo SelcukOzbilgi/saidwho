@@ -8,7 +8,7 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 - A logo: a magnifier over two quote marks stands in for the "o" in the site's name, and the browser tab and home screen icons show it (#58)
 
 ### Changed
-- The site header stays at the top while the page scrolls, as a see-through bar that blurs the page under it, and links to a section on the home page stop below it. When large text makes the header take more than a quarter of the window, it scrolls away with the page (#59)
+- The site header stays at the top while the page scrolls, as a see-through bar the page blurs and fades into, and links to a section on the home page stop below it. When large text makes the header take more than a quarter of the window, it scrolls away with the page (#59)
 
 ## [0.8.0] - 2026-10-16
 
