@@ -1,9 +1,11 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef } from "react";
 
 import { atBottom, jumpToEnd } from "../lib/log-follow";
 import type { Agent, LogEntry, Tone } from "../lib/run-state";
+import { EASE_OUT } from "./case-motion";
 import { TierChip } from "./tier-chip";
 
 const DOT: Record<Tone, string> = {
@@ -34,6 +36,7 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
   // Whether the reader is at the bottom, as of their last scroll.
   const following = useRef(true);
   const shown = useRef(0);
+  const moves = useReducedMotion() !== true;
 
   // Scroll inside the box only, never the page.
   useEffect(() => {
@@ -73,22 +76,32 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
         className="max-h-[28rem] overflow-y-auto px-4 py-2 text-sm"
         aria-live={announce ? "polite" : "off"}
       >
-        {log.map((entry) => (
-          <li key={entry.id} className="arrive flex items-start gap-2 py-1.5">
-            <span className={`mt-1.5 size-2 shrink-0 rounded-full ${DOT[entry.tone]}`} aria-hidden />
-            <span className="w-24 shrink-0 font-medium">{entry.agent}</span>
-            <div className="min-w-0 flex-1">
-              <p className="break-words text-foreground/85">{entry.text}</p>
-              {/* The model's full name doesn't fit beside the text, so it and the cost go under it. */}
-              {(entry.tier || entry.costUsd !== null) && (
-                <p className="mt-1 flex flex-wrap items-center gap-2">
-                  {entry.tier && <TierChip tier={entry.tier} />}
-                  {entry.costUsd !== null && <span className="font-mono text-xs text-muted">{callCost(entry.costUsd)}</span>}
-                </p>
-              )}
-            </div>
-          </li>
-        ))}
+        {/* Lines already there when the log first renders stay put; each new one
+            slides up into place. No layout animation: a log can run to a hundred lines. */}
+        <AnimatePresence initial={false}>
+          {log.map((entry) => (
+            <motion.li
+              key={entry.id}
+              initial={moves ? { opacity: 0, y: 6 } : false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: EASE_OUT }}
+              className="flex items-start gap-2 py-1.5"
+            >
+              <span className={`mt-1.5 size-2 shrink-0 rounded-full ${DOT[entry.tone]}`} aria-hidden />
+              <span className="w-24 shrink-0 font-medium">{entry.agent}</span>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-foreground/85">{entry.text}</p>
+                {/* The model's full name doesn't fit beside the text, so it and the cost go under it. */}
+                {(entry.tier || entry.costUsd !== null) && (
+                  <p className="mt-1 flex flex-wrap items-center gap-2">
+                    {entry.tier && <TierChip tier={entry.tier} />}
+                    {entry.costUsd !== null && <span className="font-mono text-xs text-muted">{callCost(entry.costUsd)}</span>}
+                  </p>
+                )}
+              </div>
+            </motion.li>
+          ))}
+        </AnimatePresence>
       </ol>
     </section>
   );

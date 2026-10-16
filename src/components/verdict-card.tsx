@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import type { JudgeOutput } from "../agent/schemas";
 import { parseRationale } from "../lib/rationale";
 import { type RunState, verdictWords } from "../lib/run-state";
+import { Stamp } from "./case-motion";
 import { TierChip } from "./tier-chip";
 
 export const VERDICT_LOOK: Record<JudgeOutput["verdict"], string> = {
@@ -70,9 +71,12 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
   const earliest = earliestTrace(output, nodes);
 
   return (
-    <section aria-label="Verdict" className="arrive rounded-sm border border-line bg-card p-5 shadow-sm">
+    <section aria-label="Verdict" className="rounded-sm border border-line bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span className={`font-medium uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>{verdictWords(output.verdict)}</span>
+        {/* Set like a stamp in the verdict's color; when a run reaches it, it is pressed on. */}
+        <Stamp className={`rounded-sm border-[1.5px] border-current px-1.5 py-px font-semibold uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>
+          {verdictWords(output.verdict)}
+        </Stamp>
         <span>· {output.confidence} confidence</span>
         <span className="ml-auto flex items-center gap-1.5">
           judged on <TierChip tier={tier} />
