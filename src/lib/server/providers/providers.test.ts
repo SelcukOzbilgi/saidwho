@@ -5,7 +5,7 @@ vi.mock("@tavily/core", () => ({ tavily: tavilyFactory }));
 
 import { createNebiusClient } from "./nebius";
 import { assertAllowedBaseUrl, assertNoSdkEnvOverrides, normalizeApiKey } from "./sdk-guards";
-import { createTavilyClient } from "./tavily";
+import { createTavilyClient, TAVILY_TIMEOUT_MS } from "./tavily";
 
 const BASE_URL = "https://api.tokenfactory.nebius.com/v1/";
 
@@ -26,6 +26,28 @@ describe("createTavilyClient", () => {
   it("passes the trimmed key explicitly to the SDK", () => {
     createTavilyClient({ apiKey: " tvly-visitor-key \n" });
     expect(tavilyFactory).toHaveBeenCalledWith({ apiKey: "tvly-visitor-key" });
+  });
+
+  it("gives every search an explicit timeout, in seconds, that a caller can't drop", async () => {
+    const search = vi.fn(async () => ({ results: [] }));
+    tavilyFactory.mockReturnValueOnce({ search, extract: vi.fn() });
+    const client = createTavilyClient({ apiKey: "tvly-visitor-key" });
+    await client.search("q", { maxResults: 3, timeout: undefined });
+    expect(search).toHaveBeenCalledWith("q", { includeUsage: true, maxResults: 3, timeout: TAVILY_TIMEOUT_MS / 1000 });
+  });
+
+  it("stops waiting for a search at the timeout even if the SDK never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      tavilyFactory.mockReturnValueOnce({ search: vi.fn(() => new Promise<never>(() => {})), extract: vi.fn() });
+      const client = createTavilyClient({ apiKey: "tvly-visitor-key" });
+      const pending = client.search("q");
+      await vi.advanceTimersByTimeAsync(TAVILY_TIMEOUT_MS);
+      const result = await pending;
+      expect(!result.ok && result.error.kind).toBe("timeout");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("refuses to start while SDK env overrides are set", () => {
@@ -79,6 +101,46 @@ describe("createNebiusClient", () => {
     expect(result.ok).toBe(false);
     expect(JSON.stringify(result)).not.toContain("visitor-secret");
     expect(!result.ok && result.error.kind).toBe("auth");
+  });
+
+  it.each([500, 200])("gives up near the timeout when a %i response sends its headers and stalls the body", async (status) => {
+    let bodyCancelled = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("{"));
+            init.signal?.addEventListener("abort", () => {
+              bodyCancelled = true;
+              controller.error(init.signal?.reason);
+            });
+          },
+        });
+        return new Response(body, { status, headers: { "content-type": "application/json" } });
+      }),
+    );
+    const client = createNebiusClient({ apiKey: "visitor-key", baseURL: BASE_URL, timeoutMs: 50 });
+    const started = performance.now();
+    const result = await client.chat({ model: "m", messages: [{ role: "user", content: "hi" }] });
+    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(bodyCancelled).toBe(true);
+    expect(!result.ok && result.error.kind).toBe("timeout");
+  });
+
+  it("reports a timeout when no response arrives in time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+          }),
+      ),
+    );
+    const client = createNebiusClient({ apiKey: "visitor-key", baseURL: BASE_URL, timeoutMs: 50 });
+    const result = await client.chat({ model: "m", messages: [{ role: "user", content: "hi" }] });
+    expect(!result.ok && result.error.kind).toBe("timeout");
   });
 });
 

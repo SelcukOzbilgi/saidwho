@@ -24,7 +24,9 @@ export type RunStore = {
   load: (id: string) => Promise<SavedRun | null>;
 };
 
-const TIMEOUT_MS = 10_000;
+// A run is saved before its stream closes, so the run deadline in
+// investigate-handler.ts leaves room for this.
+export const RUN_STORE_TIMEOUT_MS = 10_000;
 
 const rowsSchema = z.array(z.object({ created_at: z.string(), events: z.array(z.unknown()) }));
 
@@ -57,7 +59,7 @@ export function createRunStore({
         method: "POST",
         headers: { ...headers, Prefer: "return=minimal" },
         body: JSON.stringify({ id, keys, events }),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(RUN_STORE_TIMEOUT_MS),
       });
       if (!res.ok) await fail("saving a run", res);
     },
@@ -69,7 +71,7 @@ export function createRunStore({
       query.searchParams.set("id", `eq.${id}`);
       query.searchParams.set("select", "created_at,events");
       query.searchParams.set("limit", "1");
-      const res = await fetchImpl(query, { headers, cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+      const res = await fetchImpl(query, { headers, cache: "no-store", signal: AbortSignal.timeout(RUN_STORE_TIMEOUT_MS) });
       if (!res.ok) await fail("loading a run", res);
       const row = rowsSchema.parse(await res.json())[0];
       return row ? { createdAt: row.created_at, events: row.events } : null;

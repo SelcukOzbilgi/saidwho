@@ -1,22 +1,25 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { type RunEvent, runEventSchema } from "../../agent/events";
 import type { InvestigationOptions } from "../../agent/orchestrator";
 import { isRunId } from "../run-id";
-import { createDailyLedger } from "./daily-budget";
+import { createDailyLedger, LEDGER_TIMEOUT_MS, TAVILY_USD_PER_CREDIT } from "./daily-budget";
 import { parseServerEnv } from "./env-schema";
 import {
   createInvestigateHandler,
   type InvestigateDeps,
   NEBIUS_TIMEOUT_MS,
+  RUN_DEADLINE_MS,
   TRIAL_MAX_USD,
   TRIAL_RESERVE_USD,
 } from "./investigate-handler";
 import type { NebiusClient } from "./providers/nebius";
-import type { TavilyClient } from "./providers/tavily";
+import { type TavilyClient, TAVILY_TIMEOUT_MS } from "./providers/tavily";
 import { createMemoryLimiter, type Limit, type RateLimiter } from "./rate-limit";
 import { accessCodeMatches } from "./run-keys";
-import type { RunStore } from "./run-store";
+import { RUN_STORE_TIMEOUT_MS, type RunStore } from "./run-store";
 
 // The real comparison, watched, so a test can tell whether a code was compared at all.
 vi.mock("./run-keys", async (importOriginal) => {
@@ -153,6 +156,18 @@ describe("POST /api/investigate", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("refuses trial runs on Vercel when Supabase isn't set, before counting or reserving anything", async () => {
+    const { limiter, hits } = spyLimiter();
+    const reserve = vi.fn(async () => null);
+    const { handler, calls } = setup({ envVars: { ...ownerEnv, VERCEL: "1" }, limiter, ledger: { reserve } });
+    const res = await handler(post(trial));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "trial_disabled" });
+    expect(hits).toHaveLength(0);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+
   it("refuses a trial run once the daily budget can't cover it", async () => {
     const { handler, calls } = setup({ envVars: ownerEnv, ledger: createDailyLedger(0) });
     const res = await handler(post(trial));
@@ -221,6 +236,67 @@ describe("POST /api/investigate", () => {
     const events = frames(await (await handler(post(byok))).text()).map((f) => f.data?.type);
     expect(events).toEqual(["aborted", "done"]);
     expect(createNebius).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: NEBIUS_TIMEOUT_MS }));
+  });
+
+  it("counts the deadline from when the request came in, so slow checks use it up", async () => {
+    // The visitor count takes longer than the whole deadline, so the run must
+    // start already stopped instead of getting a fresh deadline of its own.
+    const { limiter } = spyLimiter(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return true;
+    });
+    let abortedAtStart: boolean | undefined;
+    const { handler } = setup({
+      runDeadlineMs: 20,
+      limiter,
+      run: async ({ signal, onEvent }) => {
+        abortedAtStart = signal?.aborted;
+        onEvent({ type: "aborted" });
+        onEvent(DONE);
+      },
+    });
+    await (await handler(post(byok))).text();
+    expect(abortedAtStart).toBe(true);
+  });
+
+  it("still settles the budget and saves the run, in that order, when the deadline stops it", async () => {
+    const ledger = createDailyLedger(1);
+    const order: string[] = [];
+    const store: RunStore = {
+      save: async (run) => {
+        order.push(`save ${ledger.spentTodayUsd().toFixed(3)} ${run.events.map((e) => e.type).join(",")}`);
+      },
+      load: async () => null,
+    };
+    const { handler } = setup({
+      envVars: ownerEnv,
+      ledger,
+      store,
+      runDeadlineMs: 10,
+      run: async ({ signal, onEvent }) => {
+        onEvent(STARTED);
+        onEvent(SEARCHED);
+        await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+        onEvent({ type: "aborted" });
+        onEvent(DONE);
+      },
+    });
+    const all = frames(await (await handler(post(trial))).text());
+    // DONE's own spend ($0.004 and five credits), not the whole reservation: every cost was known.
+    const spent = 0.004 + 5 * TAVILY_USD_PER_CREDIT;
+    expect(ledger.spentTodayUsd()).toBeCloseTo(spent);
+    expect(order).toEqual([`save ${spent.toFixed(3)} started,searched,aborted,done`]);
+    expect(all.at(-1)?.event).toBe("saved");
+  });
+
+  it("leaves time after the deadline for a running call, the budget and the save", () => {
+    const route = readFileSync(new URL("../../app/api/investigate/route.ts", import.meta.url), "utf8");
+    const maxDuration = Number(/export const maxDuration = (\d+);/.exec(route)?.[1]);
+    expect(maxDuration).toBe(300);
+    const slowestCall = Math.max(NEBIUS_TIMEOUT_MS, TAVILY_TIMEOUT_MS);
+    const worstCase = RUN_DEADLINE_MS + slowestCall + LEDGER_TIMEOUT_MS + RUN_STORE_TIMEOUT_MS;
+    // Some margin for the work between those steps.
+    expect(worstCase).toBeLessThanOrEqual(maxDuration * 1000 - 15_000);
   });
 
   it("stops the run when the client disconnects", async () => {

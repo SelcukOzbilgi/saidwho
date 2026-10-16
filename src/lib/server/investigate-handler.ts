@@ -38,10 +38,14 @@ export const TRIAL_MAX_USD = 0.1;
 // $0.30 leaves some margin.
 export const TRIAL_RESERVE_USD = 0.3;
 const HEARTBEAT_MS = 15_000;
-// The route may run for 300 s (maxDuration). A run starts no new paid call after
-// RUN_DEADLINE_MS, and a call already running gives up after NEBIUS_TIMEOUT_MS,
-// so the stream still ends with a done event before the platform cuts it.
-export const RUN_DEADLINE_MS = 200_000;
+// The route may run for 300 s (maxDuration in src/app/api/investigate/route.ts).
+// A run starts no new paid call once RUN_DEADLINE_MS has passed since the request
+// came in, so the checks before the run count too. Calls already running then
+// still finish, side by side: a model call gives up after NEBIUS_TIMEOUT_MS, a
+// search after TAVILY_TIMEOUT_MS (60 s, in providers/tavily.ts). Then the budget
+// is settled (LEDGER_TIMEOUT_MS, 2.5 s) and the run saved (RUN_STORE_TIMEOUT_MS,
+// 10 s) before the stream closes: 180 + 90 + 2.5 + 10 = 282.5 s, inside 300.
+export const RUN_DEADLINE_MS = 180_000;
 export const NEBIUS_TIMEOUT_MS = 90_000;
 
 export type InvestigateDeps = {
@@ -86,6 +90,7 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
   let warnedNoAddress = false;
 
   return async function POST(request: Request): Promise<Response> {
+    const receivedAt = performance.now();
     const parsed = await parseInvestigateRequest(request);
     if (!parsed.ok) return fail(parsed.status, parsed.error, parsed.fields ? { fields: parsed.fields } : {});
     const { quote, popularAttribution, language, keys: keyRequest } = parsed.request;
@@ -216,7 +221,11 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     const stop = () => abort.abort();
     if (request.signal.aborted) stop();
     else request.signal.addEventListener("abort", stop, { once: true });
-    const deadline = setTimeout(stop, deps.runDeadlineMs ?? RUN_DEADLINE_MS);
+    // The deadline counts from when the request came in. When the checks above
+    // used it all up, the run starts stopped.
+    const deadlineLeftMs = (deps.runDeadlineMs ?? RUN_DEADLINE_MS) - (performance.now() - receivedAt);
+    if (deadlineLeftMs <= 0) stop();
+    const deadline = setTimeout(stop, Math.max(0, deadlineLeftMs));
 
     const encoder = new TextEncoder();
     let closed = false;

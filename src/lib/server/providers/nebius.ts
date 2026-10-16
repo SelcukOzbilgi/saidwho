@@ -49,13 +49,18 @@ export function createNebiusClient({ apiKey, baseURL, timeoutMs = 120_000 }: Neb
   return {
     chat: async (params) => {
       const started = performance.now();
+      // The SDK's own timeout stops once an error response's headers are in, and
+      // the error body is then read with no limit. This signal bounds the whole
+      // call, body included. It is this call's own; a run's stop never cancels it.
+      const signal = AbortSignal.timeout(timeoutMs);
       try {
-        const completion = await sdk.chat.completions.create(params);
+        const completion = await sdk.chat.completions.create(params, { signal });
         return { ok: true, completion, latencyMs: Math.round(performance.now() - started) };
       } catch (err: unknown) {
         return {
           ok: false,
-          error: toSafeError("nebius", err, [key]),
+          // Running out of time is reported as a timeout, whichever step it cut short.
+          error: toSafeError("nebius", signal.aborted ? signal.reason : err, [key]),
           latencyMs: Math.round(performance.now() - started),
         };
       }
