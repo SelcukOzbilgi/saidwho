@@ -11,7 +11,7 @@ export type QuoteRequest = {
   keys: { mode: "trial"; accessCode?: string } | { mode: "byok"; nebiusApiKey: string; tavilyApiKey: string };
 };
 
-// The access code from a link like /#code=..., which fills the field in one
+// The access code from a link like /run#code=..., which fills the field in one
 // click. The part after # never reaches the server or its logs. Null when the
 // link carries no code.
 export function accessCodeFromHash(hash: string): string | null {
@@ -365,9 +365,9 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
             ) : !keysIn ? (
               <>
                 Add both keys above to run it, or{" "}
-                <a href="#cases" className="underline underline-offset-2 hover:text-foreground">
-                  open a finished case above
-                </a>
+                <Link href="/#cases" className="underline underline-offset-2 hover:text-foreground">
+                  open a finished case
+                </Link>
                 . No keys needed there.
               </>
             ) : (

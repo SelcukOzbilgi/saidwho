@@ -31,7 +31,7 @@ export function CaseGallery({ cases, title = "Finished cases" }: { cases: readon
         </p>
 
         {/* The cards come in one after another, row by row. */}
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cases.map(({ caseId, run }, i) => {
             const verdict = run.verdict?.output.verdict;
             const known = KNOWN.get(caseId);

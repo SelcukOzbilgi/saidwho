@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 import { CASES, FEATURED_CASE_ID, findCase } from "../cases/cases";
 import { checkerRejections } from "../cases/checker-rejections";
 import { CaseGallery } from "../components/case-gallery";
+import { CodeLinkForward } from "../components/code-link-forward";
 import { EvalNumbers } from "../components/eval-numbers";
 import { FeaturedCase } from "../components/featured-case";
 import { Hero, heroTrace } from "../components/hero";
 import { HowItWorks } from "../components/how-it-works";
-import { Investigation } from "../components/investigation";
 import { SiteFooter } from "../components/site-footer";
-import { env } from "../lib/server/env";
-import { TRIAL_RESERVE_USD } from "../lib/server/investigate-handler";
-import { trialRefusal } from "../lib/server/run-keys";
-import { runStoreFromEnv } from "../lib/server/run-store";
 
 // Only this page says it is the canonical "/"; set in the layout, it would reach
 // run pages and the not-found page too, since child metadata merges shallowly.
@@ -24,18 +19,13 @@ export const metadata: Metadata = {
 // The saved cases don't change between requests, so they are counted once.
 const REJECTIONS = checkerRejections(CASES);
 
-export default async function Home() {
-  // Read the switches per request, so turning trial runs off needs no rebuild.
-  await connection();
-  const trialOpen =
-    // The same check the API makes before a trial run.
-    trialRefusal(env) === null &&
-    // A trial run sets aside its worst case before it starts; a smaller budget can't fit even one.
-    env.DAILY_BUDGET_USD >= TRIAL_RESERVE_USD;
+export default function Home() {
   const featured = findCase(FEATURED_CASE_ID);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-16 px-4 pb-10 sm:gap-24 sm:px-6 sm:pb-14">
+    // One gap between every section, the hero's included, so the page keeps one rhythm.
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-20 px-4 pb-10 sm:gap-32 sm:px-6 sm:pb-14">
+      <CodeLinkForward />
       {/* The first screen: the name, what it does, and the featured case in one move. */}
       <Hero featured={featured} />
 
@@ -50,21 +40,6 @@ export default async function Home() {
         cases={featured ? CASES.filter((c) => c !== featured) : CASES}
         title={featured ? "More finished cases" : undefined}
       />
-
-      <section id="run" aria-labelledby="run-title" className="scroll-mt-6">
-        <Investigation
-          trialOpen={trialOpen}
-          // Only whether a code is needed; the code never leaves the server.
-          needsCode={Boolean(env.TRIAL_ACCESS_CODE)}
-          savesRuns={runStoreFromEnv(env) !== null}
-          tab={
-            <h2 id="run-title" className="font-serif text-2xl font-semibold sm:text-3xl">
-              Run your own
-            </h2>
-          }
-          intro="Paste any quote and watch the agents look for where it first appeared, step by step."
-        />
-      </section>
 
       <SiteFooter />
     </main>

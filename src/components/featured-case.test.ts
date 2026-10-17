@@ -62,7 +62,7 @@ describe("FeaturedCase", () => {
     expect(html).toContain("Albert Einstein probably didn&#x27;t say it");
     expect(html).toContain(`href="/cases/${FEATURED_CASE_ID}"`);
     expect(html).toContain(`href="/cases/${FEATURED_CASE_ID}#node-${trailOf(featured!.run).steps[0].node.id}"`);
-    expect(html).toContain('href="#run"');
+    expect(html).toContain('href="/run"');
     expect(html).not.toContain('href="#node-');
     expect(html).not.toMatch(/\[n\d+\]/);
   });

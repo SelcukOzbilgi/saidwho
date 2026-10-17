@@ -12,12 +12,12 @@ const render = (example: typeof featured | undefined = featured) =>
 const text = (html: string) => html.replace(/<[^>]+>/g, "");
 
 describe("Hero", () => {
-  it("names the site in its one h1 and points to a finished case and to the form", () => {
+  it("names the site in its one h1 and points to a finished case and to the run page", () => {
     const html = render();
     expect(html.match(/<h1\b/g)).toHaveLength(1);
     expect(html).toContain("Said Who?");
     expect(html).toContain('href="#featured"');
-    expect(html).toContain('href="#run"');
+    expect(html).toContain('href="/run"');
     expect(html).toContain(`href="/cases/${FEATURED_CASE_ID}"`);
   });
 

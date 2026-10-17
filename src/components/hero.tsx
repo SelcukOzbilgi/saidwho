@@ -5,7 +5,7 @@ import type { ExampleCase } from "../cases/cases";
 import { verdictWords } from "../lib/run-state";
 import { HeroReplay } from "./hero-replay";
 import { Wordmark } from "./logo-mark";
-import { OpenRunLink } from "./run-sheet";
+import { RUN_PAGE } from "./sections";
 import { earliestTrace, HEADLINE, VERDICT_LOOK } from "./verdict-card";
 
 // The first screen: the name, what the app does, and the featured case told in
@@ -35,8 +35,8 @@ export function Hero({ featured }: { featured: ExampleCase | undefined }) {
   return (
     <section
       aria-labelledby="hero-title"
-      // The first screen, less the sticky header, so the featured case starts below the fold.
-      className="flex min-h-[calc(100svh-var(--site-header-height,6.5rem))] flex-col justify-center py-8 sm:min-h-[calc(100svh-var(--site-header-height,4rem))] sm:py-10"
+      // As tall as what's in it: the page's gap below it is the same as between the other sections.
+      className="pt-10 sm:pt-16"
     >
       <h1 id="hero-title" className="font-serif text-[clamp(4rem,15vw,10.5rem)] leading-[0.95] font-semibold tracking-tight">
         <Wordmark />
@@ -58,9 +58,12 @@ export function Hero({ featured }: { featured: ExampleCase | undefined }) {
                 See a finished case
               </a>
             )}
-            <OpenRunLink className={`${BUTTON} border border-foreground hover:bg-foreground hover:text-background`}>
-              Run your own
-            </OpenRunLink>
+            <Link
+              href={RUN_PAGE.href}
+              className={`${BUTTON} border border-foreground hover:bg-foreground hover:text-background`}
+            >
+              {RUN_PAGE.label}
+            </Link>
           </div>
         </div>
 

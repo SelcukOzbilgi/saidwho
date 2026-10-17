@@ -126,7 +126,7 @@ export function EvalNumbers() {
           in, so none of them shaped the code.
         </p>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <SetCard title="Test set" scores={LATEST.test} i={1} />
           <SetCard title="Held-out set" scores={LATEST.holdout} i={2} />
         </div>

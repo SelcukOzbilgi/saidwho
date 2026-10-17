@@ -8,7 +8,7 @@ import { type RunState, verdictWords } from "../lib/run-state";
 import { UltraSaving } from "./progress";
 import { Reveal } from "./reveal";
 import { CHANGE } from "./lineage";
-import { OpenRunLink } from "./run-sheet";
+import { RUN_PAGE } from "./sections";
 import { unmark } from "./timeline";
 import { earliestTrace, HEADLINE, VERDICT_LOOK } from "./verdict-card";
 
@@ -170,9 +170,12 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
           >
             See every step
           </Link>
-          <OpenRunLink className="rounded-sm border border-foreground px-5 py-2.5 font-medium hover:bg-foreground hover:text-background">
+          <Link
+            href={RUN_PAGE.href}
+            className="rounded-sm border border-foreground px-5 py-2.5 font-medium hover:bg-foreground hover:text-background"
+          >
             Run your own quote
-          </OpenRunLink>
+          </Link>
           <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
             <UltraSaving nebiusUsd={run.nebiusUsd} ultraUsd={run.ultraUsd} />
             <span className="font-mono text-xs text-muted tabular-nums">

@@ -5,17 +5,17 @@ import { describe, expect, it } from "vitest";
 import { SiteHeader } from "./site-header";
 
 describe("SiteHeader", () => {
-  it("links home, to each section, the form and the source", () => {
+  it("links home, to each section, the run page and the source", () => {
     const html = renderToStaticMarkup(createElement(SiteHeader));
-    for (const href of ["/", "/#how-it-works", "/#eval", "/#cases", "/#run", "https://github.com/SelcukOzbilgi/saidwho"]) {
+    for (const href of ["/", "/#how-it-works", "/#eval", "/#cases", "/run", "https://github.com/SelcukOzbilgi/saidwho"]) {
       expect(html).toContain(`href="${href}"`);
     }
   });
 
-  it("lists the sections in page order", () => {
+  it("lists the sections in page order, then the run page", () => {
     const html = renderToStaticMarkup(createElement(SiteHeader));
     const site = html.slice(html.indexOf('aria-label="Site"'));
-    const order = ["/#how-it-works", "/#eval", "/#cases", "/#run"].map((href) => site.indexOf(`href="${href}"`));
+    const order = ["/#how-it-works", "/#eval", "/#cases", "/run"].map((href) => site.indexOf(`href="${href}"`));
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 

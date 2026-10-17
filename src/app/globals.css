@@ -132,8 +132,8 @@ body {
 .theme-icon :is(.theme-icon-disc, .theme-icon-shade, .theme-icon-rays) {
   transform-origin: 12px 12px;
   transition:
-    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 250ms ease-out;
+    transform 700ms cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 450ms ease-out;
 }
 
 :root[data-theme="dark"] .theme-icon-disc {

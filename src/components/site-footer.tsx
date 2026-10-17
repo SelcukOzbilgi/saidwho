@@ -1,11 +1,12 @@
 import { Star } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { GitHubMark, REPO_URL } from "./github-mark";
 import { HomeLink } from "./home-link";
 import { Wordmark } from "./logo-mark";
 import { SectionLink } from "./section-link";
-import { SECTIONS } from "./sections";
+import { RUN_PAGE, SECTIONS } from "./sections";
 
 // Where the project and the parts it runs on live.
 const PROJECT = [
@@ -47,6 +48,11 @@ export function SiteFooter() {
               </SectionLink>
             </li>
           ))}
+          <li>
+            <Link href={RUN_PAGE.href} className={link}>
+              {RUN_PAGE.label}
+            </Link>
+          </li>
         </LinkGroup>
         <LinkGroup id="footer-project" title="The project">
           {PROJECT.map(({ href, label }) => (

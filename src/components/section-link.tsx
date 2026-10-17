@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { MouseEvent, ReactNode } from "react";
 
-import { OPEN_RUN_EVENT, type SectionId } from "./sections";
+import type { SectionId } from "./sections";
 
 // A click that opens the link here, not in a new tab or window.
 export const plainClick = (event: MouseEvent) =>
@@ -34,7 +34,6 @@ export function SectionLink({
       onClick={(event) => {
         if (pathname !== "/" || !plainClick(event)) return;
         onFollow?.(id);
-        if (id === "run") window.dispatchEvent(new CustomEvent(OPEN_RUN_EVENT));
       }}
     >
       {children}

@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeLink } from "./home-link";
 import { SectionLink } from "./section-link";
-import { OPEN_RUN_EVENT } from "./sections";
 
 // Outside a Next app there's no router, so the page's path is set by hand and
 // Link is a plain anchor, as it renders in the browser.
@@ -21,8 +20,6 @@ vi.mock("next/link", async () => {
 
 let root: Root | null = null;
 let container: HTMLElement | null = null;
-let opened = 0;
-const countOpen = () => opened++;
 
 async function mount(element: ReturnType<typeof createElement>) {
   container = document.createElement("div");
@@ -41,8 +38,6 @@ function click(link: HTMLAnchorElement, init: MouseEventInit = {}) {
 
 beforeEach(() => {
   pathname = "/";
-  opened = 0;
-  window.addEventListener(OPEN_RUN_EVENT, countOpen);
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
 });
 
@@ -50,40 +45,34 @@ afterEach(async () => {
   await act(async () => root?.unmount());
   container?.remove();
   root = container = null;
-  window.removeEventListener(OPEN_RUN_EVENT, countOpen);
   window.history.replaceState(null, "", "/");
   vi.unstubAllGlobals();
 });
 
 describe("SectionLink", () => {
-  it("asks the home page to open Run your own and still follows the anchor", async () => {
-    const link = await mount(createElement(SectionLink, { id: "run" }, "Run your own"));
-    expect(link.getAttribute("href")).toBe("/#run");
+  it("links to the section on the home page and tells the nav which one was picked", async () => {
+    const follow = vi.fn();
+    const link = await mount(createElement(SectionLink, { id: "cases", onFollow: follow }, "Cases"));
+    expect(link.getAttribute("href")).toBe("/#cases");
     const event = click(link);
-    expect(opened).toBe(1);
+    expect(follow).toHaveBeenCalledWith("cases");
     expect(event.defaultPrevented).toBe(false);
   });
 
   it("leaves a click that opens a new tab alone", async () => {
-    const link = await mount(createElement(SectionLink, { id: "run" }, "Run your own"));
+    const follow = vi.fn();
+    const link = await mount(createElement(SectionLink, { id: "cases", onFollow: follow }, "Cases"));
     click(link, { metaKey: true });
     click(link, { ctrlKey: true });
-    expect(opened).toBe(0);
+    expect(follow).not.toHaveBeenCalled();
   });
 
-  it("sends nothing from another page, where the hash opens the section on arrival", async () => {
+  it("tells the nav nothing from another page, where the link goes home first", async () => {
     pathname = "/cases/insanity-same-thing";
-    const link = await mount(createElement(SectionLink, { id: "run" }, "Run your own"));
-    click(link);
-    expect(opened).toBe(0);
-  });
-
-  it("sends nothing for the other sections, and tells the nav which one was picked", async () => {
     const follow = vi.fn();
     const link = await mount(createElement(SectionLink, { id: "cases", onFollow: follow }, "Cases"));
     click(link);
-    expect(opened).toBe(0);
-    expect(follow).toHaveBeenCalledWith("cases");
+    expect(follow).not.toHaveBeenCalled();
   });
 });
 
