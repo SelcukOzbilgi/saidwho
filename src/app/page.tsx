@@ -8,6 +8,7 @@ import { EvalNumbers } from "../components/eval-numbers";
 import { FeaturedCase } from "../components/featured-case";
 import { Hero, heroTrace } from "../components/hero";
 import { HowItWorks } from "../components/how-it-works";
+import { RunCta } from "../components/run-cta";
 import { SiteFooter } from "../components/site-footer";
 
 // Only this page says it is the canonical "/"; set in the layout, it would reach
@@ -41,6 +42,9 @@ export default function Home() {
           cases={featured ? CASES.filter((c) => c !== featured) : CASES}
           title={featured ? "More finished cases" : undefined}
         />
+
+        {/* And then the visitor's own quote. */}
+        <RunCta />
 
         <SiteFooter />
       </div>

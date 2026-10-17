@@ -263,6 +263,14 @@ details[open] .menu-panel {
   transition: transform 450ms ease-out;
   transition-delay: calc(var(--i, 0) * 80ms + 120ms);
 }
+/* A marker stroke that is put down once its words are in. */
+[data-reveal="wait"] .reveal-marker {
+  background-color: transparent;
+}
+[data-reveal="in"] .reveal-marker {
+  transition: background-color 500ms ease-out;
+  transition-delay: calc(var(--i, 0) * 80ms + 420ms);
+}
 .reveal-draw-y {
   transform-origin: top;
 }
@@ -711,11 +719,53 @@ form[data-ready] .run-go {
 .hiw-fill {
   transform-origin: top;
 }
-/* While it plays, the ring shows the step the run is on, so the mark for the
-   step being read in the list (run-map-spy.tsx) waits until it is done. */
-:is([data-run="wait"], [data-run="play"]) a[aria-current="step"] {
-  background-color: transparent;
-  box-shadow: none;
+/* The step being read in the list (run-map-spy.tsx): one tint that glides from
+   row to row, the step's number inked in, and the other names set back. While
+   the map plays, the orange ring shows the step the run is on, so the mark
+   waits until it is done. */
+.hiw-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--mark-w, 0);
+  height: var(--mark-h, 0);
+  transform: translate(var(--mark-x, 0), var(--mark-y, 0));
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--foreground) 6%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+.hiw-mark[data-on] {
+  opacity: 1;
+}
+.hiw-done,
+.hiw-name {
+  transition:
+    background-color 250ms ease-out,
+    color 250ms ease-out;
+}
+a[aria-current="step"] .hiw-done {
+  background-color: var(--foreground);
+  color: var(--background);
+}
+[data-reading] a:not([aria-current="step"]) .hiw-name {
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hiw-mark[data-on] {
+    transition:
+      opacity 200ms ease-out,
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      height 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+:is([data-run="wait"], [data-run="play"]) .hiw-mark {
+  opacity: 0;
+}
+:is([data-run="wait"], [data-run="play"]) a[aria-current="step"] .hiw-done {
+  background-color: var(--card);
+  color: var(--foreground);
 }
 .play-again {
   display: none;

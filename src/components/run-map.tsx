@@ -11,7 +11,7 @@ import { TraceLoop } from "./trace-loop";
 // next one fills, the Checker throws a snippet out, and the Genealogist's loop
 // sends the run back through the Readers and the Checker once for each round.
 // Each step links to its part of the list next to it, and on a wide screen the
-// step being read there is marked. Rendered as a run ends, so it reads the same
+// step being read there is marked: a tint glides to its row and its number inks in. Rendered as a run ends, so it reads the same
 // without JavaScript.
 //
 // Adapted from n1m4mz's Agent Trace on 21st.dev: one timeline sets each row's
@@ -96,6 +96,8 @@ export function RunMap({
 
       {/* The loop is measured from the two nodes, so it sits in the same box as the list. */}
       <div className="relative mt-3">
+        {/* The step being read in the list next to it; RunMapSpy moves it from row to row. */}
+        <span aria-hidden="true" className="hiw-mark" />
         <TraceLoop from="Genealogist" to="Readers" rounds={rounds} />
         <ol className="flex flex-col pl-5">
           {steps.map((step, i) => {
@@ -113,7 +115,7 @@ export function RunMap({
                 )}
                 <a
                   href={`#${stepAnchor(step.name)}`}
-                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-sm px-2 py-2 hover:bg-foreground/5 aria-[current=step]:bg-foreground/5 aria-[current=step]:shadow-[inset_2px_0_0_var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
+                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-sm px-2 py-2 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
                 >
                   <span
                     aria-hidden="true"
