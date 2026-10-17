@@ -529,11 +529,11 @@ details[open] .menu-panel {
   transition-delay: var(--at, 0ms);
 }
 [data-reveal="in"] .ev-cell .ev-bar {
-  transition: transform 650ms ease-out;
-  transition-delay: calc(var(--at, 0ms) + 80ms);
+  transition: transform var(--bar-ms, 450ms) ease-out;
+  transition-delay: calc(var(--at, 0ms) + var(--bar-wait, 60ms));
 }
 [data-reveal="in"] .ev-marker {
-  transition: background-color 450ms ease-out;
+  transition: background-color 300ms ease-out;
   transition-delay: var(--at, 0ms);
 }
 .ev-bar {
@@ -600,13 +600,25 @@ details[open] .menu-panel {
   opacity: 0;
   transform: translateY(0.6em);
 }
-.cg-link:is(:hover, :focus-visible) .cg-figures {
+/* Hover only where there is a pointer, so a tap on a phone doesn't leave a
+   card stuck on its trace; keyboard focus shows it everywhere. */
+.cg-link:focus-visible .cg-figures {
   opacity: 0;
   transform: translateY(-0.6em);
 }
-.cg-link:is(:hover, :focus-visible) .cg-trace {
+.cg-link:focus-visible .cg-trace {
   opacity: 1;
   transform: none;
+}
+@media (hover: hover) {
+  .cg-link:hover .cg-figures {
+    opacity: 0;
+    transform: translateY(-0.6em);
+  }
+  .cg-link:hover .cg-trace {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -617,7 +629,12 @@ details[open] .menu-panel {
   .cg-trace {
     transition: none !important;
   }
-  .cg-link:is(:hover, :focus-visible) :is(.cg-figures, .cg-trace) {
+  .cg-link:focus-visible :is(.cg-figures, .cg-trace) {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) and (hover: hover) {
+  .cg-link:hover :is(.cg-figures, .cg-trace) {
     transform: none;
   }
 }

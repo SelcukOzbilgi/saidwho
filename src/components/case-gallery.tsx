@@ -40,11 +40,17 @@ export function CaseGallery({ cases, title = "Finished cases" }: { cases: readon
             const match = known && knownMatch(known, verdict ?? null);
             const confirmed = run.nodes.filter((n) => n.check.status !== "not_found").length;
             // The year first, so a narrow card that cuts the line short keeps it.
+            // A year with no author says where it was seen, as the case page does;
+            // a bare year says less than the figures, so those stay.
             const found = output && earliestTrace(output, run.nodes);
             const trace =
               found && output.earliest_author && output.earliest_date
                 ? `${output.earliest_date}, ${output.earliest_author}`
-                : found?.trace;
+                : found?.via
+                  ? `${found.trace}, via ${found.via}`
+                  : found && found.trace !== output.earliest_date
+                    ? found.trace
+                    : null;
             return (
               <li key={caseId} className="cg-card">
                 {/* On hover the card lifts a little off the page, the way a card on a desk would. */}

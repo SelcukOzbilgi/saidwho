@@ -74,6 +74,11 @@ describe("EvalNumbers motion", () => {
     for (const cost of others) expect(mix).toBeGreaterThan(cost);
     const marker = Number(/class="ev-marker[^"]*" style="--at:(\d+)ms"/.exec(html)![1]);
     expect(marker).toBeGreaterThan(mix);
+    // The mark waits for the mix's bar to land: its wait and its draw, as the tbody sets them.
+    const bar = /--bar-wait:(\d+)ms;--bar-ms:(\d+)ms/.exec(html)!;
+    expect(marker).toBeGreaterThanOrEqual(mix + Number(bar[1]) + Number(bar[2]));
+    // And the whole table is in place in under 1.4 s.
+    expect(Math.max(...at) + Number(bar[1]) + Number(bar[2])).toBeLessThanOrEqual(1400);
   });
 });
 

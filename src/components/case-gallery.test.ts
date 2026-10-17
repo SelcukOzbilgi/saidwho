@@ -53,5 +53,9 @@ describe("CaseGallery", () => {
     expect(card(html, "so-much-owed")).toContain("Earliest trace: 1940, Winston Churchill");
     // The Judge gave no author or year for this one, so there is nothing to preview.
     expect(card(html, "gel-ne-olursan-ol")).not.toContain("Earliest trace");
+    // A year with no author says where it was seen, as the case page does.
+    expect(card(html, "en-hakiki-mursit")).toContain("Earliest trace: 2019, via ackizyurdu.com");
+    // A bare year would say less than the figures, so they stay.
+    expect(card(html, "faster-horses")).not.toContain("Earliest trace");
   });
 });

@@ -67,7 +67,7 @@ describe("ArriveList", () => {
     await act(async () => seen([cards[0], cards[1]]));
     expect(cards.map((c) => c.dataset.arrive)).toEqual(["in", "in", "wait"]);
     expect(cards[0].style.getPropertyValue("--wait")).toBe("0ms");
-    expect(cards[1].style.getPropertyValue("--wait")).toBe("90ms");
+    expect(cards[1].style.getPropertyValue("--wait")).toBe("70ms");
   });
 
   it("sets nothing back under reduced motion", async () => {

@@ -24,7 +24,7 @@ export function ArriveList({ children, className }: { children: ReactNode; class
       (entries) => {
         const now = entries.filter((e) => e.isIntersecting).map((e) => e.target as HTMLElement);
         now.forEach((el, i) => {
-          el.style.setProperty("--wait", `${Math.min(i, 5) * 90}ms`);
+          el.style.setProperty("--wait", `${Math.min(i, 8) * 70}ms`);
           el.dataset.arrive = "in";
           seen.unobserve(el);
         });

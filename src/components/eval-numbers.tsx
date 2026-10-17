@@ -63,7 +63,13 @@ function Score({
   children?: ReactNode;
 }) {
   const parsed = parseScore(score);
-  if (!parsed) return <span className={numberClassName}>{score}</span>;
+  if (!parsed)
+    return (
+      <>
+        <span className={numberClassName}>{score}</span>
+        {children}
+      </>
+    );
   return (
     <ScoreMeter got={parsed.got} of={parsed.of} strong={strong} delay={delay} numberClassName={numberClassName}>
       {children}
@@ -117,13 +123,19 @@ const usd = (text: string) => Number(text.replace(/[^0-9.]/g, ""));
 // the Home: eval and cases block of globals.css reads it.
 const at = (ms: number) => ({ "--at": `${ms}ms` }) as CSSProperties;
 
-// The cost column goes dearest first, so the mix's short bar is the last to
-// land, and the heading's "about a tenth" is marked once it has.
+// Each column starts a short step after the one before it, and the cost column
+// goes dearest first, so the mix's short bar is the last to land. A bar draws
+// for BAR_MS after BAR_WAIT, and the heading's "about a tenth" is marked once
+// the mix's has landed. The whole table is in place in under 1.4 s.
+const BAR_WAIT = 60;
+const BAR_MS = 450;
+const COL_AT = { name: 0, verdicts: 200, years: 400 };
 const COST_AT = (() => {
   const order = THREE_WAY.setups.map((s, i) => ({ i, cost: usd(s.usdPerQuote) })).sort((a, b) => b.cost - a.cost);
   const rows: number[] = [];
-  order.forEach(({ i }, k) => (rows[i] = 1000 + 150 * k));
-  return { rows, end: 1000 + 150 * order.length + 450 };
+  order.forEach(({ i }, k) => (rows[i] = 600 + 120 * k));
+  // The mix is the first setup.
+  return { rows, end: rows[0] + BAR_WAIT + BAR_MS };
 })();
 
 export function EvalNumbers() {
@@ -185,7 +197,10 @@ export function EvalNumbers() {
                   claim: the setups, their verdicts, their years, then their cost,
                   the dearest first so the mix's short bar lands last. A row under
                   the pointer stays bright while the others fade back. */}
-              <tbody className="ev-rows tabular-nums">
+              <tbody
+                className="ev-rows tabular-nums"
+                style={{ "--bar-wait": `${BAR_WAIT}ms`, "--bar-ms": `${BAR_MS}ms` } as CSSProperties}
+              >
                 {THREE_WAY.setups.map((s, i) => {
                   const verdicts = parseScore(s.verdicts);
                   return (
@@ -193,11 +208,11 @@ export function EvalNumbers() {
                       <th
                         scope="row"
                         className={`ev-cell py-2.5 pr-3 text-left ${s === mix ? "font-medium" : "font-normal"}`}
-                        style={at(100 + 70 * i)}
+                        style={at(COL_AT.name + 50 * i)}
                       >
                         {s.name}
                       </th>
-                      <td className="ev-cell px-2 py-2.5 sm:px-3" style={at(400 + 70 * i)}>
+                      <td className="ev-cell px-2 py-2.5 sm:px-3" style={at(COL_AT.verdicts + 50 * i)}>
                         <span className="flex items-center gap-2.5">
                           {/* Equal bars for equal verdicts, on one scale as in eugeneshilow's Paired Bars on 21st.dev, from a width where they fit. */}
                           {verdicts && (
@@ -211,7 +226,7 @@ export function EvalNumbers() {
                           {s.verdicts}
                         </span>
                       </td>
-                      <td className="ev-cell hidden px-3 py-2.5 sm:table-cell" style={at(700 + 70 * i)}>
+                      <td className="ev-cell hidden px-3 py-2.5 sm:table-cell" style={at(COL_AT.years + 50 * i)}>
                         {s.years}
                       </td>
                       <td className="ev-cell py-2.5 pl-3" style={at(COST_AT.rows[i])}>
