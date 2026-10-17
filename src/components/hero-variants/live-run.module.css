@@ -20,10 +20,13 @@
   position: relative;
   display: inline-block;
 }
+/* Set against the end of the value's box, so while a count is shorter than
+   the value the spare room sits before the digits, not between them and the
+   word after. */
 .count::after {
   position: absolute;
   inset-block-start: 0;
-  inset-inline-start: 0;
+  inset-inline-end: 0;
   visibility: hidden;
 }
 
