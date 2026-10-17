@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CASES, FEATURED_CASE_ID, findCase } from "../cases/cases";
-import { FeaturedCase, plainNote, trailOf } from "./featured-case";
+import { FeaturedCase, plainNote, playLeads, trailOf } from "./featured-case";
 
 const featured = findCase(FEATURED_CASE_ID);
 
@@ -47,6 +47,26 @@ describe("trailOf", () => {
       nodes: run.nodes.map((n) => (n.id === first ? { ...n, check: { ...n.check, status: "not_found" as const } } : n)),
     };
     expect(trailOf(unconfirmed)).toEqual({ steps: [], more: 0 });
+  });
+});
+
+describe("playLeads", () => {
+  it("plays the trail before the verdict side by side, and the verdict first on a phone, the cost row last in both", () => {
+    for (const steps of [2, 3]) {
+      const { wide, narrow } = playLeads(steps);
+      expect(wide.trail).toBeLessThan(wide.verdict);
+      expect(wide.verdict).toBeLessThan(wide.footer);
+      expect(narrow.verdict).toBeLessThan(narrow.trail);
+      expect(narrow.trail).toBeLessThan(narrow.footer);
+    }
+    expect(playLeads(3).wide.verdict).toBeGreaterThan(playLeads(2).wide.verdict);
+  });
+
+  it("starts the verdict at once when there is no trail to wait for", () => {
+    const { wide, narrow } = playLeads(0);
+    expect(wide.verdict).toBe(0);
+    expect(narrow.verdict).toBe(0);
+    expect(wide.footer).toBe(narrow.footer);
   });
 });
 
@@ -112,5 +132,18 @@ describe("FeaturedCase", () => {
     const noVerdict = CASES.find((c) => !c.run.verdict);
     const example = noVerdict ?? { ...featured!, run: { ...featured!.run, verdict: null } };
     expect(renderToStaticMarkup(createElement(FeaturedCase, { example }))).toBe("");
+  });
+
+  it("draws one stretch of line between each pair of steps", () => {
+    const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured!, afterHero: true }));
+    const steps = trailOf(featured!.run).steps.length;
+    expect(html.match(/fc-segment/g)).toHaveLength(steps - 1);
+    expect(html.match(/fc-marker/g)).toHaveLength(steps);
+  });
+
+  it("is rendered finished, so it reads the same without JavaScript or motion", () => {
+    const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured!, afterHero: true }));
+    expect(html).not.toContain("data-reveal");
+    expect(html).not.toMatch(/opacity:\s*0/);
   });
 });
