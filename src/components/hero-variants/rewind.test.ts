@@ -73,6 +73,45 @@ describe("Hero at ?hero=rewind", () => {
     expect(text(html)).toContain(plain.run.popularAttribution!);
     // The run found the credit right, so nothing is struck.
     expect(html).not.toContain("<s ");
+    expect(text(html)).toContain("Earliest trace found");
+    expect(text(html)).not.toContain("Traced back");
     expect(rewindFile({ featured: plain, trace }).rows).toHaveLength(0);
+  });
+
+  it("strikes the credit in the fallback when the run found it wrong, and a screen reader still hears the name", () => {
+    const plain = findCase("good-men-do-nothing")!;
+    const trace = heroTrace(plain)!;
+    expect(trailOf(plain.run).steps).toHaveLength(0);
+    expect(trace.output.verdict).toBe("misattributed");
+    const html = render(plain);
+    // s, not a line drawn over hidden text: the name stays in the accessible text.
+    expect(html).toMatch(new RegExp(`<s [^>]*>${trace.credit}</s>`));
+    expect(html).not.toMatch(/<s [^>]*aria-hidden/);
+    expect(text(html)).toContain(trace.earliest.trace);
+    expect(text(html)).toContain(verdictWords("misattributed"));
+    expect(rewindFile({ featured: plain, trace }).rows).toHaveLength(0);
+  });
+
+  it("keeps the trail's first step as its own row above the earliest trace when they are different pages", () => {
+    const example = findCase("faster-horses")!;
+    const trace = heroTrace(example)!;
+    const { steps } = trailOf(example.run);
+    expect(steps[0].node.id).not.toBe(trace.output.earliest_node);
+
+    const file = rewindFile({ featured: example, trace });
+    expect(file.rows.map((r) => r.node.id)).toEqual(steps.map((s) => s.node.id).reverse());
+    expect(file.earliest.first).toBe(false);
+
+    const html = render(example);
+    // Every step, newest first, then the earliest trace below the trail's first page.
+    const at = steps.map((s) => html.indexOf(`>${s.node.host}</a>`)).reverse();
+    expect(at.every((i) => i > 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(html.indexOf("Earliest trace")).toBeGreaterThan(at[at.length - 1]);
+    expect(text(html)).not.toContain("First seen");
+    // The trace is only a year, so the year is all the row prints, and it is heard once.
+    expect(trace.earliest.trace).toBe(trace.output.earliest_date);
+    expect(file.earliest.text).toBeNull();
+    expect(html.match(new RegExp(`<span class="sr-only">${trace.earliest.trace}</span>`, "g"))).toHaveLength(1);
   });
 });
