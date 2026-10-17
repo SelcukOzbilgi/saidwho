@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { RunState } from "../lib/run-state";
+import type { Phase, RunState } from "../lib/run-state";
 import { Arrivals, Enter } from "./case-motion";
 import { Lineage } from "./lineage";
 import { Progress } from "./progress";
@@ -20,10 +20,13 @@ type Props = {
   note?: ReactNode;
   // Shown under the verdict.
   afterVerdict?: ReactNode;
+  // Why a live run ended without an answer: the card goes in the verdict's
+  // place, and the progress bar marks where it broke off.
+  problem?: { card: ReactNode; tone: "bad" | "warn"; at: Phase };
 };
 
 // A run as the page shows it, whether it is happening now or replayed from a saved log.
-export function RunView({ run, running, quoteIsHeading = false, announce = false, note, afterVerdict }: Props) {
+export function RunView({ run, running, quoteIsHeading = false, announce = false, note, afterVerdict, problem }: Props) {
   const verdict = run.verdict?.output;
   const Quote = quoteIsHeading ? "h1" : "blockquote";
 
@@ -38,7 +41,7 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
         </p>
       </header>
 
-      <Progress running={running} {...run} aside={note} />
+      <Progress running={running} {...run} aside={note} brokeAt={problem && { phase: problem.at, tone: problem.tone }} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
@@ -50,6 +53,10 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
             {running && !run.verdict ? (
               <Enter key="so-far">
                 <RunSoFar {...run} announce={announce} />
+              </Enter>
+            ) : problem && !run.verdict ? (
+              <Enter key="problem" rise={12}>
+                {problem.card}
               </Enter>
             ) : (
               <Enter key="verdict" rise={12}>

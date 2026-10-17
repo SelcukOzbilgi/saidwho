@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
 import { ultraRatio } from "../lib/cost";
@@ -31,9 +31,14 @@ type Props = Pick<
   | "unknownCostCalls"
   | "tavilyCredits"
   | "seconds"
-> & { running: boolean; aside?: ReactNode };
+> & {
+  running: boolean;
+  aside?: ReactNode;
+  // Where a run that ended badly broke off, marked in the problem's color.
+  brokeAt?: { phase: Phase; tone: "bad" | "warn" };
+};
 
-type StepState = "done" | "now" | "later";
+type StepState = "done" | "now" | "later" | "broke";
 
 // How much of the step under way is done, for the steps that can say: the
 // planned searches run, and the pages read. null for a step with no count to
@@ -44,8 +49,8 @@ export function stepShare({ phase, plan, searches, pages, readUrls }: Pick<RunSt
   return null;
 }
 
-export function Progress({ running, aside, phase, finished, plan, searches, pages, readUrls, nodes, leads, ...cost }: Props) {
-  const at = STEPS.findIndex((step) => step.phase === phase);
+export function Progress({ running, aside, brokeAt, phase, finished, plan, searches, pages, readUrls, nodes, leads, ...cost }: Props) {
+  const at = STEPS.findIndex((step) => step.phase === (brokeAt?.phase ?? phase));
   const confirmed = nodes.filter((n) => n.check.status !== "not_found").length;
   const share = stepShare({ phase, plan, searches, pages, readUrls });
   // The Genealogist's pages are read while citations are followed, so the
@@ -82,15 +87,32 @@ export function Progress({ running, aside, phase, finished, plan, searches, page
         {STEPS.map((step, i) => {
           // A run that ended early, stopped or broke leaves its last step unfinished.
           const ended = finished && phase === "judging";
-          const state: StepState = i < at || (i === at && ended) ? "done" : i === at && running ? "now" : "later";
+          const state: StepState =
+            brokeAt && !running
+              ? i < at
+                ? "done"
+                : i === at
+                  ? "broke"
+                  : "later"
+              : i < at || (i === at && ended)
+                ? "done"
+                : i === at && running
+                  ? "now"
+                  : "later";
           return (
             <li key={step.phase} aria-current={state === "now" ? "step" : undefined} className="flex items-center gap-2 sm:block">
-              <StepBar state={state} share={state === "now" ? share : null} />
+              <StepBar state={state} tone={brokeAt?.tone} share={state === "now" ? share : null} />
               <p className={`flex items-center gap-1 text-xs font-medium transition-colors duration-300 sm:mt-1.5 ${state === "later" ? "text-muted" : ""}`}>
                 {step.label}
                 {state === "done" && (step.phase !== "reading" || readingDone) && (
                   <Pop key="done" className="text-muted">
                     <Check aria-hidden className="size-3" strokeWidth={2.5} />
+                  </Pop>
+                )}
+                {state === "broke" && (
+                  <Pop key="broke" className={brokeAt?.tone === "warn" ? "text-warn" : "text-bad"}>
+                    <X aria-hidden className="size-3" strokeWidth={2.5} />
+                    <span className="sr-only">, ended here</span>
                   </Pop>
                 )}
               </p>
@@ -117,13 +139,16 @@ export function Progress({ running, aside, phase, finished, plan, searches, page
 // the run reads as handing on from step to step.
 // The fill growing in proportion is the progress line from shadcnspace's
 // Animated Progress Stepper on 21st.dev, here one per step.
-function StepBar({ state, share }: { state: StepState; share: number | null }) {
+// A step a run broke off at fills all the way, in the problem's color, so the
+// bar shows where it ended as the card below says why.
+function StepBar({ state, share, tone }: { state: StepState; share: number | null; tone?: "bad" | "warn" }) {
   const sweeps = state === "now" && share === null;
-  const fill = state === "done" ? 1 : state === "now" ? (share === null ? 0 : Math.max(0.04, share)) : 0;
+  const fill = state === "done" || state === "broke" ? 1 : state === "now" ? (share === null ? 0 : Math.max(0.04, share)) : 0;
+  const color = state === "done" ? "bg-foreground" : state === "broke" ? (tone === "warn" ? "bg-warn" : "bg-bad") : "bg-accent";
   return (
     <div className="relative h-1 w-6 shrink-0 overflow-hidden rounded-full bg-line sm:w-auto">
       <div
-        className={`absolute inset-0 origin-left rounded-full transition-[scale,background-color] duration-[450ms] ease-out motion-reduce:transition-none ${state === "done" ? "bg-foreground" : "bg-accent"}`}
+        className={`absolute inset-0 origin-left rounded-full transition-[scale,background-color] duration-[450ms] ease-out motion-reduce:transition-none ${color}`}
         style={{ scale: `${fill} 1` } as CSSProperties}
       />
       {sweeps && <div aria-hidden className="case-sweep absolute inset-y-0 left-0 w-2/5 rounded-full bg-accent" />}

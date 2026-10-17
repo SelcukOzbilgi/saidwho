@@ -5,37 +5,19 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type CSSProperties, type ReactNode, useEffect, useReducer, useRef, useState } from "react";
 
 import type { RunEvent } from "../agent/events";
+import { type PaidBy, type Problem, type ProblemAction, refusal, runProblem } from "../lib/run-problem";
 import { initialRunState, reduceRun, type RunState } from "../lib/run-state";
 import { readRunStream } from "../lib/run-stream";
 import { cn } from "../lib/utils";
-import { CaseLinks, QuoteForm, type QuoteRequest } from "./quote-form";
+import { CaseLinks, QuoteForm, type QuoteFormHandle, type QuoteRequest } from "./quote-form";
+import { ProblemCard } from "./problem-card";
 import { RunView } from "./run-view";
 
-// What went wrong, keyed by the codes POST /api/investigate returns, plus a few
-// the page finds on its own.
-const PROBLEMS: Record<string, string> = {
-  invalid_request:
-    "Check what you entered: a quote of up to 500 characters, a name of up to 200 if you add one, and keys (up to 512 characters) or an access code (up to 200) in plain keyboard characters with no spaces.",
-  invalid_json: "The page sent something the server could not read. Reload and try again.",
-  expected_json: "The page sent something the server could not read. Reload and try again.",
-  body_too_large: "That's too long to look up.",
-  byok_incomplete: "Both keys are needed: one for Nebius and one for Tavily.",
-  trial_disabled: "Free trial runs are off right now. Use your own keys instead.",
-  access_code_required: "The free trial needs an access code. Add it above, or use your own keys.",
-  access_code_wrong: "That access code isn't right. Check it and try again, or use your own keys.",
-  owner_keys_missing: "Free trial runs are not set up on this server. Use your own keys instead.",
-  daily_budget_spent: "Today's free trial budget is spent. Use your own keys, or come back tomorrow.",
-  too_many_runs: "That's a lot of runs from your network in the last hour. Try again a little later.",
-  trial_limit_reached: "You've used today's free trial runs. Use your own keys, or come back tomorrow.",
-  limits_unavailable: "Free trial runs can't start right now. Use your own keys, or try again later.",
-  server_misconfigured: "The server is not set up right. Try again later.",
-  run_failed: "The run broke on the server. What it found so far is below.",
-  connection_lost: "The connection dropped before the run finished. What it found so far is below.",
-  unreachable: "Could not reach the server.",
-};
+// Codes the page finds on its own, on top of the ones POST /api/investigate
+// returns; refusal() and runProblem() in lib/run-problem.ts say what each means.
+const PAGE_CODES = new Set(["run_failed", "connection_lost", "unreachable", "server_error"]);
 
 type Status = "idle" | "running" | "finished" | "stopped" | "failed";
-type PaidBy = QuoteRequest["keys"]["mode"];
 
 // A stopped run is saved once the calls it had running finish, which can take
 // up to a minute and a half (NEBIUS_TIMEOUT_MS), and the save itself up to ten
@@ -82,16 +64,27 @@ export function Investigation({
   const [run, dispatch] = useReducer(reducer, initialRunState);
   const [status, setStatus] = useState<Status>("idle");
   const [paidBy, setPaidBy] = useState<PaidBy>("byok");
+  // Why the run couldn't start or broke off, as a code, and how long the
+  // server asked the visitor to wait, when it did.
   const [problem, setProblem] = useState<string | null>(null);
+  const [retryAfter, setRetryAfter] = useState<number | null>(null);
   // The id of the run's public page, once the server has saved it.
   const [savedId, setSavedId] = useState<string | null>(null);
   // The form, opened again under a run that has ended.
   const [editing, setEditing] = useState(false);
+  // "Try again" waiting on the key checks a run starts with, which can take a
+  // few seconds while the form is hidden.
+  const [retrying, setRetrying] = useState(false);
+  const retryInFlight = useRef(false);
   const controller = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const top = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
-  const problemLine = useRef<HTMLParagraphElement>(null);
+  const problemLine = useRef<HTMLElement>(null);
+  const form = useRef<QuoteFormHandle>(null);
+  // What to do once the form opens again from a way forward under a run, in
+  // place of putting the cursor in the quote.
+  const onReopen = useRef<(() => void) | null>(null);
 
   // Leaving the page ends the run, which stops the spend on the server too.
   useEffect(() => {
@@ -108,6 +101,7 @@ export function Investigation({
     controller.current = abort;
     dispatch({ type: "reset" });
     setProblem(null);
+    setRetryAfter(null);
     setSavedId(null);
     setPaidBy(request.keys.mode);
     setEditing(false);
@@ -138,8 +132,13 @@ export function Investigation({
       if (!response.ok || !response.body) {
         const body: unknown = await response.json().catch(() => null);
         if (!live()) return stopped();
-        const code = body && typeof body === "object" && "error" in body ? String(body.error) : "unreachable";
-        return fail(code in PROBLEMS ? code : "unreachable");
+        // The server answered, so a reply that isn't one of its codes (a host's
+        // own error page, a timeout in front of it) is the server's trouble,
+        // not the visitor's connection.
+        const code = body && typeof body === "object" && "error" in body ? String(body.error) : "server_error";
+        const wait = Number(response.headers.get("retry-after"));
+        if (Number.isFinite(wait) && wait > 0) setRetryAfter(wait);
+        return fail(PAGE_CODES.has(code) ? "server_error" : code);
       }
 
       let done = false;
@@ -188,9 +187,63 @@ export function Investigation({
       top.current?.scrollIntoView({ block: "start" });
       bar.current?.focus({ preventScroll: true });
     }
-    if (!wasOpen.current && formOpen) top.current?.querySelector("textarea")?.focus({ preventScroll: true });
+    if (!wasOpen.current && formOpen) {
+      const then = onReopen.current;
+      onReopen.current = null;
+      if (then) then();
+      else top.current?.querySelector("textarea")?.focus({ preventScroll: true });
+    }
     wasOpen.current = formOpen;
   }, [formOpen]);
+
+  // How the run ended, said plainly, once it has.
+  const ended = shown ? runProblem(run, { status, code: problem, paidBy }) : null;
+  // A run that ended on a refused key marks that field, so the form says which
+  // key to fix when it opens again.
+  const refusedKey = ended?.actions.includes("fix_nebius") ? "nebius" : ended?.actions.includes("fix_tavily") ? "tavily" : null;
+  useEffect(() => {
+    if (refusedKey && run.trouble[refusedKey]?.kind === "auth") form.current?.markRejected(refusedKey);
+  }, [refusedKey, run.trouble]);
+
+  // The ways forward under a problem. One that changes the form opens it first.
+  const act = (action: ProblemAction) => {
+    // Read from the ref, not this render: "Try again" reopens seconds later,
+    // and the visitor may have opened the form themselves by then.
+    const reopen = (then: () => void) => {
+      if (wasOpen.current) return then();
+      onReopen.current = then;
+      setEditing(true);
+    };
+    const toQuote = () => top.current?.querySelector("textarea")?.focus({ preventScroll: true });
+    if (action === "fix_nebius" || action === "fix_tavily") {
+      const name = action === "fix_nebius" ? "nebius" : "tavily";
+      reopen(() => form.current?.focusKey(name));
+    } else if (action === "own_keys") reopen(() => form.current?.useOwnKeys());
+    else if (action === "edit") reopen(toQuote);
+    else if (action === "retry" && form.current && !retryInFlight.current) {
+      retryInFlight.current = true;
+      // Shown only if the checks take a moment, so a run that starts at once
+      // (the trial, keys already checked) doesn't flash it.
+      const slow = setTimeout(() => setRetrying(true), 150);
+      void form.current
+        .resubmit()
+        .then((sent) => {
+          if (!mounted.current) return;
+          // A key refused in the check before the run, or a form no longer ready
+          // to run, can't say so from under a run: the form opens on what to fix.
+          if (sent.outcome === "refused") reopen(() => form.current?.focusKey(sent.key));
+          else if (sent.outcome === "not_ready") reopen(() => (sent.key ? form.current?.focusKey(sent.key) : toQuote()));
+        })
+        .finally(() => {
+          retryInFlight.current = false;
+          clearTimeout(slow);
+          if (mounted.current) setRetrying(false);
+        });
+    }
+  };
+  const card = (p: Problem, eyebrow: string, ref?: React.Ref<HTMLElement>) => (
+    <ProblemCard ref={ref} problem={p} eyebrow={eyebrow} onAction={act} busy={retrying ? "retry" : null} />
+  );
 
   // A run turned down at the door leaves the form up and the button in focus,
   // with the reason under the form, maybe below the fold. Bring it into view.
@@ -215,6 +268,7 @@ export function Investigation({
       <div ref={top} className="flex scroll-mt-4 flex-col gap-6">
         <div hidden={!formOpen}>
           <QuoteForm
+            ref={form}
             trialOpen={trialOpen}
             needsCode={needsCode}
             savesRuns={savesRuns}
@@ -224,10 +278,8 @@ export function Investigation({
           />
         </div>
 
-        {problem && (
-          <p ref={problemLine} role="alert" className="arrive rounded-sm border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
-            {PROBLEMS[problem]}
-          </p>
+        {problem && !shown && (
+          <div className="arrive">{card(refusal(problem, retryAfter), "The run didn't start", problemLine)}</div>
         )}
 
         {status === "stopped" && !shown && <p className="arrive text-sm text-muted">You stopped the run before it began.</p>}
@@ -240,6 +292,7 @@ export function Investigation({
           <RunBar
             ref={bar}
             status={status}
+            ended={ended}
             paidBy={paidBy}
             editing={editing}
             onStop={() => controller.current?.abort()}
@@ -249,6 +302,15 @@ export function Investigation({
             run={run}
             running={running}
             announce
+            problem={
+              ended
+                ? {
+                    card: card(ended, ended.tone === "warn" ? "Stopped early" : "Ended early"),
+                    tone: ended.tone,
+                    at: ended.at ?? run.phase,
+                  }
+                : undefined
+            }
             note={
               <>
                 {status === "stopped" && <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>}
@@ -276,6 +338,7 @@ const STATUS: Record<Status, { word: string; dot: string }> = {
 function RunBar({
   ref,
   status,
+  ended,
   paidBy,
   editing,
   onStop,
@@ -283,12 +346,17 @@ function RunBar({
 }: {
   ref: React.Ref<HTMLDivElement>;
   status: Status;
+  ended: Problem | null;
   paidBy: PaidBy;
   editing: boolean;
   onStop: () => void;
   onAgain: () => void;
 }) {
-  const { word, dot } = STATUS[status];
+  // A run can finish and still have ended badly (its key refused, its cap hit):
+  // the bar then says so, in the problem's own color.
+  const { word, dot } = ended
+    ? { word: ended.tone === "bad" ? "Ended early" : "Stopped early", dot: ended.tone === "bad" ? "bg-bad" : "bg-warn" }
+    : STATUS[status];
   const running = status === "running";
   return (
     <div
@@ -298,11 +366,18 @@ function RunBar({
       aria-label="This run"
       className="arrive sticky top-[calc(var(--site-header-height,3.5rem)+0.5rem)] z-20 flex items-center gap-3 rounded-sm border border-line bg-card px-4 py-3 shadow-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
     >
-      <span aria-hidden="true" className={cn("size-2.5 shrink-0 rounded-full transition-colors duration-300", dot)} />
-      {/* No live region here: the run's log already reads each step aloud. */}
+      {/* The dot rings once when the run ends badly, keyed so it rings again for a new run. */}
+      <span
+        aria-hidden="true"
+        key={ended ? "ended" : "live"}
+        data-ended={ended ? ended.tone : undefined}
+        className={cn("run-dot relative size-2.5 shrink-0 rounded-full transition-colors duration-300", dot)}
+      />
+      {/* No live region here: the run's log already reads each step aloud, and a problem card is an alert. */}
       <p className="min-w-0 text-sm">
         <span className="font-medium">{word}</span>
-        <span className="text-muted"> · {paidBy === "trial" ? "on the free trial" : "on your own keys"}</span>
+        {ended && <span className="text-muted"> · {ended.short}</span>}
+        <span className="text-muted max-sm:hidden"> · {paidBy === "trial" ? "on the free trial" : "on your own keys"}</span>
       </p>
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {running ? (

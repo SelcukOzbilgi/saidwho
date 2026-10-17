@@ -168,3 +168,188 @@ describe("QuoteForm in a page: who pays", () => {
     expect(textOf(keys.getAttribute("aria-describedby"))).toMatch(/^Works on any copy of the site/);
   });
 });
+
+describe("QuoteForm in a page: checking the visitor's keys", () => {
+  const NEBIUS = "fake-visitor-nebius-key-0042";
+  const TAVILY = "fake-visitor-tavily-key-4f2a";
+  const keyField = (name: "nebius" | "tavily") => field<HTMLInputElement>(`input[id$="-${name}"]`);
+  const statusLine = (name: "nebius" | "tavily") => document.getElementById(`${keyField(name).id}-status`)!;
+  const setValue = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+    const proto = el instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, "value")!.set!.call(el, value);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const settle = () => act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+
+  // A stand-in for POST /api/keys/check that answers with the states given, and
+  // remembers which keys it was asked about.
+  function stubCheck(answer: Record<string, unknown> | (() => Promise<Response>)) {
+    const asked: Record<string, string>[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(init.body as string) as Record<string, string>;
+        asked.push(body);
+        if (typeof answer === "function") return answer();
+        const reply = Object.fromEntries(
+          Object.entries(answer).filter(([name]) => (name === "nebius" ? body.nebiusApiKey : body.tavilyApiKey)),
+        );
+        return new Response(JSON.stringify(reply), { status: 200 });
+      }),
+    );
+    return asked;
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("checks a key once it's pasted, not on each keystroke, and says it works with the key's tail and credits", async () => {
+    const asked = stubCheck({ tavily: { state: "works", creditsLeft: 812 } });
+    await mount();
+    await act(async () => setValue(keyField("tavily"), "fake"));
+    await act(async () => setValue(keyField("tavily"), "fake-visitor"));
+    expect(asked).toEqual([]);
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(keyField("tavily"), TAVILY);
+      keyField("tavily").dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
+    });
+    await settle();
+    expect(asked).toEqual([{ tavilyApiKey: TAVILY }]);
+    expect(statusLine("tavily").textContent).toBe("Works. Tavily accepted the key ending in 4f2a, 812 credits left.");
+    expect(keyField("tavily").type).toBe("password");
+    // Nothing on the page shows the key but its own field, as dots.
+    expect(container!.textContent).not.toContain(TAVILY);
+  });
+
+  it("checks a key when its field is left, and a refused key says who refused it and blocks the run", async () => {
+    stubCheck({ nebius: { state: "rejected" }, tavily: { state: "works", creditsLeft: null } });
+    const onStart = vi.fn();
+    const { form } = await mount({ onStart });
+    await act(async () => setValue(quoteField(), "A quote I saw"));
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => setValue(keyField("tavily"), TAVILY));
+    await act(async () => keyField("nebius").dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+    await settle();
+
+    expect(statusLine("nebius").textContent).toContain("Nebius rejected this key.");
+    expect(statusLine("nebius").querySelector("a")?.getAttribute("href")).toBe("https://tokenfactory.nebius.com/");
+    expect(keyField("nebius").getAttribute("aria-invalid")).toBe("true");
+    expect(keyField("nebius").getAttribute("aria-describedby")).toBe(statusLine("nebius").id);
+    expect(container!.textContent).toContain("Nebius rejected the key above. Fix it to run.");
+    expect(field<HTMLButtonElement>('button[type="submit"]').disabled).toBe(true);
+    await act(async () => form.requestSubmit());
+    await settle();
+    expect(onStart).not.toHaveBeenCalled();
+
+    // A key typed over is a new key: no longer refused, and not checked until it's left or pasted.
+    await act(async () => setValue(keyField("nebius"), `${NEBIUS}-new`));
+    expect(keyField("nebius").hasAttribute("aria-invalid")).toBe(false);
+    expect(statusLine("nebius").textContent).toBe("Get one at tokenfactory.nebius.com.");
+  });
+
+  it("checks both keys before a run starts, in one call, then starts it", async () => {
+    const asked = stubCheck({ nebius: { state: "works" }, tavily: { state: "works", creditsLeft: 3 } });
+    const onStart = vi.fn();
+    const { form } = await mount({ onStart });
+    await act(async () => setValue(quoteField(), "A quote I saw"));
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => setValue(keyField("tavily"), TAVILY));
+    await act(async () => form.requestSubmit());
+    await settle();
+    expect(asked).toEqual([{ nebiusApiKey: NEBIUS, tavilyApiKey: TAVILY }]);
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onStart.mock.calls[0][0].keys).toEqual({ mode: "byok", nebiusApiKey: NEBIUS, tavilyApiKey: TAVILY });
+  });
+
+  it("keeps the cursor on the button while the keys are checked, and starts one run however often it's pressed", async () => {
+    let answer: (response: Response) => void = () => {};
+    const asked = stubCheck(() => new Promise<Response>((resolve) => (answer = resolve)));
+    const onStart = vi.fn();
+    const { form } = await mount({ onStart });
+    await act(async () => setValue(quoteField(), "A quote I saw"));
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => setValue(keyField("tavily"), TAVILY));
+    const run = field<HTMLButtonElement>('button[type="submit"]');
+    run.focus();
+    await act(async () => form.requestSubmit());
+    expect(run.textContent).toContain("Checking your keys");
+    expect(run.getAttribute("aria-disabled")).toBe("true");
+    expect(run.disabled).toBe(false);
+    expect(document.activeElement).toBe(run);
+    await act(async () => form.requestSubmit());
+    expect(asked).toHaveLength(1);
+    await act(async () => answer(new Response(JSON.stringify({ nebius: { state: "works" }, tavily: { state: "works" } }))));
+    await settle();
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it("stops a run whose key is refused in the check before it, and puts the cursor in that key", async () => {
+    stubCheck({ nebius: { state: "works" }, tavily: { state: "rejected" } });
+    const onStart = vi.fn();
+    const { form } = await mount({ onStart });
+    await act(async () => setValue(quoteField(), "A quote I saw"));
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => setValue(keyField("tavily"), TAVILY));
+    await act(async () => form.requestSubmit());
+    await settle();
+    expect(onStart).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(keyField("tavily"));
+    expect(statusLine("tavily").textContent).toContain("Tavily rejected this key.");
+  });
+
+  it("lets the run go when the keys couldn't be checked", async () => {
+    stubCheck(async () => new Response(JSON.stringify({ error: "too_many_checks" }), { status: 429 }));
+    const onStart = vi.fn();
+    const { form } = await mount({ onStart });
+    await act(async () => setValue(quoteField(), "A quote I saw"));
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => setValue(keyField("tavily"), TAVILY));
+    await act(async () => keyField("tavily").dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+    await settle();
+    expect(statusLine("tavily").textContent).toBe("Couldn't check it just now. The run will still try it.");
+    await act(async () => form.requestSubmit());
+    await settle();
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it("says it's checking while the provider is asked", async () => {
+    let answer: (response: Response) => void = () => {};
+    stubCheck(() => new Promise<Response>((resolve) => (answer = resolve)));
+    await mount();
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => keyField("nebius").dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+    expect(statusLine("nebius").textContent).toBe("Checking with Nebius…");
+    await act(async () => answer(new Response(JSON.stringify({ nebius: { state: "works" } }))));
+    await settle();
+    expect(statusLine("nebius").textContent).toBe("Works. Nebius accepted the key ending in 0042.");
+  });
+
+  it("shows a key only when asked, and hides it again once a run starts", async () => {
+    await mount();
+    const toggle = () => field<HTMLButtonElement>('button[aria-label$="Nebius API key"]');
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    expect(keyField("nebius").type).toBe("password");
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+    await act(async () => toggle().click());
+    expect(keyField("nebius").type).toBe("text");
+    expect(toggle().getAttribute("aria-label")).toBe("Hide Nebius API key");
+
+    await act(async () =>
+      root!.render(createElement(QuoteForm, { trialOpen: false, needsCode: false, savesRuns: false, running: true, onStart: () => {}, onStop: () => {} })),
+    );
+    expect(keyField("nebius").type).toBe("password");
+  });
+
+  it("hides a shown access code again once a run starts, as it does a key", async () => {
+    await mount({ trialOpen: true, needsCode: true });
+    await act(async () => field<HTMLInputElement>('input[type="radio"]').click());
+    const code = () => field<HTMLInputElement>('input[id$="-code"]');
+    await act(async () => field<HTMLButtonElement>('button[aria-label="Show Access code"]').click());
+    expect(code().type).toBe("text");
+
+    await act(async () =>
+      root!.render(createElement(QuoteForm, { trialOpen: true, needsCode: true, savesRuns: false, running: true, onStart: () => {}, onStop: () => {} })),
+    );
+    expect(code().type).toBe("password");
+  });
+});

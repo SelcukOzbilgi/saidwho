@@ -1,4 +1,5 @@
 import { type EvidenceNode, type RunEvent, verdictStands } from "../agent/events";
+import type { ErrorKind } from "./server/safe-error";
 import { estimateCostUsd, MODELS, type TokenUsage } from "../agent/models";
 import type { JudgeOutput } from "../agent/schemas";
 import { MODEL_NAME } from "./model-name";
@@ -13,6 +14,9 @@ export type Tier = "lightning" | "nano" | "super" | "ultra";
 export type Phase = "planning" | "searching" | "reading" | "tracing" | "judging";
 export type Agent = "Planner" | "Search" | "Reader" | "Checker" | "Genealogist" | "Judge" | "Run";
 export type Tone = "neutral" | "good" | "warn" | "bad";
+// The last provider error a step of the run hit, so the page can say plainly
+// why a run ended (a rejected key, no credits) instead of leaving it to the log.
+export type ProviderTrouble = { kind: ErrorKind; step: "plan" | "search" | "read" | "trace" | "judge" };
 
 export type LogEntry = {
   id: number;
@@ -45,6 +49,8 @@ export type RunState = {
   // Why no verdict came, when none did.
   noVerdict: string | null;
   stopped: "budget" | "aborted" | null;
+  // Every model call goes to Nebius and every search to Tavily.
+  trouble: { nebius: ProviderTrouble | null; tavily: ProviderTrouble | null };
   nebiusUsd: number;
   // The same calls priced at Ultra's rates, from the token counts each one
   // reported. null for runs saved before token counts were kept.
@@ -71,6 +77,7 @@ export const initialRunState: RunState = {
   verdict: null,
   noVerdict: null,
   stopped: null,
+  trouble: { nebius: null, tavily: null },
   nebiusUsd: 0,
   ultraUsd: 0,
   unknownCostCalls: 0,
@@ -92,6 +99,26 @@ const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text
 // Why there is no verdict when every one the judge gave was set aside.
 const SET_ASIDE = "the Judge's verdict cited pages that weren't confirmed, so it was set aside";
 
+const ERROR_KINDS: readonly ErrorKind[] = [
+  "auth",
+  "rate_limit",
+  "quota",
+  "bad_request",
+  "not_found",
+  "timeout",
+  "upstream",
+  "network",
+  "unknown",
+];
+
+// A failed model call's reason starts with the provider's error kind ("auth: The
+// Nebius API key was rejected."); a failed search's reason is the bare kind.
+// Other reasons (output that didn't parse, a page too long) name no provider error.
+export function errorKindOf(reason: string | null): ErrorKind | null {
+  const head = reason ? /^([a-z_]+)(?::|$)/.exec(reason)?.[1] : undefined;
+  return head && (ERROR_KINDS as readonly string[]).includes(head) ? (head as ErrorKind) : null;
+}
+
 type Spend = { tier: Tier; costUsd: number; usageKnown: boolean; tokens?: TokenUsage };
 
 export function reduceRun(state: RunState, event: RunEvent): RunState {
@@ -111,6 +138,11 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         : state.ultraUsd + (spend.tokens ? estimateCostUsd(MODELS.ultra, spend.tokens) : 0),
     unknownCostCalls: state.unknownCostCalls + (spend.usageKnown ? 0 : 1),
   });
+
+  const nebiusTrouble = (step: ProviderTrouble["step"], reason: string | null) => {
+    const kind = errorKindOf(reason);
+    return kind ? { trouble: { ...state.trouble, nebius: { kind, step } } } : {};
+  };
 
   switch (event.type) {
     case "started":
@@ -147,6 +179,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       return {
         ...state,
         ...spent(event),
+        ...nebiusTrouble("plan", event.reason),
         noVerdict: `Planning failed: ${event.reason}`,
         log: log("Planner", `Planning failed: ${event.reason}`, "bad", event),
       };
@@ -172,7 +205,14 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
     case "search_failed": {
       // The stored reason is a bare error kind; every search goes to Tavily.
       const why = event.reason === "auth" ? "the Tavily API key was rejected" : event.reason;
-      return { ...state, phase: state.phase === "tracing" ? "tracing" : "searching", noVerdict: null, log: log("Search", `Search failed (${why}): ${event.query}`, "bad") };
+      const kind = errorKindOf(event.reason);
+      return {
+        ...state,
+        phase: state.phase === "tracing" ? "tracing" : "searching",
+        noVerdict: null,
+        ...(kind && { trouble: { ...state.trouble, tavily: { kind, step: "search" as const } } }),
+        log: log("Search", `Search failed (${why}): ${event.query}`, "bad"),
+      };
     }
     case "pages_ready": {
       const dropped = event.droppedExcluded ? `, ${event.droppedExcluded} from excluded sites dropped` : "";
@@ -194,7 +234,13 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       return { ...state, ...spent(event), phase: "tracing", leads: [...state.leads, ...leads], log: log("Genealogist", text, "neutral", event) };
     }
     case "trace_failed":
-      return { ...state, ...spent(event), phase: "tracing", log: log("Genealogist", `Tracing failed: ${event.reason}`, "bad", event) };
+      return {
+        ...state,
+        ...spent(event),
+        ...nebiusTrouble("trace", event.reason),
+        phase: "tracing",
+        log: log("Genealogist", `Tracing failed: ${event.reason}`, "bad", event),
+      };
     case "page_read": {
       const text: Record<typeof event.outcome, string> = {
         evidence: `Found the quote on ${event.host}`,
@@ -204,7 +250,13 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       };
       const tone: Tone = event.outcome === "evidence" ? "good" : event.outcome === "failed" ? "bad" : "neutral";
       const readUrls = state.readUrls.includes(event.url) ? state.readUrls : [...state.readUrls, event.url];
-      return { ...state, ...spent(event), readUrls, log: log("Reader", text[event.outcome], tone, event) };
+      return {
+        ...state,
+        ...spent(event),
+        ...(event.outcome === "failed" && nebiusTrouble("read", event.reason)),
+        readUrls,
+        log: log("Reader", text[event.outcome], tone, event),
+      };
     }
     case "node_added": {
       const { node } = event;
@@ -263,6 +315,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       return {
         ...state,
         ...spent(event),
+        ...nebiusTrouble("judge", event.reason),
         phase: "judging",
         noVerdict: state.verdict ? null : event.reason,
         log: log("Judge", `Judging failed: ${event.reason}`, "bad", event),
