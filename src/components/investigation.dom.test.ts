@@ -30,15 +30,21 @@ function openStream(signal: AbortSignal, first: RunEvent | null = STARTED) {
   return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
-async function mount() {
+async function mount(trialOpen = true) {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
   await act(async () => {
     root!.render(
-      createElement(Investigation, { trialOpen: true, needsCode: false, savesRuns: false, heading: createElement("h1", null, "Run your own") }),
+      createElement(Investigation, { trialOpen, needsCode: false, savesRuns: false, heading: createElement("h1", null, "Run your own") }),
     );
   });
+}
+
+// A whole run's stream, sent at once and closed.
+function wholeStream(events: RunEvent[]) {
+  const text = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
+  return new Response(text, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
 const quoteField = () => container!.querySelector("textarea")!;
@@ -98,7 +104,8 @@ describe("Investigation", () => {
 
     expect(formBox().hidden).toBe(false);
     const alert = container!.querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain("Today's free trial budget is spent.");
+    expect(alert?.textContent).toContain("Today's free trial budget is spent");
+    expect(alert?.textContent).toContain("Use my own keys");
     expect(scrolled.mock.contexts).toContain(alert);
     expect(button("Run another quote")).toBeUndefined();
   });
@@ -113,5 +120,45 @@ describe("Investigation", () => {
     await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
     expect(container!.textContent).toContain("You stopped the run before it began.");
     expect(button("Find the source")).toBeDefined();
+  });
+
+  it("says plainly when a run ends on a refused key, and takes the visitor to that key", async () => {
+    const NEBIUS = "fake-visitor-nebius-key-0042";
+    const TAVILY = "fake-visitor-tavily-key-4f2a";
+    vi.stubGlobal("fetch", (url: string) =>
+      Promise.resolve(
+        url === "/api/keys/check"
+          ? new Response(JSON.stringify({ nebius: { state: "unknown" }, tavily: { state: "works", creditsLeft: null } }))
+          : wholeStream([
+              STARTED,
+              { type: "plan_failed", tier: "super", costUsd: 0, usageKnown: false, latencyMs: 9, reason: "auth: The Nebius API key was rejected." },
+              { type: "done", nebiusUsd: 0, tavilyCredits: 0, unknownCostCalls: 1, seconds: 1 },
+            ]),
+      ),
+    );
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    await mount(false);
+    const key = (name: string) => container!.querySelector<HTMLInputElement>(`input[id$="-${name}"]`)!;
+    await act(async () => {
+      for (const [name, value] of [["nebius", NEBIUS], ["tavily", TAVILY]]) {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(key(name), value);
+        key(name).dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+    await typeAndRun("A quote I saw");
+
+    const alert = container!.querySelector('[role="alert"]')!;
+    expect(alert.textContent).toContain("Nebius rejected your key");
+    expect(alert.textContent).toContain("before it spent anything");
+    const bar = container!.querySelector('[role="region"][aria-label="This run"]')!;
+    expect(bar.textContent).toContain("Ended early · Nebius key rejected");
+    // Neither the bar nor the run shows a key.
+    for (const text of [NEBIUS, TAVILY, NEBIUS.slice(-4)]) expect(bar.parentElement!.textContent).not.toContain(text);
+
+    await act(async () => button("Fix the Nebius key")!.click());
+    expect(formBox().hidden).toBe(false);
+    expect(document.activeElement).toBe(key("nebius"));
+    expect(key("nebius").value).toBe(NEBIUS);
+    expect(key("nebius").getAttribute("aria-invalid")).toBe("true");
   });
 });
