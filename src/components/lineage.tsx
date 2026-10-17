@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import type { EvidenceNode } from "../agent/events";
 import { type LineageStep, MAX_LINEAGE_STEPS } from "../agent/schemas";
 import { Enter, RevealList } from "./case-motion";
+import { FOCUS_RING } from "./focus-ring";
 import { Rationale } from "./verdict-card";
 
 // Each kind of change has a chip and a marker on the line. The marker's shape
@@ -63,7 +64,7 @@ export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes
               </span>
               <a
                 href={`#node-${node.id}`}
-                className="-my-1 truncate py-1 underline decoration-line underline-offset-2 hover:decoration-foreground"
+                className={`-my-1 truncate rounded-sm py-1 underline decoration-line underline-offset-2 hover:decoration-foreground ${FOCUS_RING}`}
               >
                 <span className="font-mono">{node.id}</span> {node.host}
               </a>

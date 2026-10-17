@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { EvidenceNode } from "../agent/events";
 import { byDate } from "../lib/run-state";
 import { Arrivals, Enter, RevealList } from "./case-motion";
+import { FOCUS_RING } from "./focus-ring";
 
 type Marks = { earliest: string | null; misattribution: string | null };
 
@@ -145,7 +146,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
         )}
         {node.foundVia && (
           <Row label="Found via">
-            <a href={`#node-${node.foundVia.node}`} className="py-1 underline decoration-line underline-offset-2 hover:decoration-foreground">
+            <a href={`#node-${node.foundVia.node}`} className={`rounded-sm py-1 underline decoration-line underline-offset-2 hover:decoration-foreground ${FOCUS_RING}`}>
               {node.foundVia.node}
             </a>
             , looking for {unmark(node.foundVia.work)}
@@ -168,7 +169,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
           href={webUrl(node.url)}
           target="_blank"
           rel="noopener noreferrer"
-          className="-my-1.5 ml-auto max-w-[60%] truncate py-1.5 underline decoration-line underline-offset-2 hover:decoration-foreground"
+          className={`-my-1.5 ml-auto max-w-[60%] truncate rounded-sm py-1.5 underline decoration-line underline-offset-2 hover:decoration-foreground ${FOCUS_RING}`}
           title={node.title}
         >
           {node.title || node.host}

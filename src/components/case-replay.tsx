@@ -6,6 +6,7 @@ import { type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject, 
 import type { RunEvent } from "../agent/events";
 import { initialRunState, reduceRun } from "../lib/run-state";
 import { Arrivals, Enter } from "./case-motion";
+import { FOCUS_RING } from "./focus-ring";
 import { RunView } from "./run-view";
 
 // A replay takes about this long, whatever the run took.
@@ -110,8 +111,8 @@ function ReplayControl({ shown, total, paused, onStart, onPause, onSeek }: Contr
         aria-label={replaying ? (paused ? "Play the replay" : "Pause the replay") : undefined}
         className={
           replaying
-            ? "flex size-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background hover:bg-accent hover:text-on-accent"
-            : "flex items-center gap-2 rounded-sm border border-foreground px-4 py-2 text-sm font-medium hover:bg-foreground hover:text-background"
+            ? `flex size-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background hover:bg-accent hover:text-on-accent ${FOCUS_RING}`
+            : `flex items-center gap-2 rounded-sm border border-foreground px-4 py-2 text-sm font-medium hover:bg-foreground hover:text-background ${FOCUS_RING}`
         }
       >
         {!replaying ? (
@@ -157,7 +158,7 @@ function ReplayControl({ shown, total, paused, onStart, onPause, onSeek }: Contr
                   resume.current = false;
                 }}
                 onKeyDown={onKey}
-                className="relative flex h-9 w-28 cursor-ew-resize touch-none items-center rounded-sm select-none sm:w-44"
+                className={`relative flex h-9 w-28 cursor-ew-resize touch-none items-center rounded-sm select-none sm:w-44 ${FOCUS_RING}`}
               >
                 <div className="h-1 w-full overflow-hidden rounded-full bg-line">
                   <div
@@ -177,7 +178,7 @@ function ReplayControl({ shown, total, paused, onStart, onPause, onSeek }: Contr
               <button
                 type="button"
                 onClick={() => onSeek(total)}
-                className="py-2 text-sm font-medium underline decoration-line underline-offset-4 hover:decoration-foreground"
+                className={`rounded-sm py-2 text-sm font-medium underline decoration-line underline-offset-4 hover:decoration-foreground ${FOCUS_RING}`}
               >
                 Skip to the end
               </button>

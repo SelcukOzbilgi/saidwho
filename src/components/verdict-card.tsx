@@ -4,6 +4,7 @@ import type { JudgeOutput } from "../agent/schemas";
 import { parseRationale } from "../lib/rationale";
 import { type RunState, verdictWords } from "../lib/run-state";
 import { Stamp } from "./case-motion";
+import { FOCUS_RING } from "./focus-ring";
 import { TierChip } from "./tier-chip";
 
 export const VERDICT_LOOK: Record<JudgeOutput["verdict"], string> = {
@@ -132,14 +133,14 @@ export function Rationale({ text, confirmed }: { text: string; confirmed: Readon
 function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> }) {
   if (!confirmed.has(id)) {
     return (
-      <span title="Not backed up by a page" className="rounded bg-bad/15 px-1 font-mono text-xs text-bad line-through">
+      <span title="Not backed up by a page" className="rounded-sm bg-bad/15 px-1 font-mono text-xs text-bad line-through">
         {id}
       </span>
     );
   }
   return (
-    <a href={`#node-${id}`} className="group py-1 no-underline">
-      <span className="rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink group-hover:bg-accent/25">{id}</span>
+    <a href={`#node-${id}`} className={`group rounded-sm py-1 no-underline ${FOCUS_RING}`}>
+      <span className="rounded-sm bg-accent/15 px-1 font-mono text-xs text-accent-ink group-hover:bg-accent/25">{id}</span>
     </a>
   );
 }
