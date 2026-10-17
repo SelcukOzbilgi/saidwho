@@ -269,6 +269,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
   const quoteIn = quote.trim() !== "";
   const codeIn = !needsCode || accessCode.trim() !== "";
   const rejected = mode === "byok" ? KEY_NAMES.find((name) => statusOf(name).state === "rejected") : undefined;
+  const checking = mode === "byok" && KEY_NAMES.some((name) => statusOf(name).state === "checking");
   // The name is optional: left blank, the planner says who it's usually credited to.
   const keysIn = mode === "trial" ? codeIn : nebiusApiKey.trim() !== "" && tavilyApiKey.trim() !== "";
   const ready = quoteIn && keysIn && !rejected;
@@ -416,7 +417,8 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
 
         <fieldset disabled={running} className="run-in min-w-0" style={order(5)}>
           <legend className="mb-3 flex items-center gap-2.5 text-lg font-medium">
-            <StepMark n={2} done={keysIn && !rejected} />
+            {/* Ticked once the keys are in and none is refused or still being asked about. */}
+            <StepMark n={2} done={keysIn && !rejected && !checking} />
             Who pays for the run
           </legend>
           {/* The two ways to pay as cards, after sean0205's Icon Card Radio Group
