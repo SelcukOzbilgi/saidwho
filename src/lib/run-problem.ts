@@ -193,7 +193,7 @@ export function runProblem(
       return {
         tone: "bad",
         title: "Tavily turned down every search",
-        text: "It refused the searches the plan made, so there were no pages to check. Trying again makes a new plan; a plainer wording of the quote can help too.",
+        text: "It refused the searches the plan made, so there were no pages to check. A second try may plan other searches, and a plainer wording of the quote can help too.",
         short: "searches refused",
         actions: ["retry", "edit"],
         at: "searching",
