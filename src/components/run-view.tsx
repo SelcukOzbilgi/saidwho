@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-import type { RunState } from "../lib/run-state";
+import type { Phase, RunState } from "../lib/run-state";
+import { Arrivals, Enter } from "./case-motion";
 import { Lineage } from "./lineage";
 import { Progress } from "./progress";
 import { RunLog } from "./run-log";
@@ -19,10 +20,13 @@ type Props = {
   note?: ReactNode;
   // Shown under the verdict.
   afterVerdict?: ReactNode;
+  // Why a live run ended without an answer: the card goes in the verdict's
+  // place, and the progress bar marks where it broke off.
+  problem?: { card: ReactNode; tone: "bad" | "warn"; at: Phase };
 };
 
 // A run as the page shows it, whether it is happening now or replayed from a saved log.
-export function RunView({ run, running, quoteIsHeading = false, announce = false, note, afterVerdict }: Props) {
+export function RunView({ run, running, quoteIsHeading = false, announce = false, note, afterVerdict, problem }: Props) {
   const verdict = run.verdict?.output;
   const Quote = quoteIsHeading ? "h1" : "blockquote";
 
@@ -37,21 +41,41 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
         </p>
       </header>
 
-      <Progress running={running} {...run} aside={note} />
+      <Progress running={running} {...run} aside={note} brokeAt={problem && { phase: problem.at, tone: problem.tone }} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
           {/* Until there is a verdict, a run under way says where it is instead. Once it
               ends without one, the card says why; the plan, which only showed
               progress, goes with the card, and the log keeps it. */}
-          {running && !run.verdict ? <RunSoFar {...run} announce={announce} /> : <VerdictCard {...run} />}
-          {afterVerdict}
+          {/* The verdict replaces the run so far in one move; on a finished page it is just there. */}
+          <Arrivals>
+            {running && !run.verdict ? (
+              <Enter key="so-far">
+                <RunSoFar {...run} announce={announce} />
+              </Enter>
+            ) : problem && !run.verdict ? (
+              <Enter key="problem" rise={12}>
+                {problem.card}
+              </Enter>
+            ) : (
+              <Enter key="verdict" rise={12}>
+                <VerdictCard {...run} />
+              </Enter>
+            )}
+            {/* After the verdict's stamp has landed. */}
+            {afterVerdict && (
+              <Enter key="after" delay={0.45}>
+                {afterVerdict}
+              </Enter>
+            )}
+          </Arrivals>
         </div>
         <RunLog log={run.log} announce={announce} />
       </div>
 
       {/* The lineage and the timeline get the page's full width, so their cards don't hide off to the side. */}
-      {verdict?.lineage && <Lineage steps={verdict.lineage} nodes={run.nodes} />}
+      <Arrivals>{verdict?.lineage && <Lineage key="lineage" steps={verdict.lineage} nodes={run.nodes} />}</Arrivals>
       <Timeline
         nodes={run.nodes}
         marks={{

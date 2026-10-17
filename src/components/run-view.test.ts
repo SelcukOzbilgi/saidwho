@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { RunEvent } from "../agent/events";
+import { CASES } from "../cases/cases";
 import { initialRunState, reduceRun } from "../lib/run-state";
 import { RunView } from "./run-view";
 
@@ -126,5 +127,15 @@ describe("RunView", () => {
     expect(ended([{ type: "aborted" }, finish])).toContain("The run was stopped before a verdict.");
     // Stopped by the visitor or cut off: the page stops the run with no more events.
     expect(ended([])).toContain("The run ended before a verdict.");
+  });
+
+  // The motion only plays for what a replay or a live run adds; a finished run
+  // must read in full before any script runs.
+  it("renders a finished run fully visible, with nothing waiting on an animation", () => {
+    for (const { caseId, events } of CASES) {
+      const html = renderToStaticMarkup(createElement(RunView, { run: events.reduce(reduceRun, initialRunState), running: false }));
+      expect(html, caseId).not.toMatch(/opacity:\s*0[;"]/);
+      expect(html, caseId).not.toContain("data-reveal");
+    }
   });
 });

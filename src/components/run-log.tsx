@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 
 import { atBottom, jumpToEnd } from "../lib/log-follow";
 import type { Agent, LogEntry, Tone } from "../lib/run-state";
+import { Arrivals, Enter } from "./case-motion";
+import { FOCUS_RING, FOCUS_RING_INSET } from "./focus-ring";
 import { TierChip } from "./tier-chip";
 
 const DOT: Record<Tone, string> = {
@@ -46,12 +48,12 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
   }, [log.length]);
 
   return (
-    <section aria-label="Run log" className="self-start rounded-xl border border-line bg-card">
+    <section aria-label="Run log" className="self-start rounded-sm border border-line bg-card">
       <div className="relative border-b border-line">
         <h2 className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted">What the agents did</h2>
         {/* The toggle sits on the heading's line; the list opens under it. */}
         <details className="group">
-          <summary className="absolute top-1 right-2 flex min-h-7 cursor-pointer list-none items-center rounded px-2 text-xs text-muted underline decoration-line underline-offset-2 hover:text-foreground [&::-webkit-details-marker]:hidden">
+          <summary className={`absolute top-1 right-2 flex min-h-7 cursor-pointer list-none items-center rounded-sm px-2 text-xs text-muted underline decoration-line underline-offset-2 hover:text-foreground [&::-webkit-details-marker]:hidden ${FOCUS_RING}`}>
             <span className="group-open:hidden">Who does what</span>
             <span className="hidden group-open:inline">Hide</span>
           </summary>
@@ -70,25 +72,30 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
         onScroll={(event) => {
           following.current = atBottom(event.currentTarget);
         }}
-        className="max-h-[28rem] overflow-y-auto px-4 py-2 text-sm"
+        // A box that scrolls takes keyboard focus in some browsers, so it gets the ring too.
+        className={`max-h-[28rem] overflow-y-auto rounded-b-sm px-4 py-2 text-sm ${FOCUS_RING_INSET}`}
         aria-live={announce ? "polite" : "off"}
       >
-        {log.map((entry) => (
-          <li key={entry.id} className="arrive flex items-start gap-2 py-1.5">
-            <span className={`mt-1.5 size-2 shrink-0 rounded-full ${DOT[entry.tone]}`} aria-hidden />
-            <span className="w-24 shrink-0 font-medium">{entry.agent}</span>
-            <div className="min-w-0 flex-1">
-              <p className="break-words text-foreground/85">{entry.text}</p>
-              {/* The model's full name doesn't fit beside the text, so it and the cost go under it. */}
-              {(entry.tier || entry.costUsd !== null) && (
-                <p className="mt-1 flex flex-wrap items-center gap-2">
-                  {entry.tier && <TierChip tier={entry.tier} />}
-                  {entry.costUsd !== null && <span className="font-mono text-xs text-muted">{callCost(entry.costUsd)}</span>}
-                </p>
-              )}
-            </div>
-          </li>
-        ))}
+        {/* Lines already there when the log first renders stay put; each new one
+            slides up into place. No layout animation: a log can run to a hundred lines. */}
+        <Arrivals>
+          {log.map((entry) => (
+            <Enter as="li" key={entry.id} rise={6} className="flex items-start gap-2 py-1.5">
+              <span className={`mt-1.5 size-2 shrink-0 rounded-full ${DOT[entry.tone]}`} aria-hidden />
+              <span className="w-24 shrink-0 font-medium">{entry.agent}</span>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-foreground/85">{entry.text}</p>
+                {/* The model's full name doesn't fit beside the text, so it and the cost go under it. */}
+                {(entry.tier || entry.costUsd !== null) && (
+                  <p className="mt-1 flex flex-wrap items-center gap-2">
+                    {entry.tier && <TierChip tier={entry.tier} />}
+                    {entry.costUsd !== null && <span className="font-mono text-xs text-muted">{callCost(entry.costUsd)}</span>}
+                  </p>
+                )}
+              </div>
+            </Enter>
+          ))}
+        </Arrivals>
       </ol>
     </section>
   );

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* The theme is a data-theme attribute on <html>, set before the first paint by
+   the script in layout.tsx and switched by ThemeToggle. Style with the color
+   tokens below; a dark: class follows the same attribute. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Paper and ink, with the banner's marker orange, tick green and cross red.
    Green, red and amber are set to read as small text on their own tints;
    the bright orange stays for marks, and --accent-ink is its readable text color. */
@@ -16,21 +21,21 @@
   --good: #236814;
   --bad: #b0291f;
   --warn: #7d5400;
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #14130f;
-    --foreground: #ece8df;
-    --card: #1d1b17;
-    --muted: #a39d90;
-    --line: #34312a;
-    --accent: #f59a45;
-    --accent-ink: #f59a45;
-    --good: #6cc24a;
-    --bad: #f37066;
-    --warn: #e5b23a;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #14130f;
+  --foreground: #ece8df;
+  --card: #1d1b17;
+  --muted: #a39d90;
+  --line: #34312a;
+  --accent: #f59a45;
+  --accent-ink: #f59a45;
+  --good: #6cc24a;
+  --bad: #f37066;
+  --warn: #e5b23a;
 }
 
 @theme inline {
@@ -45,21 +50,41 @@
   --color-good: var(--good);
   --color-bad: var(--bad);
   --color-warn: var(--warn);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans-face);
+  --font-mono: var(--font-mono-face);
   --font-serif: var(--font-newsreader);
 }
 
-/* The site header sticks to the top, so a jump to #cases or #run stops below it.
+/* The site header sticks to the top, so a jump to #cases stops below it.
    HeaderHeight sets the header's measured height; until it runs, the fallback
-   allows for two rows on a phone and one from the sm width up. */
+   is the one-row bar's height, a little taller from the sm width up. */
 html {
-  scroll-padding-top: var(--site-header-height, 6.5rem);
+  scroll-padding-top: var(--site-header-height, 3.5rem);
+  /* The one gap between the sections of a page, and above the hero. */
+  --section-gap: 5rem;
+  /* Jumps to a section on this page glide there; layout.tsx keeps route changes instant. */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Anything focusable without a ring of its own gets the site's ring instead of
+   the browser's blue one. In the base layer, so a utility class still wins. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 2px;
+  }
 }
 
 @media (min-width: 40rem) {
   html {
-    scroll-padding-top: var(--site-header-height, 4rem);
+    scroll-padding-top: var(--site-header-height, 4.25rem);
+    --section-gap: 9rem;
   }
 }
 
@@ -84,5 +109,1016 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .arrive {
     animation: none;
+  }
+}
+
+/* Shell */
+
+/* The theme switch. While ThemeToggle runs a view transition, the old page
+   stays put under the new one and the new one grows out of the button, in
+   place of the browser's crossfade. Scoped to the switch so other view
+   transitions keep their own animation. */
+:root[data-theme-switch]::view-transition-old(root),
+:root[data-theme-switch]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+:root[data-theme-switch]::view-transition-new(root) {
+  z-index: 1;
+}
+
+/* No color fades while the theme switches: cards with transition-colors
+   would otherwise ease into the new theme after the page has already
+   changed, which is motion under reduced motion and a lag inside the circle.
+   The toggle's own icon keeps its sun-to-moon turn. */
+:root[data-theme-switch] *:not(.theme-icon, .theme-icon *),
+:root[data-theme-switch] *:not(.theme-icon, .theme-icon *)::before,
+:root[data-theme-switch] *:not(.theme-icon, .theme-icon *)::after {
+  transition: none !important;
+}
+
+/* The toggle's sun turns into a moon: the disc grows, a shadow slides over
+   it and the rays fold in. It follows data-theme, so the icon is right
+   before the page hydrates. */
+.theme-icon :is(.theme-icon-disc, .theme-icon-shade, .theme-icon-rays) {
+  transform-origin: 12px 12px;
+  transition:
+    transform 700ms cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 450ms ease-out;
+}
+
+:root[data-theme="dark"] .theme-icon-disc {
+  transform: scale(1.7);
+}
+
+:root[data-theme="dark"] .theme-icon-shade {
+  transform: translate(-9.33px, 6.33px);
+}
+
+:root[data-theme="dark"] .theme-icon-rays {
+  opacity: 0;
+  transform: rotate(-45deg) scale(0.6);
+}
+
+/* Without the script in layout.tsx there's no data-theme and nothing to
+   switch, so the button stays out of the way. */
+:root:not([data-theme]) .theme-toggle {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-icon :is(.theme-icon-disc, .theme-icon-shade, .theme-icon-rays) {
+    transition: none;
+  }
+}
+
+/* The phone menu's icon crosses into an X and its panel drops in under the bar. */
+.menu-icon {
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-icon-loop {
+  stroke-dasharray: 12 63;
+  transition:
+    stroke-dasharray 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    stroke-dashoffset 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+details[open] .menu-icon {
+  transform: rotate(-45deg);
+}
+
+details[open] .menu-icon-loop {
+  stroke-dasharray: 20 300;
+  stroke-dashoffset: -32.42px;
+}
+
+@keyframes menu-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+details[open] .menu-panel {
+  animation: menu-drop 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-icon,
+  .menu-icon-loop {
+    transition: none;
+  }
+
+  details[open] .menu-panel {
+    animation: none;
+  }
+}
+
+/* The footer's star fills with the marker orange and turns one point on hover. */
+.star-nudge-icon {
+  fill: transparent;
+  transition:
+    fill 200ms ease-out,
+    transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.star-nudge:is(:hover, :focus-visible) .star-nudge-icon {
+  fill: var(--accent);
+  transform: rotate(72deg) scale(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-nudge:is(:hover, :focus-visible) .star-nudge-icon {
+    transform: none;
+  }
+}
+
+/* Home */
+
+/* Scroll reveals, set by Reveal in reveal.tsx. Without its data-reveal
+   attribute, which it never sets under reduced motion, everything is in place. */
+[data-reveal="wait"] .reveal-up {
+  opacity: 0;
+  transform: translateY(14px);
+}
+[data-reveal="wait"] .reveal-pop {
+  opacity: 0;
+  transform: scale(0.6);
+}
+[data-reveal="wait"] .reveal-draw-y {
+  transform: scaleY(0);
+}
+[data-reveal="wait"] .reveal-draw-x {
+  transform: scaleX(0);
+}
+[data-reveal="in"] :is(.reveal-up, .reveal-pop) {
+  transition:
+    opacity 420ms ease-out,
+    transform 420ms ease-out;
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+[data-reveal="in"] :is(.reveal-draw-y, .reveal-draw-x) {
+  transition: transform 450ms ease-out;
+  transition-delay: calc(var(--i, 0) * 80ms + 120ms);
+}
+/* A marker stroke that is put down once its words are in. */
+[data-reveal="wait"] .reveal-marker {
+  background-color: transparent;
+}
+[data-reveal="in"] .reveal-marker {
+  transition: background-color 500ms ease-out;
+  transition-delay: calc(var(--i, 0) * 80ms + 420ms);
+}
+.reveal-draw-y {
+  transform-origin: top;
+}
+.reveal-draw-x {
+  transform-origin: left;
+}
+
+/* A strike drawn through a line of text: a thin rule laid over it, which
+   the hero's trace grows from the left. */
+.strike {
+  position: relative;
+}
+.strike::after {
+  content: "";
+  position: absolute;
+  inset-inline: -0.04em;
+  top: 58%;
+  height: 0.09em;
+  margin-top: -0.045em;
+  background-color: var(--bad);
+  transform-origin: left;
+}
+
+/* A marker pen's stroke behind a few words, in the banner's orange. Clone
+   gives each line its own stroke when the words wrap. */
+.marker {
+  --marker: color-mix(in srgb, var(--accent) 22%, transparent);
+  background-color: var(--marker);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding-inline: 0.08em;
+  margin-inline: -0.08em;
+}
+
+/* On dark paper the same orange reads much stronger, so it goes lighter. */
+:root[data-theme="dark"] .marker {
+  --marker: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+/* The hero's trace plays once, as the page opens: the credit is struck out and
+   the origin written in. It plays from the first paint, in CSS alone, and only
+   where scripts run and motion is welcome, so without JavaScript, or with
+   reduced motion, it shows how it ends. HeroReplay sets hero-rewind for a
+   moment to play it again. */
+.hero-replay {
+  display: none;
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .hero-trace:not(.hero-rewind) .hero-step {
+    animation: hero-step 380ms ease-out both;
+    animation-delay: var(--at);
+  }
+  .hero-trace:not(.hero-rewind) .strike::after {
+    animation: hero-strike 420ms ease-out both;
+    animation-delay: var(--at);
+  }
+  .hero-trace:not(.hero-rewind) .marker {
+    animation: hero-marker 450ms ease-out both;
+    animation-delay: var(--at);
+  }
+  .hero-trace:not(.hero-rewind) .hero-char {
+    animation: hero-char 1ms linear both;
+    animation-delay: calc(var(--at) + var(--c) * 24ms);
+  }
+  .hero-replay {
+    display: inline-flex;
+  }
+}
+
+@keyframes hero-step {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes hero-strike {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes hero-marker {
+  from {
+    background-color: transparent;
+  }
+}
+@keyframes hero-char {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-trace *,
+  .hero-trace *::after {
+    animation: none !important;
+  }
+  [data-reveal] * {
+    transition: none !important;
+  }
+}
+
+/* Home: featured case */
+/* The featured case plays what its run found, in order, once it is seen:
+   FeaturedPlay in featured-play.tsx sets data-reveal on each of its three
+   parts (verdict, trail, cost row) when that part's turn comes, and --start
+   is an element's offset within its part. The marker, its ring and the line
+   drawn between steps use the case page's lineage timing (Case block), so the
+   two read as one thing. Without data-reveal, everything is in place. */
+.fc-part {
+  --start: 0ms;
+}
+.fc-segment {
+  transform-origin: top;
+}
+[data-reveal="wait"] :is(.fc-stamp, .fc-after, .fc-headline, .fc-reason, .fc-heading, .fc-marker, .fc-chip, .fc-note),
+.fc-footer[data-reveal="wait"] {
+  opacity: 0;
+}
+[data-reveal="wait"] .fc-segment {
+  transform: scaleY(0);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal="in"] .fc-stamp {
+    animation: fc-stamp 360ms cubic-bezier(0.3, 1.35, 0.55, 1) var(--start) both;
+  }
+  [data-reveal="in"] .fc-after {
+    animation: fc-rise 300ms ease-out calc(var(--start) + 150ms) both;
+  }
+  [data-reveal="in"] .fc-headline {
+    animation: fc-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 200ms) both;
+  }
+  [data-reveal="in"] .fc-reason {
+    animation: fc-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 400ms) both;
+  }
+  [data-reveal="in"] .fc-heading,
+  .fc-footer[data-reveal="in"] {
+    animation: fc-rise 380ms ease-out var(--start) both;
+  }
+  [data-reveal="in"] .fc-marker {
+    animation: fc-land 340ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--start) both;
+  }
+  [data-reveal="in"] .fc-marker::after {
+    animation: lineage-land 520ms ease-out calc(var(--start) + 120ms) both;
+  }
+  [data-reveal="in"] .fc-chip {
+    animation: fc-slide 300ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 60ms) both;
+  }
+  [data-reveal="in"] .fc-note {
+    animation: fc-rise 280ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 120ms) both;
+  }
+  /* Drawn from this step's marker, reaching the next as it lands. */
+  [data-reveal="in"] .fc-segment {
+    animation: fc-draw var(--draw, 500ms) cubic-bezier(0.65, 0, 0.35, 1) calc(var(--start) + 100ms) both;
+  }
+}
+
+/* The verdict's word lands a little large and tilted, dips past its size and
+   settles, as Stamp in case-motion.tsx presses it on during a run. */
+@keyframes fc-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.4) rotate(-4deg);
+  }
+  30% {
+    opacity: 1;
+  }
+}
+@keyframes fc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fc-land {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+@keyframes fc-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+@keyframes fc-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* Case */
+/* The case page's diagrams reveal in order as they scroll into view. useReveal
+   in case-motion.tsx sets data-reveal on the list: "armed" hides the parts
+   before they are seen, "shown" plays a whole list in, and data-seen plays in
+   one part of a long list. Without JavaScript, or for a list already on screen
+   at load, nothing is set and the markup stays as the server drew it. --i is a
+   lineage step's place in its list. */
+[data-reveal="armed"] :is(.lineage-marker, .lineage-chip, .lineage-text, .reveal-item:not([data-seen])) {
+  opacity: 0;
+}
+[data-reveal="armed"] .lineage-chip {
+  transform: translateX(-8px);
+}
+[data-reveal="armed"] .lineage-marker {
+  transform: scale(0.3);
+}
+[data-reveal="armed"] :is(.lineage-text, .reveal-item:not([data-seen])) {
+  transform: translateY(8px);
+}
+[data-reveal="armed"] .lineage-segment {
+  transform: scaleY(0);
+}
+
+/* The lineage goes one step at a time, each a --step apart: the marker lands a
+   touch past its size and a ring spreads from it, the change chip slides in
+   from the line, the note follows, and then the line draws down to the next
+   step, reaching it as that step's marker lands. The marker pop and the line
+   drawn between steps follow kuratlielia's Timeline on 21st.dev. */
+.lineage-segment {
+  transform-origin: top;
+}
+.lineage-marker {
+  position: relative;
+}
+.lineage-marker::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1.5px solid currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+[data-reveal] {
+  --step: 300ms;
+}
+[data-reveal="shown"] .lineage-marker {
+  transition:
+    opacity 150ms ease-out,
+    transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition-delay: calc(var(--i, 0) * var(--step));
+}
+[data-reveal="shown"] .lineage-marker::after {
+  animation: lineage-land 520ms ease-out both;
+  animation-delay: calc(var(--i, 0) * var(--step) + 120ms);
+}
+[data-reveal="shown"] .lineage-chip {
+  transition:
+    opacity 220ms ease-out,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * var(--step) + 60ms);
+}
+[data-reveal="shown"] .lineage-text {
+  transition:
+    opacity 280ms ease-out,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * var(--step) + 120ms);
+}
+[data-reveal="shown"] .lineage-segment {
+  transition: transform 200ms cubic-bezier(0.65, 0, 0.35, 1);
+  transition-delay: calc(var(--i, 0) * var(--step) + 100ms);
+}
+
+@keyframes lineage-land {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Timeline cards come in as each is scrolled to; --wait spaces out those seen together, oldest first. */
+[data-reveal="armed"] .reveal-item[data-seen] {
+  transition:
+    opacity 300ms ease-out,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--wait, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce), print {
+  [data-reveal="armed"] :is(.lineage-marker, .lineage-chip, .lineage-text, .lineage-segment, .reveal-item) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .lineage-marker::after {
+    animation: none !important;
+  }
+}
+
+/* Case: round two */
+/* A step under way with nothing to count: a short stretch of its bar sweeps
+   across it, then rests a moment before the next pass. Under reduced motion
+   it sits still at the start of the bar. */
+@keyframes case-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  65%,
+  to {
+    transform: translateX(250%);
+  }
+}
+.case-sweep {
+  animation: case-sweep 1400ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .case-sweep {
+    animation: none;
+  }
+}
+
+/* Run page */
+
+/* The preview under the quote's fields (run-preview.tsx): when the quote
+   comes in whole, its words come in one after another and the bars for what
+   the run will say draw in. Each part is remounted for it, so the animation
+   plays from the start; under reduced motion it is simply there. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .preview-in {
+    animation: preview-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .preview-bar {
+    animation: preview-bar 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left;
+  }
+}
+@keyframes preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes preview-bar {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* The page opens in reading order: the heading, then the form's parts, one
+   after another, the way it is filled in. It plays from the first paint, in CSS
+   alone, and only where scripts run and motion is welcome, so without
+   JavaScript, or with reduced motion, everything is simply there. A form opened
+   again for another run plays it once more, from being hidden. --i is a part's
+   place in that order. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .run-in {
+    animation: run-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 80ms);
+  }
+}
+@keyframes run-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* A step's number gives way to a tick once that part is filled in. */
+.step-mark :is(.step-n, .step-tick) {
+  transition:
+    opacity 200ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.step-mark .step-tick,
+.step-mark[data-done] .step-n {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.step-mark[data-done] .step-tick {
+  opacity: 1;
+  transform: none;
+}
+
+/* Who pays: the checked card's dot fills from its middle. */
+.pay-dot-fill {
+  transform: scale(0);
+  transition: transform 200ms ease-out;
+}
+.pay-card:has(input:checked) .pay-dot {
+  border-color: var(--foreground);
+}
+.pay-card:has(input:checked) .pay-dot-fill {
+  transform: none;
+}
+/* While a run is going the choice is locked: the dot dims, the words stay readable. */
+.pay-card:has(input:checked:disabled) .pay-dot-fill {
+  opacity: 0.6;
+}
+
+/* Once the form has all it needs, the arrow on its button nudges forward once. */
+form[data-ready] .run-go {
+  animation: run-go 600ms ease-out;
+}
+@keyframes run-go {
+  40% {
+    transform: translateX(4px);
+  }
+}
+
+/* A key's check: the icons at the field's end sit on one spot and the one for
+   the field's state fades in as the last fades out. The line under the field
+   is remounted with each state, so a new answer rises in a little. */
+.key-icons > .key-icon {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 180ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.key-box[data-state="checking"] .key-icon[data-for="checking"],
+.key-box[data-state="works"] .key-icon[data-for="works"],
+.key-box[data-state="rejected"] .key-icon[data-for="rejected"],
+.key-box[data-state="unknown"] .key-icon[data-for="unknown"] {
+  opacity: 1;
+  transform: none;
+}
+.key-spin {
+  animation: key-spin 900ms linear infinite;
+}
+@keyframes key-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .key-line {
+    display: inline-block;
+    animation: key-line 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* A refused key's field nudges once, so the eye finds which of the two it is. */
+  .key-box[data-state="rejected"] {
+    animation: key-refused 320ms ease-out;
+  }
+}
+@keyframes key-line {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+@keyframes key-refused {
+  25% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-mark :is(.step-n, .step-tick),
+  .pay-dot-fill,
+  .key-icons > .key-icon {
+    transition: none;
+  }
+  form[data-ready] .run-go {
+    animation: none;
+  }
+  /* The words still say it's checking, without the turn. */
+  .key-spin {
+    animation: none;
+  }
+}
+
+/* A run that ended badly: the problem card's edge draws down from the top as
+   it arrives, and the run bar's dot rings out once in the problem's color.
+   Both only where scripts run and motion is welcome; otherwise they are there. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .problem-rule {
+    transform-origin: top;
+    animation: problem-rule 420ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  }
+  .run-dot[data-ended]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: inherit;
+    animation: run-dot-ring 900ms ease-out 1 both;
+  }
+}
+@keyframes problem-rule {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes run-dot-ring {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+/* Home: eval and cases */
+
+/* The three-way table fills in a column at a time, in the order of its heading's
+   claim (--at, set in eval-numbers.tsx): the setups, the verdicts, the years,
+   then the cost, whose bars draw from the left. The heading's "about a tenth"
+   is marked last, once the mix's short bar has landed. Like the rest of the
+   home page it hangs on Reveal's data-reveal, so without it all is in place. */
+[data-reveal="wait"] .ev-cell {
+  opacity: 0;
+  transform: translateY(6px);
+}
+[data-reveal="wait"] .ev-cell .ev-bar {
+  transform: scaleX(0);
+}
+[data-reveal="wait"] .ev-marker {
+  background-color: transparent;
+}
+[data-reveal="in"] .ev-cell {
+  transition:
+    opacity 360ms ease-out,
+    transform 360ms ease-out;
+  transition-delay: var(--at, 0ms);
+}
+[data-reveal="in"] .ev-cell .ev-bar {
+  transition: transform var(--bar-ms, 450ms) ease-out;
+  transition-delay: calc(var(--at, 0ms) + var(--bar-wait, 60ms));
+}
+[data-reveal="in"] .ev-marker {
+  transition: background-color 300ms ease-out;
+  transition-delay: var(--at, 0ms);
+}
+.ev-bar {
+  transform-origin: left;
+}
+
+/* A row under the pointer keeps its full ink and the others fade back, so its
+   verdicts, years and cost read as one setup's. Borrowed from the row focus in
+   micka_design's Table on 21st.dev, without its sliding background. */
+.ev-rows > tr {
+  transition: opacity 200ms ease-out;
+}
+@media (hover: hover) {
+  .ev-rows:hover > tr:not(:hover) {
+    opacity: 0.45;
+  }
+}
+
+/* Case cards, set by ArriveList in arrive-list.tsx: a card rises in as it is
+   scrolled to, its verdict is pressed on like the case page's stamp, and then
+   the chip says whether that verdict matches the known answer. --wait spaces
+   out cards seen together. */
+.cg-card[data-arrive="wait"] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.cg-card[data-arrive="wait"] .cg-verdict {
+  opacity: 0;
+  transform: scale(1.25) rotate(-2deg);
+}
+.cg-card[data-arrive="wait"] .cg-match {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.cg-card[data-arrive="in"] {
+  transition:
+    opacity 420ms ease-out,
+    transform 420ms ease-out;
+  transition-delay: var(--wait, 0ms);
+}
+/* An overshooting curve gives the stamp its small dip past its size. */
+.cg-card[data-arrive="in"] .cg-verdict {
+  transform-origin: left center;
+  transition:
+    opacity 140ms ease-out calc(var(--wait, 0ms) + 260ms),
+    transform 360ms cubic-bezier(0.3, 1.35, 0.55, 1) calc(var(--wait, 0ms) + 260ms);
+}
+.cg-card[data-arrive="in"] .cg-match {
+  transition:
+    opacity 300ms ease-out calc(var(--wait, 0ms) + 560ms),
+    transform 300ms ease-out calc(var(--wait, 0ms) + 560ms);
+}
+
+/* Hovered or focused, a card's figures give way to its earliest trace: two
+   lines stacked in one grid cell that trade places, the way the chip labels
+   cross-fade in ddoemonn's Filter Grid on 21st.dev, with a short rise added. */
+.cg-figures,
+.cg-trace {
+  transition:
+    opacity 220ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cg-trace {
+  opacity: 0;
+  transform: translateY(0.6em);
+}
+/* Hover only where there is a pointer, so a tap on a phone doesn't leave a
+   card stuck on its trace; keyboard focus shows it everywhere. */
+.cg-link:focus-visible .cg-figures {
+  opacity: 0;
+  transform: translateY(-0.6em);
+}
+.cg-link:focus-visible .cg-trace {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) {
+  .cg-link:hover .cg-figures {
+    opacity: 0;
+    transform: translateY(-0.6em);
+  }
+  .cg-link:hover .cg-trace {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-rows > tr,
+  .cg-card,
+  .cg-card *,
+  .cg-figures,
+  .cg-trace {
+    transition: none !important;
+  }
+  .cg-link:focus-visible :is(.cg-figures, .cg-trace) {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) and (hover: hover) {
+  .cg-link:hover :is(.cg-figures, .cg-trace) {
+    transform: none;
+  }
+}
+
+/* Home: how it works */
+
+/* How it works: the run map (run-map.tsx). PlayOnView sets data-run on it:
+   "wait" holds every step at its start, "play" runs them in order from the
+   times set on each row (--start, --done, --busy) and on the map (--loop-at,
+   --round, --rounds), and "done" is the finished run again. Without the
+   attribute it is a finished run too. */
+.hiw-busy,
+.hiw-again,
+.hiw-loop-dot {
+  opacity: 0;
+}
+.hiw-fill {
+  transform-origin: top;
+}
+/* The step being read in the list (run-map-spy.tsx): one tint that glides from
+   row to row, the step's number inked in, and the other names set back. While
+   the map plays, the orange ring shows the step the run is on, so the mark
+   waits until it is done. */
+.hiw-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--mark-w, 0);
+  height: var(--mark-h, 0);
+  transform: translate(var(--mark-x, 0), var(--mark-y, 0));
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--foreground) 6%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+.hiw-mark[data-on] {
+  opacity: 1;
+}
+.hiw-done,
+.hiw-name {
+  transition:
+    background-color 250ms ease-out,
+    color 250ms ease-out;
+}
+a[aria-current="step"] .hiw-done {
+  background-color: var(--foreground);
+  color: var(--background);
+}
+[data-reading] a:not([aria-current="step"]) .hiw-name {
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hiw-mark[data-on] {
+    transition:
+      opacity 200ms ease-out,
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      height 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+:is([data-run="wait"], [data-run="play"]) .hiw-mark {
+  opacity: 0;
+}
+:is([data-run="wait"], [data-run="play"]) a[aria-current="step"] .hiw-done {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+.play-again {
+  display: none;
+}
+[data-run="wait"] :is(.hiw-done, .hiw-thrown, .hiw-rounds, .hiw-loop-head) {
+  opacity: 0;
+}
+[data-run="wait"] .hiw-name {
+  color: var(--muted);
+}
+[data-run="wait"] .hiw-fill {
+  transform: scaleY(0);
+}
+[data-run="wait"] .hiw-thrown .strike::after {
+  transform: scaleX(0);
+}
+[data-run="wait"] .hiw-loop-path {
+  stroke-dashoffset: 1;
+}
+.hiw-loop-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .play-again {
+    display: inline-flex;
+  }
+  [data-run="play"] .hiw-busy {
+    animation: hiw-busy var(--busy) ease-out var(--start) both;
+  }
+  [data-run="play"] .hiw-done {
+    animation: hiw-in 240ms ease-out var(--done) both;
+  }
+  [data-run="play"] .hiw-name {
+    animation: hiw-name 240ms ease-out var(--start) both;
+  }
+  [data-run="play"] .hiw-fill {
+    animation: hiw-fill 260ms ease-out var(--done) both;
+  }
+  /* The Checker's snippet comes out of its row, is struck through, and stays out. */
+  [data-run="play"] .hiw-thrown {
+    animation: hiw-out 320ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 200ms) both;
+  }
+  [data-run="play"] .hiw-thrown .strike::after {
+    animation: hero-strike 380ms ease-out calc(var(--start) + 600ms) both;
+  }
+  /* The loop draws in from the Genealogist, then a dot runs it once a round,
+     and each time it gets back the Readers and the Checker light up again. */
+  [data-run="play"] .hiw-loop-path {
+    animation: hiw-draw 450ms ease-out calc(var(--loop-at) - 450ms) both;
+  }
+  [data-run="play"] :is(.hiw-loop-head, .hiw-rounds) {
+    animation: hiw-in 200ms ease-out var(--loop-at) both;
+  }
+  [data-run="play"] .hiw-loop-dot {
+    offset-rotate: 0deg;
+    animation: hiw-round var(--round) ease-in-out var(--loop-at) var(--rounds) both;
+  }
+  [data-run="play"] .hiw-again {
+    animation: hiw-again var(--round) ease-out var(--loop-at) var(--rounds) both;
+  }
+  [data-run="play"] .hiw-again-late {
+    animation-name: hiw-again-late;
+  }
+}
+@keyframes hiw-busy {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  20%,
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@keyframes hiw-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hiw-name {
+  from {
+    color: var(--muted);
+  }
+}
+@keyframes hiw-fill {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes hiw-out {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes hiw-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+/* A round: the dot runs the loop, then rests on the Readers while they and
+   the Checker read and check what the Genealogist found. */
+@keyframes hiw-round {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  55% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  70%,
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+@keyframes hiw-again {
+  0%,
+  52% {
+    opacity: 0;
+  }
+  62% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hiw-again-late {
+  0%,
+  68% {
+    opacity: 0;
+  }
+  78% {
+    opacity: 1;
+  }
+  96%,
+  100% {
+    opacity: 0;
   }
 }

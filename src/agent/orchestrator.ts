@@ -14,7 +14,7 @@ import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { citedWork, judge } from "./judge";
 import { mayHoldWork, namesWork } from "./library-pages";
-import { broaden, isExtraRequote, queryKey, shapeQuery, tidyModelText } from "./queries";
+import { broaden, isExtraRequote, MAX_QUERIES, queryKey, shapeQuery, tidyModelText } from "./queries";
 import { cleanDate, genealogistOutputSchema, plannerOutputSchema, type PlannerOutput, readerOutputSchema, type ReaderOutput } from "./schemas";
 import { callStructured, type StructuredResult, worthRetrying } from "./structured";
 import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, normalizeText } from "./verifier";
@@ -23,7 +23,8 @@ import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, nor
 // them so the agent has to find the trail itself.
 export const ANSWER_SITES = ["quoteinvestigator.com", "wikiquote.org", "wikipedia.org"];
 
-export const MAX_QUERIES = 5;
+// In queries.ts, so the run page can follow the searches without this file.
+export { MAX_QUERIES };
 const RESULTS_PER_QUERY = 5;
 export const MAX_PAGES = 20;
 export const READER_CHARS = 6_000;
@@ -87,7 +88,8 @@ export type InvestigationInput = {
   quote: string;
   // null when the visitor gave no name; the planner then names the usual credit.
   popularAttribution: string | null;
-  language: string;
+  // null when the visitor wasn't sure; the planner then works it out.
+  language: string | null;
   excludeDomains: readonly string[];
 };
 
@@ -218,7 +220,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "quote only a distinctive part of six to ten words in those later queries, or leave the quotes off. " +
       "usual_attribution: only when no credit is given, the person the saying is most often credited to, name only; " +
       "null when a credit is given or you don't know one.",
-    user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language}`,
+    user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language ?? "not given"}`,
   };
   // What plans give the run, shaped and checked, in order: their wordings and
   // candidates, the usual credit when the visitor gave none, and the searches to

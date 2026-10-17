@@ -3,10 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CASCADE } from "../agent/models";
+import { TRACE_ROUNDS } from "../agent/orchestrator";
 import { CASES } from "../cases/cases";
 import { checkerRejections } from "../cases/checker-rejections";
 import { MODEL_NAME } from "../lib/model-name";
 import { HowItWorks, STEPS } from "./how-it-works";
+import { playTimes, stepAnchor } from "./run-map";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, "");
 const render = (rejections = checkerRejections(CASES)) =>
@@ -46,4 +48,56 @@ describe("HowItWorks", () => {
     expect(one).toContain("turned down 1 snippet. 1 passed when");
     expect(one).not.toContain("like this one");
   });
+
+  it("shows the crossed-out snippet the counts link to, from its saved case, and none without one", () => {
+    const counts = checkerRejections(CASES);
+    const found = CASES.find((c) => c.caseId === counts.example!.caseId)!;
+    const node = found.run.nodes.find((n) => n.id === counts.example!.nodeId)!;
+    const shown = text(render(counts));
+    expect(shown).toContain(node.reader.exact_snippet!.slice(0, 40));
+    expect(shown).toContain(`Crossed out in the case for “${found.run.quote}”: a sentence a Reader copied from ${node.host}.`);
+    expect(text(render({ ...counts, example: null }))).not.toContain("Crossed out in the case");
+  });
+
+  it("says the Genealogist loops back to the Readers for as many rounds as the orchestrator allows", () => {
+    expect(text(render())).toContain(`Back to the Readers, up to ${TRACE_ROUNDS} rounds`);
+  });
+
+  it("plays the steps on the map in the order a run takes them, going round the loop before the Judge", () => {
+    const { times, loopAt } = playTimes(STEPS, TRACE_ROUNDS);
+    for (let i = 1; i < times.length; i++) expect(times[i].start).toBeGreaterThan(times[i - 1].done);
+    const at = (name: string) => times[STEPS.findIndex((s) => s.name === name)];
+    expect(loopAt).toBeGreaterThan(at("Genealogist").done);
+    expect(at("Judge").start).toBeGreaterThan(loopAt);
+    // More rounds take longer to go round.
+    expect(playTimes(STEPS, TRACE_ROUNDS + 1).times.at(-1)!.start).toBeGreaterThan(at("Judge").start);
+  });
+
+  it("tells the map how long its play takes, so it can be marked done after the Judge", () => {
+    const { times, end } = playTimes(STEPS, TRACE_ROUNDS);
+    const playFor = Number(render().match(/data-play-for="(\d+)"/)![1]);
+    expect(end).toBeGreaterThan(times.at(-1)!.done);
+    expect(playFor).toBeGreaterThan(end);
+  });
+
+  it("links each step on the map to what the list says about it", () => {
+    const html = render();
+    for (const step of STEPS) {
+      expect(html).toContain(`href="#${stepAnchor(step.name)}"`);
+      expect(html).toContain(`id="${stepAnchor(step.name)}"`);
+    }
+  });
+
+  it("throws the start of the crossed-out snippet out of the Checker on the map, and none without one", () => {
+    const counts = checkerRejections(CASES);
+    const found = CASES.find((c) => c.caseId === counts.example!.caseId)!;
+    const snippet = found.run.nodes.find((n) => n.id === counts.example!.nodeId)!.reader.exact_snippet!.trim();
+    const html = render(counts);
+    const shown = html.match(/<s class="strike[^"]*">“([^”]+)”<\/s>/)![1];
+    expect(shown.endsWith("…")).toBe(true);
+    expect(snippet.startsWith(shown.slice(0, -1))).toBe(true);
+    expect(html).toContain(">thrown out</span>");
+    expect(render({ ...counts, example: null })).not.toContain(">thrown out</span>");
+  });
 });
+

@@ -250,6 +250,24 @@ describe("investigate", () => {
     expect(rejected.find((e) => e.type === "plan_failed")).not.toHaveProperty("tokens");
   });
 
+  it("tells the planner the language, or that none was given", async () => {
+    const given = fakeNebius();
+    await run({ nebius: given });
+    expect(given.prompts.get("plan")).toMatch(/\nLanguage: en$/);
+
+    const events: RunEvent[] = [];
+    const notGiven = fakeNebius();
+    await investigate({
+      nebius: notGiven,
+      tavily: fakeTavily(),
+      input: { ...INPUT, language: null },
+      onEvent: (event) => events.push(event),
+    });
+    expect(notGiven.prompts.get("plan")).toMatch(/\nLanguage: not given$/);
+    expect(events[0]).toMatchObject({ type: "started", language: null });
+    expect(runEventSchema.safeParse(events[0]).success).toBe(true);
+  });
+
   it("asks the planner for the usual credit when no name was given, and judges against it", async () => {
     const nebius = fakeNebius({ plan: () => ({ ...PLAN, usual_attribution: "  Albert\nEinstein " }) });
     const events = await run({ nebius, name: null });

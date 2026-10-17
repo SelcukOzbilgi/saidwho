@@ -7,13 +7,15 @@ import { z } from "zod";
 import type { ServerEnv } from "./env-schema";
 import { createSupabaseRpc, type SupabaseRpc } from "./supabase-rpc";
 
-// How many runs one visitor may start in a window. Windows are fixed and start
+// How many runs one visitor may start in a window, or keys they may check. Windows are fixed and start
 // on the epoch, so a day's window starts at UTC midnight, as the trial budget's
 // day does. A visitor is counted by a keyed hash of their address (see
 // client-ip.ts), never the address itself. In this server's memory a count is
 // dropped once its window ends; in Supabase, an hour after that (see the migration).
 
-export type Limit = { name: "runs" | "trial"; max: number; windowSeconds: number };
+// "keys" counts key checks (POST /api/keys/check) apart from runs, so checking
+// a key never uses up a run.
+export type Limit = { name: "runs" | "trial" | "keys"; max: number; windowSeconds: number };
 
 export type RateLimiter = {
   // When the run may start, it is counted and this gives the start of the window

@@ -20,10 +20,18 @@ const optionalName = z
   .nullish()
   .transform((value) => value || null);
 
+// The quote's language, as a code like "en" or "pt-BR". A visitor who isn't
+// sure leaves it out, and the planner works it out from the quote.
+const optionalLanguage = z
+  .string()
+  .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/)
+  .nullish()
+  .transform((value) => value ?? null);
+
 // A key is one printable token. Blank is allowed here so resolveRunKeys can
 // report an incomplete BYOK request; anything with spaces or control characters
 // inside cannot be a header value and is rejected.
-const apiKey = z
+export const apiKey = z
   .string()
   .trim()
   .max(512)
@@ -42,10 +50,7 @@ const accessCode = z
 export const investigateRequestSchema = z.strictObject({
   quote: text(500),
   popularAttribution: optionalName,
-  language: z
-    .string()
-    .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/)
-    .default("en"),
+  language: optionalLanguage,
   keys: z.discriminatedUnion("mode", [
     z.strictObject({ mode: z.literal("byok"), nebiusApiKey: apiKey, tavilyApiKey: apiKey }),
     z.strictObject({ mode: z.literal("trial"), accessCode }),
@@ -84,24 +89,32 @@ async function readCapped(request: Request, maxBytes: number): Promise<string | 
   return new TextDecoder().decode(bytes);
 }
 
-// Reads and validates the body. Error results name the fields that failed,
-// never the values sent.
-export async function parseInvestigateRequest(request: Request): Promise<ParsedRequest> {
+// Reads a JSON body under a size cap: the content type, the declared length and
+// the bytes read all count. Shared with POST /api/keys/check.
+export async function readJsonBody(
+  request: Request,
+  maxBytes: number,
+): Promise<{ ok: true; json: unknown } | { ok: false; status: 400 | 413 | 415; error: string }> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!/^application\/json\b/i.test(contentType)) return { ok: false, status: 415, error: "expected_json" };
   const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > MAX_BODY_BYTES) return { ok: false, status: 413, error: "body_too_large" };
-
-  let json: unknown;
+  if (declared > maxBytes) return { ok: false, status: 413, error: "body_too_large" };
   try {
-    const raw = await readCapped(request, MAX_BODY_BYTES);
+    const raw = await readCapped(request, maxBytes);
     if (raw === null) return { ok: false, status: 413, error: "body_too_large" };
-    json = JSON.parse(raw);
+    return { ok: true, json: JSON.parse(raw) };
   } catch {
     // Bad JSON, or a body the client stopped sending.
     return { ok: false, status: 400, error: "invalid_json" };
   }
-  const parsed = investigateRequestSchema.safeParse(json);
+}
+
+// Reads and validates the body. Error results name the fields that failed,
+// never the values sent.
+export async function parseInvestigateRequest(request: Request): Promise<ParsedRequest> {
+  const body = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!body.ok) return body;
+  const parsed = investigateRequestSchema.safeParse(body.json);
   if (!parsed.success) {
     const fields = [...new Set(parsed.error.issues.map((issue) => issue.path.join(".") || "body"))];
     return { ok: false, status: 400, error: "invalid_request", fields };

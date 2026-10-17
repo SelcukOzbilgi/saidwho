@@ -32,7 +32,7 @@ export const serverEnvSchema = z.object({
   // sent to the browser. The hourly count only slows guessing from one address,
   // so the code itself has to be unguessable: at least 20 characters, such as
   // the output of `openssl rand -base64 18 | tr '+/' '-_'`. Only letters,
-  // digits and - _ . ~, which pass through a /#code=... link unchanged, so a
+  // digits and - _ . ~, which pass through a /run#code=... link unchanged, so a
   // code the link would cut short or garble fails at startup.
   TRIAL_ACCESS_CODE: z.preprocess(
     blankToUndefined,

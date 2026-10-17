@@ -1,18 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import { IBM_Plex_Mono, Newsreader, Schibsted_Grotesk } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
+import { THEME_COLORS } from "@/components/theme";
 import { SITE_URL } from "@/lib/site";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Schibsted Grotesk was drawn for a news group's papers, so labels and body
+// text read like a newsroom's rather than a framework's default. latin-ext
+// carries the Turkish letters in the saved cases.
+const sans = Schibsted_Grotesk({
+  variable: "--font-sans-face",
+  subsets: ["latin", "latin-ext"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+// Ids, costs and timings, set like a wire service's figures.
+const mono = IBM_Plex_Mono({
+  variable: "--font-mono-face",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
 });
 
 // Quotes and snippets are set in a book face, the way they'd look on the page they came from.
@@ -35,19 +41,34 @@ export const metadata: Metadata = {
 };
 
 // The browser bar takes the page's paper color, the same --background as globals.css.
+// It starts from the system setting; once the page runs, ThemeToggle gives both
+// tags the color of the theme on the page, so a theme picked there reaches it
+// too, and does it again whenever a route change puts these defaults back.
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f4ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#14130f" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
   ],
 };
+
+// Runs while the page is parsed, before anything is painted: a theme picked
+// on the page wins, then the system setting. ThemeToggle writes the same key.
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
+      // Next only turns smooth scrolling off for a route change when this is set,
+      // so a new page opens at its top instead of gliding there.
+      data-scroll-behavior="smooth"
+      // THEME_SCRIPT sets data-theme before the first paint, so the DOM wins.
+      suppressHydrationWarning
+      className={`${sans.variable} ${mono.variable} ${newsreader.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <SiteHeader />
         {children}

@@ -1,0 +1,86 @@
+/* /?hero=rewind. The steps, the strike and the marker play from the global
+   hero-trace rules in globals.css; this adds the earliest year running back in
+   time, the trail's line drawing down from step to step, the earliest step's
+   dot landing, and the verdict pressed on. As there, it plays only where scripts run and motion
+   is welcome, and HeroReplay sets hero-rewind for a moment to play it again;
+   otherwise the file stays as the server drew it, at its end. */
+
+/* A registered integer, so the counter steps through whole years. */
+@property --rewind-year {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  /* The year in the markup keeps its place and width; the count is drawn over it. */
+  .count {
+    color: transparent;
+  }
+  .count::after {
+    --rewind-year: var(--rewind-to);
+    counter-reset: rewind-year var(--rewind-year);
+    content: counter(rewind-year);
+    position: absolute;
+    inset: 0;
+    color: var(--accent-ink);
+  }
+  /* Linear and quick: the years it passes go by in a frame or two each, so none
+     reads as a date, and it stops dead on the judge's year. */
+  .file:not(:global(.hero-rewind)) .count::after {
+    animation:
+      rewind-count var(--count-run) linear both,
+      rewind-land 360ms ease-out both;
+    animation-delay: var(--count-at), calc(var(--count-at) + var(--count-run));
+  }
+  .file:not(:global(.hero-rewind)) .segment {
+    animation: rewind-draw var(--rewind-run) ease-out both;
+    animation-delay: var(--at);
+  }
+  .file:not(:global(.hero-rewind)) .landing {
+    animation: rewind-pop 420ms cubic-bezier(0.3, 1.35, 0.55, 1) both;
+    animation-delay: var(--at);
+  }
+  .file:not(:global(.hero-rewind)) .stamp {
+    animation: rewind-stamp 360ms cubic-bezier(0.3, 1.35, 0.55, 1) both;
+    animation-delay: var(--at);
+  }
+}
+
+.segment {
+  transform-origin: top;
+}
+.stamp {
+  display: inline-block;
+  transform-origin: left center;
+}
+
+/* While it runs the count is still looking, so it is muted; it takes the
+   earliest trace's color as it lands. */
+@keyframes rewind-count {
+  from {
+    --rewind-year: var(--rewind-from);
+  }
+}
+@keyframes rewind-land {
+  from {
+    color: var(--muted);
+  }
+}
+@keyframes rewind-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes rewind-pop {
+  from {
+    transform: scale(0);
+  }
+}
+/* Lands a little large and tilted, dips past its size and settles, like the case page's stamp. */
+@keyframes rewind-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.4) rotate(-4deg);
+  }
+}

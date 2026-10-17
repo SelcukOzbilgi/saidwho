@@ -1,5 +1,9 @@
+import type { ReactNode } from "react";
+
 import type { EvidenceNode } from "../agent/events";
 import { byDate } from "../lib/run-state";
+import { Arrivals, Enter, RevealList } from "./case-motion";
+import { FOCUS_RING } from "./focus-ring";
 
 type Marks = { earliest: string | null; misattribution: string | null };
 
@@ -30,24 +34,40 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
       </h2>
       {/* Years read left to right, then down, oldest first. A year takes as many
           columns as it has cards, up to a full row, so a year with one page shares
-          its row with the next ones instead of leaving the rest of it empty. */}
-      <ol className="grid gap-x-3 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-        {years.map((column) => (
-          <li key={column.label} className={`min-w-0 ${SPAN[Math.min(column.nodes.length, 3)]}`}>
-            <div className="mb-3 flex items-center gap-2">
-              <span className="font-serif text-2xl font-semibold tabular-nums">{column.label}</span>
-              <span className="h-px flex-1 bg-line" aria-hidden />
-            </div>
-            <ul className={`grid gap-3 ${CARDS[Math.min(column.nodes.length, 3)]}`}>
-              {column.nodes.map((node) => (
-                <li key={node.id} className="min-w-0">
-                  <NodeCard node={node} marks={marks} />
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ol>
+          its row with the next ones instead of leaving the rest of it empty. As a
+          run adds pages, the cards after a new one glide to their new places. During
+          a run each card comes in as it is found, so only a finished page's list
+          reveals as it scrolls into view. */}
+      <RevealList playFresh={false} each className="grid gap-x-3 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+        <Arrivals>
+          {years.map((column) => {
+            const holdsEarliest = column.nodes.some((node) => node.id === marks.earliest);
+            return (
+              <Enter as="li" layout key={column.label} className={`min-w-0 ${SPAN[Math.min(column.nodes.length, 3)]}`}>
+                <div className="reveal-item mb-3 flex items-center gap-2">
+                  <span
+                    className={`font-serif text-2xl font-semibold tabular-nums transition-colors duration-300 ${holdsEarliest ? "text-accent-ink" : ""}`}
+                  >
+                    {column.label}
+                  </span>
+                  <span className={`h-px flex-1 transition-colors duration-300 ${holdsEarliest ? "bg-accent/60" : "bg-line"}`} aria-hidden />
+                </div>
+                <ul className={`grid gap-3 ${CARDS[Math.min(column.nodes.length, 3)]}`}>
+                  <Arrivals>
+                    {column.nodes.map((node) => (
+                      <Enter as="li" layout key={node.id} className="min-w-0">
+                        <div className="reveal-item h-full">
+                          <NodeCard node={node} marks={marks} />
+                        </div>
+                      </Enter>
+                    ))}
+                  </Arrivals>
+                </ul>
+              </Enter>
+            );
+          })}
+        </Arrivals>
+      </RevealList>
     </section>
   );
 }
@@ -82,12 +102,18 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
   const check = node.check.reason === "not_the_saying" ? { ...CHECK.not_found, words: "On the page, but not the saying" } : CHECK[node.check.status];
   const earliest = marks.earliest === node.id;
   const misattribution = marks.misattribution === node.id;
-  const ring = earliest ? "border-accent ring-2 ring-accent/30" : misattribution ? "border-bad/60" : "border-line";
+  // The two pages the verdict points to stand out from the rest, and ease into it
+  // when the verdict arrives during a run.
+  const ring = earliest
+    ? "border-accent bg-accent/5 ring-2 ring-accent/30"
+    : misattribution
+      ? "border-bad/60 bg-bad/5 ring-1 ring-bad/25"
+      : "border-line bg-card";
 
   return (
     <article
       id={`node-${node.id}`}
-      className={`arrive flex h-full scroll-mt-24 flex-col rounded-xl border bg-card p-4 shadow-sm target:ring-2 target:ring-accent ${ring} ${crossed ? "opacity-60" : ""}`}
+      className={`flex h-full scroll-mt-24 flex-col rounded-sm border p-4 shadow-sm transition-[border-color,background-color,box-shadow] duration-300 target:ring-2 target:ring-accent ${ring} ${crossed ? "opacity-60" : ""}`}
     >
       <header className="mb-2 flex items-center gap-2 text-xs text-muted">
         <span className="font-mono">{node.id}</span>
@@ -95,12 +121,16 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
         {node.date && <span className="ml-auto shrink-0 tabular-nums">{node.date}</span>}
       </header>
 
-      {(earliest || misattribution) && (
-        <p className="mb-2 flex flex-wrap gap-1.5">
-          {earliest && <Badge className="bg-accent text-on-accent">Earliest the judge found</Badge>}
-          {misattribution && <Badge className="bg-bad/15 text-bad">Where the wrong name shows up</Badge>}
-        </p>
-      )}
+      <Arrivals>
+        {(earliest || misattribution) && (
+          <Enter key="marks" rise={4} delay={0.3}>
+            <p className="mb-2 flex flex-wrap gap-1.5">
+              {earliest && <Badge className="bg-accent text-on-accent">Earliest the judge found</Badge>}
+              {misattribution && <Badge className="bg-bad/15 text-bad">Where the wrong name shows up</Badge>}
+            </p>
+          </Enter>
+        )}
+      </Arrivals>
 
       {node.reader.exact_snippet && (
         <blockquote className={`font-serif text-[17px] leading-snug ${crossed ? "line-through decoration-bad decoration-2" : ""}`}>
@@ -116,7 +146,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
         )}
         {node.foundVia && (
           <Row label="Found via">
-            <a href={`#node-${node.foundVia.node}`} className="py-1 underline decoration-line underline-offset-2 hover:decoration-foreground">
+            <a href={`#node-${node.foundVia.node}`} className={`rounded-sm py-1 underline decoration-line underline-offset-2 hover:decoration-foreground ${FOCUS_RING}`}>
               {node.foundVia.node}
             </a>
             , looking for {unmark(node.foundVia.work)}
@@ -139,7 +169,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
           href={webUrl(node.url)}
           target="_blank"
           rel="noopener noreferrer"
-          className="-my-1.5 ml-auto max-w-[60%] truncate py-1.5 underline decoration-line underline-offset-2 hover:decoration-foreground"
+          className={`-my-1.5 ml-auto max-w-[60%] truncate rounded-sm py-1.5 underline decoration-line underline-offset-2 hover:decoration-foreground ${FOCUS_RING}`}
           title={node.title}
         >
           {node.title || node.host}
@@ -149,7 +179,7 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex gap-2">
       <dt className="w-20 shrink-0">{label}</dt>
@@ -158,6 +188,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function Badge({ className, children }: { className: string; children: React.ReactNode }) {
+function Badge({ className, children }: { className: string; children: ReactNode }) {
   return <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${className}`}>{children}</span>;
 }

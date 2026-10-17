@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { EvalNumbers, LATEST, THREE_WAY } from "./eval-numbers";
+import { EvalNumbers, LATEST, parseScore, THREE_WAY } from "./eval-numbers";
 
 // A summary table row's cells, by its label, from a result file pnpm eval wrote.
 function row(file: string, label: string): string[] {
@@ -44,5 +44,49 @@ describe("EvalNumbers", () => {
       expect(html).toContain(`href="https://github.com/SelcukOzbilgi/saidwho/blob/main/${file}"`);
     }
     expect(html).not.toContain("—");
+  });
+
+  it("renders every score in full, so the numbers that count up read right without JavaScript", () => {
+    const text = renderToStaticMarkup(createElement(EvalNumbers)).replace(/<[^>]+>/g, "");
+    for (const set of [LATEST.test, LATEST.holdout]) {
+      expect(text).toContain(set.verdicts);
+      expect(text).toContain(set.years);
+    }
+  });
+});
+
+describe("EvalNumbers motion", () => {
+  const html = renderToStaticMarkup(createElement(EvalNumbers));
+
+  it("ships nothing start-hidden, so the page reads the same without JavaScript", () => {
+    expect(html).not.toMatch(/opacity:\s*0|scaleX\(0\)|data-reveal=/);
+  });
+
+  it("fills the three-way table a column at a time, the mix's cost last, then marks the tenth", () => {
+    const at = [...html.matchAll(/class="ev-cell[^"]*" style="--at:(\d+)ms"/g)].map((m) => Number(m[1]));
+    const rows = THREE_WAY.setups.map((_, i) => at.slice(4 * i, 4 * i + 4));
+    expect(at).toHaveLength(4 * THREE_WAY.setups.length);
+    // Each column comes after the one before it, in every row.
+    for (let col = 1; col < 4; col++) {
+      expect(Math.min(...rows.map((r) => r[col]))).toBeGreaterThan(Math.max(...rows.map((r) => r[col - 1])));
+    }
+    const [mix, ...others] = rows.map((r) => r[3]);
+    for (const cost of others) expect(mix).toBeGreaterThan(cost);
+    const marker = Number(/class="ev-marker[^"]*" style="--at:(\d+)ms"/.exec(html)![1]);
+    expect(marker).toBeGreaterThan(mix);
+    // The mark waits for the mix's bar to land: its wait and its draw, as the tbody sets them.
+    const bar = /--bar-wait:(\d+)ms;--bar-ms:(\d+)ms/.exec(html)!;
+    expect(marker).toBeGreaterThanOrEqual(mix + Number(bar[1]) + Number(bar[2]));
+    // And the whole table is in place in under 1.4 s.
+    expect(Math.max(...at) + Number(bar[1]) + Number(bar[2])).toBeLessThanOrEqual(1400);
+  });
+});
+
+describe("parseScore", () => {
+  it("reads a score's two numbers, and nothing that isn't one", () => {
+    expect(parseScore("13 of 20")).toEqual({ got: 13, of: 20 });
+    expect(parseScore("0 of 10")).toEqual({ got: 0, of: 10 });
+    expect(parseScore("$0.0076")).toBeNull();
+    expect(parseScore("13 of")).toBeNull();
   });
 });

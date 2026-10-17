@@ -72,7 +72,13 @@ const fail = (
   headers: Record<string, string> = {},
 ): Response => Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store", ...headers } });
 
-const LIMIT_ERRORS = { runs: "too_many_runs", trial: "trial_limit_reached" } as const;
+// The limits a run is counted against; key checks have their own route.
+type RunLimit = Limit & { name: "runs" | "trial" };
+
+const LIMIT_ERRORS: Record<RunLimit["name"], string> = {
+  runs: "too_many_runs",
+  trial: "trial_limit_reached",
+};
 
 const KEY_ERRORS = {
   byok_incomplete: 400,
@@ -129,8 +135,8 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     // limit can't hold any of the day's budget, however many requests they send.
     // The scarcer trial limit goes first, so a visitor out of trial runs who keeps
     // trying doesn't use up their hourly runs on their own keys too.
-    const runsLimit: Limit = { name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS };
-    const limits: Limit[] = [runsLimit];
+    const runsLimit: RunLimit = { name: "runs", max: deps.env.RUNS_PER_IP_PER_HOUR, windowSeconds: HOUR_SECONDS };
+    const limits: RunLimit[] = [runsLimit];
     // A run that needs the access code skips the daily trial limit. That limit
     // shares an open trial out among strangers; the code's holders are a few
     // invited people, often several behind one address, who each try a handful

@@ -28,11 +28,11 @@ const VERDICT_COLOR: Record<JudgeOutput["verdict"], string> = {
   no_known_source: MUTED,
 };
 
-// The page fonts: Newsreader for quotes and headlines, Geist for labels. Static
+// The page fonts: Newsreader for quotes and headlines, Schibsted Grotesk for labels. Static
 // instances, since the renderer can't pick a weight from a variable font.
 // Fetched at build time, like next/font fetches them for the pages.
 const NEWSREADER = "https://fonts.gstatic.com/s/newsreader/v26/cY9qfjOCX1hbuyalUrK49dLac06G1ZGsZBtoBCzBDXXD9JVF438w";
-const GEIST = "https://fonts.gstatic.com/s/geist/v5/gyBhhwUxId8gMGYQMKR3pzfaWI_R";
+const SCHIBSTED = "https://fonts.gstatic.com/s/schibstedgrotesk/v7/JqzK5SSPQuCQF3t8uOwiUL-taUTtarVKQ9vZ6pJJWlMN";
 // A stalled download fails the build after 30 seconds instead of hanging it,
 // and every failure, the body's too, names the font's address.
 const font = async (url: string): Promise<ArrayBuffer> => {
@@ -46,8 +46,8 @@ const font = async (url: string): Promise<ArrayBuffer> => {
 const [serif, serifSemibold, sans, sansMedium] = await Promise.all([
   font(`${NEWSREADER}eI_ADA.ttf`),
   font(`${NEWSREADER}pojADA.ttf`),
-  font(`${GEIST}nOM4nQ.ttf`),
-  font(`${GEIST}ruM4nQ.ttf`),
+  font(`${SCHIBSTED}IsEATw.ttf`),
+  font(`${SCHIBSTED}EMEATw.ttf`),
 ]);
 
 // Shorter quotes set larger, so a short one still fills the card.
@@ -71,7 +71,7 @@ export async function shareCard({ run }: ExampleCase): Promise<ImageResponse> {
           padding: "56px 80px 60px",
           background: PAPER,
           color: INK,
-          fontFamily: "Geist",
+          fontFamily: "Schibsted Grotesk",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -113,8 +113,8 @@ export async function shareCard({ run }: ExampleCase): Promise<ImageResponse> {
       fonts: [
         { name: "Newsreader", data: serif, weight: 400, style: "normal" },
         { name: "Newsreader", data: serifSemibold, weight: 600, style: "normal" },
-        { name: "Geist", data: sans, weight: 400, style: "normal" },
-        { name: "Geist", data: sansMedium, weight: 500, style: "normal" },
+        { name: "Schibsted Grotesk", data: sans, weight: 400, style: "normal" },
+        { name: "Schibsted Grotesk", data: sansMedium, weight: 500, style: "normal" },
       ],
     },
   );

@@ -3,6 +3,8 @@ import { Fragment } from "react";
 import type { JudgeOutput } from "../agent/schemas";
 import { parseRationale } from "../lib/rationale";
 import { type RunState, verdictWords } from "../lib/run-state";
+import { Stamp } from "./case-motion";
+import { FOCUS_RING } from "./focus-ring";
 import { TierChip } from "./tier-chip";
 
 export const VERDICT_LOOK: Record<JudgeOutput["verdict"], string> = {
@@ -50,7 +52,7 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
   // without one it always says why.
   if (!verdict) {
     return (
-      <section className="rounded-xl border border-line bg-card p-5">
+      <section className="rounded-sm border border-line bg-card p-5">
         <p className="text-xs font-medium uppercase tracking-wider text-muted">No verdict</p>
         <p className="mt-1 text-lg">
           {noVerdict
@@ -70,9 +72,12 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
   const earliest = earliestTrace(output, nodes);
 
   return (
-    <section aria-label="Verdict" className="arrive rounded-xl border border-line bg-card p-5 shadow-sm">
+    <section aria-label="Verdict" className="rounded-sm border border-line bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span className={`font-medium uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>{verdictWords(output.verdict)}</span>
+        {/* Set like a stamp in the verdict's color; when a run reaches it, it is pressed on. */}
+        <Stamp className={`rounded-sm border-[1.5px] border-current px-1.5 py-px font-semibold uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>
+          {verdictWords(output.verdict)}
+        </Stamp>
         <span>· {output.confidence} confidence</span>
         <span className="ml-auto flex items-center gap-1.5">
           judged on <TierChip tier={tier} />
@@ -128,14 +133,14 @@ export function Rationale({ text, confirmed }: { text: string; confirmed: Readon
 function Cite({ id, confirmed }: { id: string; confirmed: ReadonlySet<string> }) {
   if (!confirmed.has(id)) {
     return (
-      <span title="Not backed up by a page" className="rounded bg-bad/15 px-1 font-mono text-xs text-bad line-through">
+      <span title="Not backed up by a page" className="rounded-sm bg-bad/15 px-1 font-mono text-xs text-bad line-through">
         {id}
       </span>
     );
   }
   return (
-    <a href={`#node-${id}`} className="group py-1 no-underline">
-      <span className="rounded bg-accent/15 px-1 font-mono text-xs text-accent-ink group-hover:bg-accent/25">{id}</span>
+    <a href={`#node-${id}`} className={`group rounded-sm py-1 no-underline ${FOCUS_RING}`}>
+      <span className="rounded-sm bg-accent/15 px-1 font-mono text-xs text-accent-ink group-hover:bg-accent/25">{id}</span>
     </a>
   );
 }

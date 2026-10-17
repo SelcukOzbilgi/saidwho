@@ -1,0 +1,209 @@
+/* Only this candidate adjusts the wordmark and breathing room. The section
+   still fills the viewport and centres the whole composition as one piece. */
+:global(section):has(> .headline) {
+  /* HeaderHeight rounds its measurement up; cover that fractional pixel too. */
+  min-height: calc(100svh - var(--site-header-height, 3.5rem) + 1px);
+  padding-block: 3rem;
+}
+
+:global(section):has(> .headline) > h1 {
+  font-size: clamp(4rem, 8vw, 8rem);
+}
+
+.headline {
+  margin-top: 1.75rem;
+}
+
+.overline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.overline button {
+  font-size: 0.75rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.quote {
+  margin-top: 1rem;
+  max-width: 22em;
+  font-size: clamp(2.5rem, 4.1vw, 4rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: pretty;
+}
+
+.correction {
+  display: flex;
+  align-items: start;
+  gap: 3rem;
+  margin-top: 1.75rem;
+}
+
+.label {
+  margin-bottom: 0.4rem;
+  color: var(--muted);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.credit {
+  flex-shrink: 0;
+}
+
+.correction dd {
+  font-size: clamp(1.5rem, 2.1vw, 1.875rem);
+  line-height: 1.25;
+}
+
+.credit dd {
+  color: var(--muted);
+}
+
+.via {
+  display: block;
+  margin-top: 0.375rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 2rem;
+  margin-top: 1.25rem;
+  font-size: 0.8125rem;
+}
+
+.verdictWord {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.caseLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.3em;
+}
+
+.caseLink:hover {
+  text-decoration-color: var(--foreground);
+}
+
+.intro {
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+}
+
+.intro > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  column-gap: 4rem;
+}
+
+.intro p:first-child {
+  grid-row: span 2;
+  max-width: 35rem;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.intro p + p {
+  margin-top: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.intro p + div {
+  margin-top: 1rem;
+}
+
+.intro a {
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+}
+
+/* The server sends the finished correction. These animations borrow the
+   existing pen marks, but stay scoped here so the candidates can merge. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .case:not(:global(.hero-rewind)) .strike::after {
+    animation: strike 420ms ease-out 650ms both;
+  }
+
+  .case:not(:global(.hero-rewind)) .origin {
+    animation: arrive 300ms ease-out 1050ms both;
+  }
+
+  .case:not(:global(.hero-rewind)) .char {
+    animation: ink 1ms linear both;
+    animation-delay: calc(1100ms + var(--c) * 20ms);
+  }
+
+  .case:not(:global(.hero-rewind)) .marker {
+    animation: marker 400ms ease-out 1950ms both;
+  }
+
+  .case:not(:global(.hero-rewind)) .verdict {
+    animation: arrive 350ms ease-out 2250ms both;
+  }
+}
+
+@keyframes strike {
+  from { transform: scaleX(0); }
+}
+
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(5px); }
+}
+
+@keyframes ink {
+  from { opacity: 0; }
+}
+
+@keyframes marker {
+  from { background-color: transparent; }
+}
+
+@media (max-width: 47.99rem) {
+  .correction {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .intro > div {
+    display: block;
+  }
+
+  .intro p + p {
+    margin-top: 0.75rem;
+  }
+}
+
+@media (max-width: 39.99rem) {
+  :global(section):has(> .headline) {
+    padding-block: 2.5rem;
+  }
+
+  .headline { margin-top: 1.5rem; }
+  .quote { font-size: 2.5rem; }
+  .correction { margin-top: 1.5rem; }
+  .verdict { gap: 1rem; }
+  .intro { margin-top: 1.5rem; }
+}

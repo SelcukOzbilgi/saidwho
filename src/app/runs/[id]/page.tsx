@@ -48,7 +48,7 @@ export default async function RunPage({ params }: PageProps<"/runs/[id]">) {
         {left.length > 0 && ` Left out of the search, so the trail had to be found elsewhere: ${left.join(", ")}.`}
       </p>
       {broke && (
-        <p role="status" className="rounded-lg border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
+        <p role="status" className="rounded-sm border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
           The run broke on the server before it finished. What it found until then is below.
         </p>
       )}
