@@ -9,7 +9,7 @@ import { type ReactNode, useLayoutEffect, useRef, useState, useSyncExternalStore
 // run adds afterwards moves in. Under reduced motion nothing moves.
 
 // Quick out, slow settle: things arrive fast and don't bounce.
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
 const moving = (reduced: boolean | null) => reduced !== true;
 
@@ -37,7 +37,7 @@ export function Arrivals({ children }: { children: ReactNode }) {
 }
 
 type EnterProps = {
-  as?: "div" | "li" | "section";
+  as?: "div" | "li" | "section" | "span";
   // Glide to a new place when cards before it come or go, instead of jumping.
   layout?: boolean;
   delay?: number;
@@ -48,7 +48,7 @@ type EnterProps = {
   children: ReactNode;
 };
 
-const TAGS = { div: motion.div, li: motion.li, section: motion.section } as const;
+const TAGS = { div: motion.div, li: motion.li, section: motion.section, span: motion.span } as const;
 
 // Fades and rises into place when it mounts after the view has rendered.
 export function Enter({ as = "div", layout = false, delay = 0, rise = 8, children, ...rest }: EnterProps) {
@@ -68,6 +68,25 @@ export function Enter({ as = "div", layout = false, delay = 0, rise = 8, childre
   );
 }
 
+// Words that stand for the step a run is on, such as a heading: when the step
+// changes, the old words lift away and the new ones rise into their place.
+export function Swap({ id, children }: { id: string; children: ReactNode }) {
+  const moves = moving(useReducedMotion());
+  return (
+    <AnimatePresence initial={false} mode="wait">
+      <motion.div
+        key={id}
+        initial={moves ? { opacity: 0, y: 6 } : false}
+        animate={{ opacity: 1, y: 0 }}
+        exit={moves ? { opacity: 0, y: -4, transition: { duration: 0.14, ease: "easeIn" } } : { opacity: 0, transition: { duration: 0 } }}
+        transition={{ duration: 0.26, ease: EASE_OUT }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 // The verdict's word, pressed on like a stamp: it lands a little large, dips
 // just past its size and settles. Only when the verdict arrives during a run.
 const STAMP_FROM = { opacity: 0, scale: 1.4, rotate: -4 };
@@ -84,6 +103,24 @@ export function Stamp({ className, children }: { className: string; children: Re
       initial={moves && later ? STAMP_FROM : false}
       animate={STAMP_TO}
       transition={STAMP_TIMING}
+    >
+      {children}
+    </motion.span>
+  );
+}
+
+// A small mark, such as the tick on a finished step, that lands a touch past
+// its size and settles when it appears during a run. Key it by what it shows,
+// so a new mark in its place lands again.
+export function Pop({ className = "", children }: { className?: string; children: ReactNode }) {
+  const moves = moving(useReducedMotion());
+  const later = useMountedLater();
+  return (
+    <motion.span
+      className={`inline-flex ${className}`}
+      initial={moves && later ? { opacity: 0, scale: 0.4 } : false}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.32, ease: [0.34, 1.56, 0.64, 1], opacity: { duration: 0.15 } }}
     >
       {children}
     </motion.span>

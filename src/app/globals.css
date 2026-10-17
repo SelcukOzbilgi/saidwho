@@ -504,3 +504,25 @@ details[open] .menu-panel {
     transition: none;
   }
 }
+
+/* Case: round two */
+/* A step under way with nothing to count: a short stretch of its bar sweeps
+   across it, then rests a moment before the next pass. Under reduced motion
+   it sits still at the start of the bar. */
+@keyframes case-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  65%,
+  to {
+    transform: translateX(250%);
+  }
+}
+.case-sweep {
+  animation: case-sweep 1400ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .case-sweep {
+    animation: none;
+  }
+}
