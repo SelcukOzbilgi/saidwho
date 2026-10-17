@@ -55,6 +55,28 @@ describe("EvalNumbers", () => {
   });
 });
 
+describe("EvalNumbers motion", () => {
+  const html = renderToStaticMarkup(createElement(EvalNumbers));
+
+  it("ships nothing start-hidden, so the page reads the same without JavaScript", () => {
+    expect(html).not.toMatch(/opacity:\s*0|scaleX\(0\)|data-reveal=/);
+  });
+
+  it("fills the three-way table a column at a time, the mix's cost last, then marks the tenth", () => {
+    const at = [...html.matchAll(/class="ev-cell[^"]*" style="--at:(\d+)ms"/g)].map((m) => Number(m[1]));
+    const rows = THREE_WAY.setups.map((_, i) => at.slice(4 * i, 4 * i + 4));
+    expect(at).toHaveLength(4 * THREE_WAY.setups.length);
+    // Each column comes after the one before it, in every row.
+    for (let col = 1; col < 4; col++) {
+      expect(Math.min(...rows.map((r) => r[col]))).toBeGreaterThan(Math.max(...rows.map((r) => r[col - 1])));
+    }
+    const [mix, ...others] = rows.map((r) => r[3]);
+    for (const cost of others) expect(mix).toBeGreaterThan(cost);
+    const marker = Number(/class="ev-marker[^"]*" style="--at:(\d+)ms"/.exec(html)![1]);
+    expect(marker).toBeGreaterThan(mix);
+  });
+});
+
 describe("parseScore", () => {
   it("reads a score's two numbers, and nothing that isn't one", () => {
     expect(parseScore("13 of 20")).toEqual({ got: 13, of: 20 });

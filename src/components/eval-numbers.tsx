@@ -3,10 +3,10 @@
 // against its file, so a new run that changes them fails the tests until this
 // is updated too.
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-import { CountUp } from "./count-up";
 import { Reveal } from "./reveal";
+import { ScoreMeter } from "./score-meter";
 
 const REPO = "https://github.com/SelcukOzbilgi/saidwho/blob/main";
 
@@ -47,31 +47,31 @@ export function parseScore(score: string): { got: number; of: number } | null {
   return match ? { got: Number(match[1]), of: Number(match[2]) } : null;
 }
 
-// A score as the file has it, with its first number counting up into view.
-function Score({ score }: { score: string }) {
+// A score as the file has it, its first number counting up as its bar fills.
+// delay is in seconds after it comes into view.
+function Score({
+  score,
+  strong,
+  delay,
+  numberClassName,
+  children,
+}: {
+  score: string;
+  strong?: boolean;
+  delay?: number;
+  numberClassName?: string;
+  children?: ReactNode;
+}) {
   const parsed = parseScore(score);
-  if (!parsed) return <>{score}</>;
+  if (!parsed) return <span className={numberClassName}>{score}</span>;
   return (
-    <>
-      <CountUp value={parsed.got} /> of {parsed.of}
-    </>
+    <ScoreMeter got={parsed.got} of={parsed.of} strong={strong} delay={delay} numberClassName={numberClassName}>
+      {children}
+    </ScoreMeter>
   );
 }
 
-// How much of the set a score covers, as a thin bar that fills in from the left.
-function ScoreBar({ score, strong = false }: { score: string; strong?: boolean }) {
-  const parsed = parseScore(score);
-  if (!parsed || parsed.of === 0) return null;
-  return (
-    <span aria-hidden="true" className="mt-2 block h-1.5 overflow-hidden rounded-full bg-line">
-      <span
-        className={`reveal-draw-x block h-full rounded-full ${strong ? "bg-accent" : "bg-foreground/40"}`}
-        style={{ width: `${(100 * parsed.got) / parsed.of}%`, "--i": 2 } as CSSProperties}
-      />
-    </span>
-  );
-}
-
+// i is the card's place, so the test set's scores go before the held-out set's.
 function SetCard({ title, scores, i }: { title: string; scores: Scores & { quotes: number }; i: number }) {
   return (
     <div className="reveal-up rounded-sm border border-line bg-card p-5" style={{ "--i": i } as CSSProperties}>
@@ -82,18 +82,20 @@ function SetCard({ title, scores, i }: { title: string; scores: Scores & { quote
         <div className="col-span-2">
           <dt className="sr-only">Verdicts that match the known answer</dt>
           <dd>
-            <span className="font-serif text-5xl font-semibold tabular-nums sm:text-6xl">
-              <Score score={scores.verdicts} />
-            </span>
-            <span className="mt-1 block text-sm text-muted">verdicts match the known answer</span>
-            <ScoreBar score={scores.verdicts} strong />
+            <Score
+              score={scores.verdicts}
+              strong
+              delay={0.15 + 0.15 * i}
+              numberClassName="font-serif text-5xl font-semibold tabular-nums sm:text-6xl"
+            >
+              <span className="mt-1 block text-sm text-muted">verdicts match the known answer</span>
+            </Score>
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted">Earliest year within two years</dt>
           <dd className="mt-0.5 font-medium tabular-nums">
-            <Score score={scores.years} />
-            <ScoreBar score={scores.years} />
+            <Score score={scores.years} delay={0.6 + 0.15 * i} />
           </dd>
         </div>
         <div>
@@ -110,6 +112,19 @@ function SetCard({ title, scores, i }: { title: string; scores: Scores & { quote
 
 // "$0.0426" as a number, for the length of its bar.
 const usd = (text: string) => Number(text.replace(/[^0-9.]/g, ""));
+
+// When a part of the three-way table comes in, in ms after the table is seen;
+// the Home: eval and cases block of globals.css reads it.
+const at = (ms: number) => ({ "--at": `${ms}ms` }) as CSSProperties;
+
+// The cost column goes dearest first, so the mix's short bar is the last to
+// land, and the heading's "about a tenth" is marked once it has.
+const COST_AT = (() => {
+  const order = THREE_WAY.setups.map((s, i) => ({ i, cost: usd(s.usdPerQuote) })).sort((a, b) => b.cost - a.cost);
+  const rows: number[] = [];
+  order.forEach(({ i }, k) => (rows[i] = 1000 + 150 * k));
+  return { rows, end: 1000 + 150 * order.length + 450 };
+})();
 
 export function EvalNumbers() {
   const [mix, ultra] = THREE_WAY.setups;
@@ -141,7 +156,10 @@ export function EvalNumbers() {
       <Reveal className="mt-8">
         <div className="reveal-up rounded-sm border border-line bg-card p-4 sm:p-6">
           <h3 className="font-serif text-xl font-semibold sm:text-2xl">
-            As many right verdicts as every step on Ultra, at about a tenth of the Nebius cost
+            As many right verdicts as every step on Ultra, at{" "}
+            <span className="ev-marker marker" style={at(COST_AT.end)}>
+              about a tenth of the Nebius cost
+            </span>
           </h3>
           <div className="mt-4">
             <table className="w-full text-left text-sm">
@@ -162,33 +180,55 @@ export function EvalNumbers() {
                   </th>
                 </tr>
               </thead>
-              {/* Figures line up, but the header's comma keeps its own width. */}
-              <tbody className="tabular-nums">
-                {THREE_WAY.setups.map((s, i) => (
-                  <tr
-                    key={s.name}
-                    className={`reveal-up border-b border-line last:border-0 ${s === mix ? "bg-accent/5" : ""}`}
-                    style={{ "--i": i + 1 } as CSSProperties}
-                  >
-                    <th scope="row" className={`py-2.5 pr-3 text-left ${s === mix ? "font-medium" : "font-normal"}`}>
-                      {s.name}
-                    </th>
-                    <td className="px-2 py-2.5 sm:px-3">{s.verdicts}</td>
-                    <td className="hidden px-3 py-2.5 sm:table-cell">{s.years}</td>
-                    <td className="py-2.5 pl-3">
-                      {/* The bar is the cost against the dearest setup, so a tenth looks like one. */}
-                      <span className="flex items-center justify-end gap-2.5">
-                        <span aria-hidden="true" className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-line sm:block">
-                          <span
-                            className={`reveal-draw-x block h-full rounded-full ${s === mix ? "bg-accent" : "bg-foreground/40"}`}
-                            style={{ width: `${(100 * usd(s.usdPerQuote)) / dearest}%`, "--i": i + 2 } as CSSProperties}
-                          />
+              {/* Figures line up, but the header's comma keeps its own width. The
+                  table fills in a column at a time, the order of the heading's
+                  claim: the setups, their verdicts, their years, then their cost,
+                  the dearest first so the mix's short bar lands last. A row under
+                  the pointer stays bright while the others fade back. */}
+              <tbody className="ev-rows tabular-nums">
+                {THREE_WAY.setups.map((s, i) => {
+                  const verdicts = parseScore(s.verdicts);
+                  return (
+                    <tr key={s.name} className={`border-b border-line last:border-0 ${s === mix ? "bg-accent/5" : ""}`}>
+                      <th
+                        scope="row"
+                        className={`ev-cell py-2.5 pr-3 text-left ${s === mix ? "font-medium" : "font-normal"}`}
+                        style={at(100 + 70 * i)}
+                      >
+                        {s.name}
+                      </th>
+                      <td className="ev-cell px-2 py-2.5 sm:px-3" style={at(400 + 70 * i)}>
+                        <span className="flex items-center gap-2.5">
+                          {/* Equal bars for equal verdicts, on one scale as in eugeneshilow's Paired Bars on 21st.dev, from a width where they fit. */}
+                          {verdicts && (
+                            <span aria-hidden="true" className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-line md:block">
+                              <span
+                                className={`ev-bar block h-full rounded-full ${s === mix ? "bg-accent" : "bg-foreground/40"}`}
+                                style={{ width: `${(100 * verdicts.got) / verdicts.of}%` }}
+                              />
+                            </span>
+                          )}
+                          {s.verdicts}
                         </span>
-                        <span className={`font-mono text-xs ${s === mix ? "text-accent-ink" : ""}`}>{s.usdPerQuote}</span>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="ev-cell hidden px-3 py-2.5 sm:table-cell" style={at(700 + 70 * i)}>
+                        {s.years}
+                      </td>
+                      <td className="ev-cell py-2.5 pl-3" style={at(COST_AT.rows[i])}>
+                        {/* The bar is the cost against the dearest setup, so a tenth looks like one. */}
+                        <span className="flex items-center justify-end gap-2.5">
+                          <span aria-hidden="true" className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-line sm:block">
+                            <span
+                              className={`ev-bar block h-full rounded-full ${s === mix ? "bg-accent" : "bg-foreground/40"}`}
+                              style={{ width: `${(100 * usd(s.usdPerQuote)) / dearest}%` }}
+                            />
+                          </span>
+                          <span className={`font-mono text-xs ${s === mix ? "text-accent-ink" : ""}`}>{s.usdPerQuote}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

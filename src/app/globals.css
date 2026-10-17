@@ -504,3 +504,56 @@ details[open] .menu-panel {
     transition: none;
   }
 }
+
+/* Home: eval and cases */
+
+/* The three-way table fills in a column at a time, in the order of its heading's
+   claim (--at, set in eval-numbers.tsx): the setups, the verdicts, the years,
+   then the cost, whose bars draw from the left. The heading's "about a tenth"
+   is marked last, once the mix's short bar has landed. Like the rest of the
+   home page it hangs on Reveal's data-reveal, so without it all is in place. */
+[data-reveal="wait"] .ev-cell {
+  opacity: 0;
+  transform: translateY(6px);
+}
+[data-reveal="wait"] .ev-cell .ev-bar {
+  transform: scaleX(0);
+}
+[data-reveal="wait"] .ev-marker {
+  background-color: transparent;
+}
+[data-reveal="in"] .ev-cell {
+  transition:
+    opacity 360ms ease-out,
+    transform 360ms ease-out;
+  transition-delay: var(--at, 0ms);
+}
+[data-reveal="in"] .ev-cell .ev-bar {
+  transition: transform 650ms ease-out;
+  transition-delay: calc(var(--at, 0ms) + 80ms);
+}
+[data-reveal="in"] .ev-marker {
+  transition: background-color 450ms ease-out;
+  transition-delay: var(--at, 0ms);
+}
+.ev-bar {
+  transform-origin: left;
+}
+
+/* A row under the pointer keeps its full ink and the others fade back, so its
+   verdicts, years and cost read as one setup's. Borrowed from the row focus in
+   micka_design's Table on 21st.dev, without its sliding background. */
+.ev-rows > tr {
+  transition: opacity 200ms ease-out;
+}
+@media (hover: hover) {
+  .ev-rows:hover > tr:not(:hover) {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-rows > tr {
+    transition: none !important;
+  }
+}
