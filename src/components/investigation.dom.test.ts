@@ -19,11 +19,11 @@ let container: HTMLElement | null = null;
 
 const STARTED: RunEvent = { type: "started", quote: "Q", popularAttribution: null, language: null, excludeDomains: [] };
 
-// A stream that sends the started event and then stays open until the run is stopped.
-function openStream(signal: AbortSignal) {
+// A stream that sends the started event (or nothing) and then stays open until the run is stopped.
+function openStream(signal: AbortSignal, first: RunEvent | null = STARTED) {
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
-      controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(STARTED)}\n\n`));
+      if (first) controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(first)}\n\n`));
       signal.addEventListener("abort", () => controller.error(new DOMException("Aborted", "AbortError")));
     },
   });
@@ -72,6 +72,10 @@ describe("Investigation", () => {
 
     expect(formBox().hidden).toBe(true);
     expect(container!.textContent).toContain("Running");
+    // The bar sits in one box with the run, so it can stay stuck while the run scrolls by.
+    const bar = container!.querySelector('[role="region"][aria-label="This run"]')!;
+    expect(bar.parentElement!.querySelector("blockquote")?.textContent).toContain("Q");
+    expect(document.activeElement).toBe(bar);
     await act(async () => button("Stop")!.click());
     await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
     expect(container!.textContent).toContain("Stopped");
@@ -84,15 +88,30 @@ describe("Investigation", () => {
     expect(button("Run another quote")).toBeUndefined();
   });
 
-  it("keeps the form when the server turns the run down before it starts", async () => {
+  it("keeps the form when the server turns the run down before it starts, and shows why", async () => {
     vi.stubGlobal("fetch", () =>
       Promise.resolve(new Response(JSON.stringify({ error: "daily_budget_spent" }), { status: 429, headers: { "content-type": "application/json" } })),
     );
+    const scrolled = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     await mount();
     await typeAndRun("A quote I saw");
 
     expect(formBox().hidden).toBe(false);
-    expect(container!.querySelector('[role="alert"]')?.textContent).toContain("Today's free trial budget is spent.");
+    const alert = container!.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain("Today's free trial budget is spent.");
+    expect(scrolled.mock.contexts).toContain(alert);
     expect(button("Run another quote")).toBeUndefined();
+  });
+
+  it("says so when a run is stopped before anything came back", async () => {
+    vi.stubGlobal("fetch", (_url: string, init: RequestInit) => Promise.resolve(openStream(init.signal!, null)));
+    await mount();
+    await typeAndRun("A quote I saw");
+
+    expect(formBox().hidden).toBe(false);
+    await act(async () => button("Stop")!.click());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(container!.textContent).toContain("You stopped the run before it began.");
+    expect(button("Find the source")).toBeDefined();
   });
 });

@@ -91,6 +91,7 @@ export function Investigation({
   const mounted = useRef(true);
   const top = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
+  const problemLine = useRef<HTMLParagraphElement>(null);
 
   // Leaving the page ends the run, which stops the spend on the server too.
   useEffect(() => {
@@ -191,6 +192,12 @@ export function Investigation({
     wasOpen.current = formOpen;
   }, [formOpen]);
 
+  // A run turned down at the door leaves the form up and the button in focus,
+  // with the reason under the form, maybe below the fold. Bring it into view.
+  useEffect(() => {
+    if (problem && formOpen) problemLine.current?.scrollIntoView({ block: "nearest" });
+  }, [problem, formOpen]);
+
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
       <header className="max-w-2xl">
@@ -218,12 +225,18 @@ export function Investigation({
         </div>
 
         {problem && (
-          <p role="alert" className="arrive rounded-sm border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
+          <p ref={problemLine} role="alert" className="arrive rounded-sm border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
             {PROBLEMS[problem]}
           </p>
         )}
 
-        {shown && (
+        {status === "stopped" && !shown && <p className="arrive text-sm text-muted">You stopped the run before it began.</p>}
+      </div>
+
+      {/* The bar and the run share one box, so the bar can stay stuck under
+          the site header for as long as the run runs down the page. */}
+      {shown && (
+        <div className="flex flex-col gap-6">
           <RunBar
             ref={bar}
             status={status}
@@ -232,21 +245,18 @@ export function Investigation({
             onStop={() => controller.current?.abort()}
             onAgain={() => setEditing(true)}
           />
-        )}
-      </div>
-
-      {shown && (
-        <RunView
-          run={run}
-          running={running}
-          announce
-          note={
-            <>
-              {status === "stopped" && <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>}
-              {savedId && <SavedLink id={savedId} />}
-            </>
-          }
-        />
+          <RunView
+            run={run}
+            running={running}
+            announce
+            note={
+              <>
+                {status === "stopped" && <p className="text-sm text-muted">You stopped the run. What it found so far is below.</p>}
+                {savedId && <SavedLink id={savedId} />}
+              </>
+            }
+          />
+        </div>
       )}
     </div>
   );
@@ -284,11 +294,13 @@ function RunBar({
     <div
       ref={ref}
       tabIndex={-1}
+      role="region"
       aria-label="This run"
       className="arrive sticky top-[calc(var(--site-header-height,3.5rem)+0.5rem)] z-20 flex items-center gap-3 rounded-sm border border-line bg-card px-4 py-3 shadow-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
     >
       <span aria-hidden="true" className={cn("size-2.5 shrink-0 rounded-full transition-colors duration-300", dot)} />
-      <p className="min-w-0 text-sm" role="status">
+      {/* No live region here: the run's log already reads each step aloud. */}
+      <p className="min-w-0 text-sm">
         <span className="font-medium">{word}</span>
         <span className="text-muted"> · {paidBy === "trial" ? "on the free trial" : "on your own keys"}</span>
       </p>
