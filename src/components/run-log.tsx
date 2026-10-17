@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { atBottom, jumpToEnd } from "../lib/log-follow";
 import type { Agent, LogEntry, Tone } from "../lib/run-state";
 import { Arrivals, Enter } from "./case-motion";
-import { FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING, FOCUS_RING_INSET } from "./focus-ring";
 import { TierChip } from "./tier-chip";
 
 const DOT: Record<Tone, string> = {
@@ -73,7 +73,7 @@ export function RunLog({ log, announce }: { log: readonly LogEntry[]; announce: 
           following.current = atBottom(event.currentTarget);
         }}
         // A box that scrolls takes keyboard focus in some browsers, so it gets the ring too.
-        className={`max-h-[28rem] overflow-y-auto rounded-b-sm px-4 py-2 text-sm focus-visible:-outline-offset-2 ${FOCUS_RING}`}
+        className={`max-h-[28rem] overflow-y-auto rounded-b-sm px-4 py-2 text-sm ${FOCUS_RING_INSET}`}
         aria-live={announce ? "polite" : "off"}
       >
         {/* Lines already there when the log first renders stay put; each new one
