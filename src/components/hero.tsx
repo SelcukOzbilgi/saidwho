@@ -4,6 +4,10 @@ import type { CSSProperties } from "react";
 import type { ExampleCase } from "../cases/cases";
 import { verdictWords } from "../lib/run-state";
 import { HeroReplay } from "./hero-replay";
+import { HeroHeadline } from "./hero-variants/headline";
+import { HeroLiveRun } from "./hero-variants/live-run";
+import { HeroRewind } from "./hero-variants/rewind";
+import type { HeroVersion } from "./hero-variants/types";
 import { Wordmark } from "./logo-mark";
 import { RUN_PAGE } from "./sections";
 import { earliestTrace, HEADLINE, VERDICT_LOOK } from "./verdict-card";
@@ -28,8 +32,40 @@ export function heroTrace(featured: ExampleCase | undefined) {
   return output && credit && earliest ? { output, credit, earliest } : null;
 }
 
-export function Hero({ featured }: { featured: ExampleCase | undefined }) {
-  const { output, credit, earliest } = heroTrace(featured) ?? {};
+const VERSION = { rewind: HeroRewind, headline: HeroHeadline, run: HeroLiveRun };
+
+// version: one of the three tellings being compared (hero-variants/types.ts);
+// without it, the card below.
+export function Hero({ featured, version }: { featured: ExampleCase | undefined; version?: HeroVersion }) {
+  const trace = heroTrace(featured);
+  const { output, credit, earliest } = trace ?? {};
+  const Version = version && featured && trace ? VERSION[version] : null;
+
+  const intro = (
+    <div>
+      <p className="max-w-xl text-lg leading-7 sm:text-xl sm:leading-8">
+        Ask a chatbot where a quote comes from and it will often guess a source. Said Who? goes and finds the pages
+        and their dates, and a check written in plain code, not AI, throws out any snippet it can&apos;t find on the
+        page.
+      </p>
+      <p className="mt-3 max-w-xl leading-7 text-muted sm:text-lg sm:leading-8">
+        Paste a quote you saw online and find out where it first appeared, with a link for every step.
+      </p>
+      <div className="mt-8 flex flex-wrap gap-3">
+        {featured && (
+          <a href="#featured" className={`${BUTTON} bg-foreground text-background hover:bg-accent hover:text-on-accent`}>
+            See a finished case
+          </a>
+        )}
+        <Link
+          href={RUN_PAGE.href}
+          className={`${BUTTON} border border-foreground hover:bg-foreground hover:text-background`}
+        >
+          {RUN_PAGE.label}
+        </Link>
+      </div>
+    </div>
+  );
 
   return (
     <section
@@ -45,93 +81,75 @@ export function Hero({ featured }: { featured: ExampleCase | undefined }) {
         <Wordmark />
       </h1>
 
-      <div className="mt-6 grid items-start gap-10 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
-        <div>
-          <p className="max-w-xl text-lg leading-7 sm:text-xl sm:leading-8">
-            Ask a chatbot where a quote comes from and it will often guess a source. Said Who? goes and finds the pages
-            and their dates, and a check written in plain code, not AI, throws out any snippet it can&apos;t find on the
-            page.
-          </p>
-          <p className="mt-3 max-w-xl leading-7 text-muted sm:text-lg sm:leading-8">
-            Paste a quote you saw online and find out where it first appeared, with a link for every step.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            {featured && (
-              <a href="#featured" className={`${BUTTON} bg-foreground text-background hover:bg-accent hover:text-on-accent`}>
-                See a finished case
-              </a>
-            )}
-            <Link
-              href={RUN_PAGE.href}
-              className={`${BUTTON} border border-foreground hover:bg-foreground hover:text-background`}
+      {Version && featured && trace ? (
+        <Version featured={featured} trace={trace} intro={intro} />
+      ) : (
+        <div className="mt-6 grid items-start gap-10 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
+          {intro}
+
+          {featured && output && credit && earliest && (
+            <figure
+              aria-label="One finished case, in short"
+              // globals.css plays the trace only where scripts run and motion is welcome.
+              className="hero-trace rounded-sm border border-line bg-card p-5 shadow-sm sm:p-6"
             >
-              {RUN_PAGE.label}
-            </Link>
-          </div>
-        </div>
-
-        {featured && output && credit && earliest && (
-          <figure
-            aria-label="One finished case, in short"
-            // globals.css plays the trace only where scripts run and motion is welcome.
-            className="hero-trace rounded-sm border border-line bg-card p-5 shadow-sm sm:p-6"
-          >
-            <div className="flex items-center justify-between gap-3 text-xs text-muted">
-              <span>One quote, traced</span>
-              <HeroReplay />
-            </div>
-            <blockquote
-              lang={featured.run.language ?? undefined}
-              dir="auto"
-              className="mt-3 font-serif text-2xl leading-snug italic sm:text-[1.7rem]"
-            >
-              “{featured.run.quote}”
-            </blockquote>
-
-            <dl className="mt-5 grid gap-4 border-t border-line pt-4">
-              <div className="hero-step" style={at(AT.credit)}>
-                <dt className="text-xs font-medium uppercase tracking-wider text-muted">Usually credited to</dt>
-                <dd className="mt-1 font-serif text-2xl">
-                  {/* s: no longer taken as right. The line is drawn over it, so it can be struck in front of the reader. */}
-                  <s className="strike no-underline" style={at(AT.strike)}>
-                    {credit}
-                  </s>
-                </dd>
+              <div className="flex items-center justify-between gap-3 text-xs text-muted">
+                <span>One quote, traced</span>
+                <HeroReplay />
               </div>
-              <div className="hero-step" style={at(AT.origin - 150)}>
-                <dt className="text-xs font-medium uppercase tracking-wider text-muted">Earliest trace found</dt>
-                <dd className="mt-1 font-serif text-2xl text-accent-ink">
-                  <span className="sr-only">{earliest.trace}</span>
-                  <span aria-hidden="true" className="marker" style={at(AT.marker)}>
-                    {Array.from(earliest.trace).map((char, i) => (
-                      <span key={i} className="hero-char" style={{ ...at(AT.origin), "--c": i } as CSSProperties}>
-                        {char}
-                      </span>
-                    ))}
-                  </span>
-                  {earliest.via && <span className="mt-1 block font-sans text-sm text-muted">via {earliest.via}</span>}
-                </dd>
-              </div>
-            </dl>
-
-            <figcaption className="hero-step mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line pt-4" style={at(AT.verdict)}>
-              <span className="text-sm">
-                <span className={`font-medium uppercase tracking-wider text-xs ${VERDICT_LOOK[output.verdict]}`}>
-                  {verdictWords(output.verdict)}
-                </span>
-                <span className="text-muted"> · {output.confidence} confidence</span>
-                <span className="mt-0.5 block font-medium">{HEADLINE[output.verdict](credit)}</span>
-              </span>
-              <Link
-                href={`/cases/${featured.caseId}`}
-                className="text-sm underline decoration-line underline-offset-4 hover:decoration-foreground"
+              <blockquote
+                lang={featured.run.language ?? undefined}
+                dir="auto"
+                className="mt-3 font-serif text-2xl leading-snug italic sm:text-[1.7rem]"
               >
-                See every step
-              </Link>
-            </figcaption>
-          </figure>
-        )}
-      </div>
+                “{featured.run.quote}”
+              </blockquote>
+
+              <dl className="mt-5 grid gap-4 border-t border-line pt-4">
+                <div className="hero-step" style={at(AT.credit)}>
+                  <dt className="text-xs font-medium uppercase tracking-wider text-muted">Usually credited to</dt>
+                  <dd className="mt-1 font-serif text-2xl">
+                    {/* s: no longer taken as right. The line is drawn over it, so it can be struck in front of the reader. */}
+                    <s className="strike no-underline" style={at(AT.strike)}>
+                      {credit}
+                    </s>
+                  </dd>
+                </div>
+                <div className="hero-step" style={at(AT.origin - 150)}>
+                  <dt className="text-xs font-medium uppercase tracking-wider text-muted">Earliest trace found</dt>
+                  <dd className="mt-1 font-serif text-2xl text-accent-ink">
+                    <span className="sr-only">{earliest.trace}</span>
+                    <span aria-hidden="true" className="marker" style={at(AT.marker)}>
+                      {Array.from(earliest.trace).map((char, i) => (
+                        <span key={i} className="hero-char" style={{ ...at(AT.origin), "--c": i } as CSSProperties}>
+                          {char}
+                        </span>
+                      ))}
+                    </span>
+                    {earliest.via && <span className="mt-1 block font-sans text-sm text-muted">via {earliest.via}</span>}
+                  </dd>
+                </div>
+              </dl>
+
+              <figcaption className="hero-step mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line pt-4" style={at(AT.verdict)}>
+                <span className="text-sm">
+                  <span className={`font-medium uppercase tracking-wider text-xs ${VERDICT_LOOK[output.verdict]}`}>
+                    {verdictWords(output.verdict)}
+                  </span>
+                  <span className="text-muted"> · {output.confidence} confidence</span>
+                  <span className="mt-0.5 block font-medium">{HEADLINE[output.verdict](credit)}</span>
+                </span>
+                <Link
+                  href={`/cases/${featured.caseId}`}
+                  className="text-sm underline decoration-line underline-offset-4 hover:decoration-foreground"
+                >
+                  See every step
+                </Link>
+              </figcaption>
+            </figure>
+          )}
+        </div>
+      )}
     </section>
   );
 }

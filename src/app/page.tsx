@@ -7,6 +7,7 @@ import { CodeLinkForward } from "../components/code-link-forward";
 import { EvalNumbers } from "../components/eval-numbers";
 import { FeaturedCase } from "../components/featured-case";
 import { Hero, heroTrace } from "../components/hero";
+import { HERO_VERSIONS, type HeroVersion } from "../components/hero-variants/types";
 import { HowItWorks } from "../components/how-it-works";
 import { RunCta } from "../components/run-cta";
 import { SiteFooter } from "../components/site-footer";
@@ -20,14 +21,20 @@ export const metadata: Metadata = {
 // The saved cases don't change between requests, so they are counted once.
 const REJECTIONS = checkerRejections(CASES);
 
-export default function Home() {
+// Three ways of telling the case on the first screen while one is picked:
+// /?hero=rewind, /?hero=headline and /?hero=run. Reading the query makes "/"
+// render on each request instead of once at build; when one is chosen, this
+// goes, with the version prop and the other versions.
+export default async function Home({ searchParams }: PageProps<"/">) {
   const featured = findCase(FEATURED_CASE_ID);
+  const asked = (await searchParams).hero;
+  const hero = HERO_VERSIONS.find((v) => v === asked) as HeroVersion | undefined;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-10 sm:px-6 sm:pb-14">
       <CodeLinkForward />
       {/* The first screen: the name, what it does, and the featured case in one move. */}
-      <Hero featured={featured} />
+      <Hero featured={featured} version={hero} />
 
       {/* Every section after the first screen, one gap apart, so the page keeps one rhythm. */}
       <div className="flex flex-col gap-(--section-gap)">
