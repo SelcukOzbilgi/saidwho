@@ -507,7 +507,8 @@ details[open] .menu-panel {
 /* How it works: the run map (run-map.tsx). PlayOnView sets data-run on it:
    "wait" holds every step at its start, "play" runs them in order from the
    times set on each row (--start, --done, --busy) and on the map (--loop-at,
-   --round, --rounds). Without the attribute it is a finished run. */
+   --round, --rounds), and "done" is the finished run again. Without the
+   attribute it is a finished run too. */
 .hiw-busy,
 .hiw-again,
 .hiw-loop-dot {
@@ -515,6 +516,12 @@ details[open] .menu-panel {
 }
 .hiw-fill {
   transform-origin: top;
+}
+/* While it plays, the ring shows the step the run is on, so the mark for the
+   step being read in the list (run-map-spy.tsx) waits until it is done. */
+:is([data-run="wait"], [data-run="play"]) a[aria-current="step"] {
+  background-color: transparent;
+  box-shadow: none;
 }
 .play-again {
   display: none;

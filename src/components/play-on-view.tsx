@@ -7,10 +7,34 @@ import { onFirstView } from "./reveal";
 
 // Plays a diagram once, the first time it scrolls into view. The server renders
 // it as it ends; only once this runs is one still below the window set back
-// (data-run="wait"), to play when it gets there (data-run="play"). One already on
-// screen is left alone, and so is everything under reduced motion. The CSS for
-// both states sits with the diagram's own rules in globals.css.
-export function PlayOnView({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
+// (data-run="wait"), to play when it gets there (data-run="play"), and once it
+// has played for playFor ms it is marked done (data-run="done"), so marks that
+// would muddle the play can come back. One already on screen is left alone, and
+// so is everything under reduced motion. The CSS for the states sits with the
+// diagram's own rules in globals.css.
+const timers = new WeakMap<HTMLElement, number>();
+
+function play(root: HTMLElement) {
+  window.clearTimeout(timers.get(root));
+  root.dataset.run = "play";
+  timers.set(
+    root,
+    window.setTimeout(() => (root.dataset.run = "done"), Number(root.dataset.playFor)),
+  );
+}
+
+export function PlayOnView({
+  children,
+  className,
+  style,
+  playFor,
+}: {
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  // How long the play takes, in ms, its last fade included.
+  playFor: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -18,17 +42,18 @@ export function PlayOnView({ children, className, style }: { children: ReactNode
     if (!el) return;
     const stop = onFirstView(
       el,
-      () => (el.dataset.run = "play"),
+      () => play(el),
       () => (el.dataset.run = "wait"),
     );
     return () => {
       stop?.();
+      window.clearTimeout(timers.get(el));
       delete el.dataset.run;
     };
   }, []);
 
   return (
-    <div ref={ref} data-play-root="" className={className} style={style}>
+    <div ref={ref} data-play-root="" data-play-for={playFor} className={className} style={style}>
       {children}
     </div>
   );
@@ -47,7 +72,7 @@ export function PlayAgain() {
     // makes the browser drop them, so "play" starts them again from the top.
     root.dataset.run = "wait";
     void root.offsetWidth;
-    root.dataset.run = "play";
+    play(root);
   };
 
   return (

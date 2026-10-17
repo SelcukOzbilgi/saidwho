@@ -79,10 +79,12 @@ export function RunMap({
   // The start of a snippet the Checker turned down in a saved case, or null.
   thrownOut: string | null;
 }) {
-  const { times, loopAt } = playTimes(steps, rounds);
+  const { times, loopAt, end } = playTimes(steps, rounds);
 
   return (
     <PlayOnView
+      // The Judge's node takes 240ms to ink in after its step is done; the play ends after that.
+      playFor={end + 240}
       className="hiw-map rounded-sm border border-line bg-card p-4 shadow-sm sm:p-5"
       style={{ "--loop-at": ms(loopAt), "--round": ms(ROUND), "--rounds": rounds } as CSSProperties}
     >
@@ -111,7 +113,7 @@ export function RunMap({
                 )}
                 <a
                   href={`#${stepAnchor(step.name)}`}
-                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-sm px-2 py-2 hover:bg-foreground/5 aria-[current=step]:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
+                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-sm px-2 py-2 hover:bg-foreground/5 aria-[current=step]:bg-foreground/5 aria-[current=step]:shadow-[inset_2px_0_0_var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
                 >
                   <span
                     aria-hidden="true"
@@ -132,13 +134,13 @@ export function RunMap({
                   </span>
                 </a>
                 {checker && thrownOut && (
-                  <p className="hiw-thrown mb-1 ml-[3.25rem] flex min-w-0 items-baseline gap-2 text-xs">
+                  <p className="hiw-thrown mr-2 mb-1 ml-[3.25rem] flex min-w-0 items-baseline gap-2 text-xs">
                     <s className="strike min-w-0 truncate font-serif text-[13px] text-foreground/70 no-underline">“{thrownOut}”</s>
                     <span className="shrink-0 text-bad">thrown out</span>
                   </p>
                 )}
                 {step.name === "Genealogist" && (
-                  <p className="hiw-rounds mb-1 ml-[3.25rem] text-xs text-accent-ink">{roundsLabel}</p>
+                  <p className="hiw-rounds mr-2 mb-1 ml-[3.25rem] text-xs text-accent-ink">{roundsLabel}</p>
                 )}
               </li>
             );

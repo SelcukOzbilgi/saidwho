@@ -73,6 +73,13 @@ describe("HowItWorks", () => {
     expect(playTimes(STEPS, TRACE_ROUNDS + 1).times.at(-1)!.start).toBeGreaterThan(at("Judge").start);
   });
 
+  it("tells the map how long its play takes, so it can be marked done after the Judge", () => {
+    const { times, end } = playTimes(STEPS, TRACE_ROUNDS);
+    const playFor = Number(render().match(/data-play-for="(\d+)"/)![1]);
+    expect(end).toBeGreaterThan(times.at(-1)!.done);
+    expect(playFor).toBeGreaterThan(end);
+  });
+
   it("links each step on the map to what the list says about it", () => {
     const html = render();
     for (const step of STEPS) {

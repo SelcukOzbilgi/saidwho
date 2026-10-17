@@ -6,7 +6,9 @@ import { useEffect, useRef } from "react";
 // marks the step being read there (aria-current="step" on its link), the last
 // one whose top has passed two fifths of the way down the window. Below the lg
 // width the map sits above the list, so nothing is marked. A mark, not motion:
-// it changes as the reader scrolls and stays put when they stop.
+// it changes as the reader scrolls and stays put when they stop. It is drawn in
+// ink, not the orange of the step the run is on, and globals.css keeps it off
+// while the map plays.
 const WIDE = "(min-width: 64rem)";
 
 export function RunMapSpy() {
