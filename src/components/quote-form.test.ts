@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 
 import { CASES } from "../cases/cases";
 import { parseEvalCases } from "../eval/cases";
-import { AccessCodeField, accessCodeFromHash, EXAMPLES, initialMode, QuoteForm, takeCodeFromLink } from "./quote-form";
+import { AccessCodeField, accessCodeFromHash, CaseLinks, EXAMPLES, initialMode, QuoteForm, takeCodeFromLink } from "./quote-form";
 
 const render = (trialOpen: boolean, { savesRuns = false, needsCode = false } = {}) =>
   renderToStaticMarkup(
@@ -27,12 +27,17 @@ describe("QuoteForm", () => {
     expect(render(true, { savesRuns: true })).toContain("Every run is saved and gets a public link");
   });
 
-  it("names each trial state plainly", () => {
+  it("names each trial state plainly, and says why it's off without promising one", () => {
     expect(render(true)).toContain("Free trial, on us");
     expect(render(true, { needsCode: true })).toContain("Free trial, with an access code");
-    expect(render(false)).toContain("Free trial (not offered on this site)");
-    expect(render(false, { needsCode: true })).toContain("Free trial (not offered on this site)");
-    expect(render(false)).not.toContain("off right now");
+    for (const needsCode of [false, true]) {
+      const off = render(false, { needsCode });
+      expect(off).toContain("Free trial");
+      expect(off).toContain("Not offered on this site");
+      expect(off).toContain("they aren&#x27;t switched on here");
+      expect(off).not.toContain("access code");
+      expect(off).toMatch(/<input[^>]*type="radio"[^>]*disabled=""/);
+    }
   });
 
   it("starts on the trial only when anyone may use it", () => {
@@ -41,7 +46,7 @@ describe("QuoteForm", () => {
     expect(initialMode(true, true)).toBe("byok");
     expect(initialMode(false, false)).toBe("byok");
     expect(initialMode(false, true)).toBe("byok");
-    expect(render(true, { needsCode: true })).toMatch(/<input[^>]*type="radio"[^>]*checked=""[^>]*>My own Nebius and Tavily keys/);
+    expect(render(true, { needsCode: true })).toMatch(/<input[^>]*type="radio"[^>]*checked=""[^>]*>(?:(?!<input).)*My own Nebius and Tavily keys/);
   });
 
   it("shows no access code field until the trial is picked, and none at all without a code", () => {
@@ -78,10 +83,11 @@ describe("example quotes", () => {
     }
   });
 
-  it("show as buttons that fill the form, and links to the cases already run", () => {
+  it("show as buttons that fill the form, and links to the cases already run by the heading", () => {
     const html = render(false);
+    const links = renderToStaticMarkup(createElement(CaseLinks));
     for (const example of EXAMPLES) {
-      if (example.caseId) expect(html).toContain(`href="/cases/${example.caseId}"`);
+      if (example.caseId) expect(links).toContain(`href="/cases/${example.caseId}"`);
       else expect(html).toMatch(new RegExp(`<button[^>]*type="button"[^>]*>${example.popularAttribution}</button>`));
     }
   });

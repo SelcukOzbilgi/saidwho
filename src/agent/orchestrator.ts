@@ -87,7 +87,8 @@ export type InvestigationInput = {
   quote: string;
   // null when the visitor gave no name; the planner then names the usual credit.
   popularAttribution: string | null;
-  language: string;
+  // null when the visitor wasn't sure; the planner then works it out.
+  language: string | null;
   excludeDomains: readonly string[];
 };
 
@@ -218,7 +219,7 @@ export async function investigate({ nebius, tavily, input, onEvent, signal, maxU
       "quote only a distinctive part of six to ten words in those later queries, or leave the quotes off. " +
       "usual_attribution: only when no credit is given, the person the saying is most often credited to, name only; " +
       "null when a credit is given or you don't know one.",
-    user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language}`,
+    user: `Saying: "${quote}"\nUsually credited to: ${popularAttribution ?? "not given"}\nLanguage: ${language ?? "not given"}`,
   };
   // What plans give the run, shaped and checked, in order: their wordings and
   // candidates, the usual credit when the visitor gave none, and the searches to
