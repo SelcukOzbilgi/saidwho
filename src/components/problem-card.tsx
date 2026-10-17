@@ -79,10 +79,11 @@ export function ProblemCard({
                   <button
                     key={action}
                     type="button"
-                    onClick={() => onAction(action)}
-                    disabled={busy === action}
+                    onClick={() => busy !== action && onAction(action)}
+                    // aria-disabled, not disabled, so the keyboard stays on it.
+                    aria-disabled={busy === action || undefined}
                     aria-busy={busy === action || undefined}
-                    className={cn(i === 0 ? FIRST : OTHER, "disabled:cursor-wait disabled:opacity-70")}
+                    className={cn(i === 0 ? FIRST : OTHER, "aria-disabled:cursor-wait aria-disabled:opacity-70", i === 0 && "aria-disabled:hover:bg-foreground aria-disabled:hover:text-background")}
                   >
                     {busy === action ? (
                       <>

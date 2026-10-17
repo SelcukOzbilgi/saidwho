@@ -212,8 +212,10 @@ describe("Investigation", () => {
     await act(async () => button("Try again")!.click());
     await act(async () => new Promise((resolve) => setTimeout(resolve, 200)));
     const busy = [...container!.querySelectorAll('[role="alert"] button')].find((b) => b.textContent?.includes("Checking your keys")) as HTMLButtonElement;
-    expect(busy.disabled).toBe(true);
+    expect(busy.getAttribute("aria-disabled")).toBe("true");
     expect(busy.getAttribute("aria-busy")).toBe("true");
+    // A second press while it checks asks nothing more.
+    await act(async () => busy.click());
 
     await act(async () => answerCheck!());
     await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));

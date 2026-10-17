@@ -261,6 +261,28 @@ describe("QuoteForm in a page: checking the visitor's keys", () => {
     expect(onStart.mock.calls[0][0].keys).toEqual({ mode: "byok", nebiusApiKey: NEBIUS, tavilyApiKey: TAVILY });
   });
 
+  it("keeps the cursor on the button while the keys are checked, and starts one run however often it's pressed", async () => {
+    let answer: (response: Response) => void = () => {};
+    const asked = stubCheck(() => new Promise<Response>((resolve) => (answer = resolve)));
+    const onStart = vi.fn();
+    const { form } = await mount({ onStart });
+    await act(async () => setValue(quoteField(), "A quote I saw"));
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => setValue(keyField("tavily"), TAVILY));
+    const run = field<HTMLButtonElement>('button[type="submit"]');
+    run.focus();
+    await act(async () => form.requestSubmit());
+    expect(run.textContent).toContain("Checking your keys");
+    expect(run.getAttribute("aria-disabled")).toBe("true");
+    expect(run.disabled).toBe(false);
+    expect(document.activeElement).toBe(run);
+    await act(async () => form.requestSubmit());
+    expect(asked).toHaveLength(1);
+    await act(async () => answer(new Response(JSON.stringify({ nebius: { state: "works" }, tavily: { state: "works" } }))));
+    await settle();
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
   it("stops a run whose key is refused in the check before it, and puts the cursor in that key", async () => {
     stubCheck({ nebius: { state: "works" }, tavily: { state: "rejected" } });
     const onStart = vi.fn();

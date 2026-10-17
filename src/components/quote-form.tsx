@@ -532,9 +532,13 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
         ) : (
           <button
             type="submit"
-            disabled={!ready || preparing}
+            disabled={!ready}
+            // aria-disabled while the keys are checked, not disabled, so the
+            // keyboard stays on the button and is there if the run is turned down.
+            aria-disabled={preparing || undefined}
+            aria-busy={preparing || undefined}
             aria-describedby={`${id}-why`}
-            className="group/run inline-flex shrink-0 items-center gap-2 rounded-sm bg-foreground px-5 py-3 font-medium text-background transition-colors hover:bg-accent hover:text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink disabled:opacity-40 disabled:hover:bg-foreground disabled:hover:text-background"
+            className="group/run inline-flex shrink-0 items-center gap-2 rounded-sm bg-foreground px-5 py-3 font-medium text-background transition-colors hover:bg-accent hover:text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink disabled:opacity-40 disabled:hover:bg-foreground disabled:hover:text-background aria-disabled:cursor-wait aria-disabled:hover:bg-foreground aria-disabled:hover:text-background"
           >
             {preparing ? "Checking your keys" : "Find the source"}
             {preparing ? (
