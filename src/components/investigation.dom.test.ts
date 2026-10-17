@@ -110,6 +110,16 @@ describe("Investigation", () => {
     expect(button("Run another quote")).toBeUndefined();
   });
 
+  it("doesn't blame the visitor's connection when the server answers with a page that isn't a run", async () => {
+    vi.stubGlobal("fetch", () => Promise.resolve(new Response("<html>Gateway Timeout</html>", { status: 504, headers: { "content-type": "text/html" } })));
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    await mount();
+    await typeAndRun("A quote I saw");
+    const alert = container!.querySelector('[role="alert"]')!;
+    expect(alert.textContent).toContain("The server couldn't start the run just now");
+    expect(alert.textContent).not.toContain("connection");
+  });
+
   it("says so when a run is stopped before anything came back", async () => {
     vi.stubGlobal("fetch", (_url: string, init: RequestInit) => Promise.resolve(openStream(init.signal!, null)));
     await mount();

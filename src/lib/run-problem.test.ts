@@ -33,6 +33,12 @@ describe("runProblem", () => {
     expect(ended(run)).toMatchObject({ title: "Tavily rejected your key", actions: ["fix_tavily"] });
   });
 
+  it("doesn't say Tavily failed to answer searches it turned down", () => {
+    const failed = (query: string): RunEvent => ({ type: "search_failed", query, reason: "bad_request" });
+    const run = play(STARTED, PLANNED, failed('"Q"'), failed("Q origin"), { type: "judge_skipped", reason: "no verified evidence" }, DONE);
+    expect(ended(run)).toMatchObject({ title: "Tavily turned down every search", actions: ["retry", "edit"] });
+  });
+
   it("leaves a run alone when only some searches failed and the rest found nothing", () => {
     const run = play(
       STARTED,
@@ -143,7 +149,11 @@ describe("refusal", () => {
     expect(refusal("too_many_runs").text).not.toContain("Try again in");
   });
 
-  it("reads an unknown code as an unreachable server", () => {
-    expect(refusal("something_new")).toMatchObject({ title: "Couldn't reach the server", actions: ["retry", "cases"] });
+  it("blames the connection only when no answer came", () => {
+    expect(refusal("unreachable")).toMatchObject({ title: "Couldn't reach the server", actions: ["retry", "cases"] });
+    for (const code of ["server_error", "something_new"]) {
+      expect(refusal(code)).toMatchObject({ title: "The server couldn't start the run just now", actions: ["retry", "cases"] });
+      expect(refusal(code).text).not.toContain("connection");
+    }
   });
 });

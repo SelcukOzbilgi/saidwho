@@ -45,7 +45,8 @@ const TAVILY_KEYS = "app.tavily.com";
 const minutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
 
 // A run the server turned down before it started, by the code POST
-// /api/investigate returned, or one the page found on its own (unreachable).
+// /api/investigate returned, or one the page found on its own: unreachable when
+// no answer came, server_error when one came that wasn't a run or a code.
 // retryAfter is the Retry-After header in seconds, when the server sent one.
 export function refusal(code: string, retryAfter: number | null = null): Problem {
   const wait = retryAfter ? ` Try again in about ${minutes(retryAfter)} ${minutes(retryAfter) === 1 ? "minute" : "minutes"}.` : "";
@@ -92,8 +93,15 @@ export function refusal(code: string, retryAfter: number | null = null): Problem
       return bad("The connection dropped before the run began", "Check your connection and try again.", ["retry"]);
     case "server_misconfigured":
       return bad("The server isn't set up right", "This one is on the site, not you. Try again later, or open a finished case.", ["cases"]);
-    default:
+    case "unreachable":
       return bad("Couldn't reach the server", "Check your connection and try again.", ["retry", "cases"]);
+    // The server answered, with something the page doesn't know.
+    default:
+      return bad(
+        "The server couldn't start the run just now",
+        "This one is on the site, not you. Trying again in a minute usually works, or open a finished case.",
+        ["retry", "cases"],
+      );
   }
 }
 
@@ -180,6 +188,17 @@ export function runProblem(
         : { ...siteKeyTrouble("Tavily"), at: "searching" };
     }
     if (tavily.kind === "rate_limit") return { ...slowDown("Tavily"), at: "searching" };
+    // Searches Tavily turned down as asked, not ones it failed to answer.
+    if (tavily.kind === "bad_request" || tavily.kind === "not_found") {
+      return {
+        tone: "bad",
+        title: "Tavily turned down every search",
+        text: "It refused the searches the plan made, so there were no pages to check. Trying again makes a new plan; a plainer wording of the quote can help too.",
+        short: "searches refused",
+        actions: ["retry", "edit"],
+        at: "searching",
+      };
+    }
     return {
       tone: "bad",
       title: "Tavily didn't answer",

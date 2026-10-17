@@ -15,7 +15,7 @@ import { RunView } from "./run-view";
 
 // Codes the page finds on its own, on top of the ones POST /api/investigate
 // returns; refusal() and runProblem() in lib/run-problem.ts say what each means.
-const PAGE_CODES = new Set(["run_failed", "connection_lost", "unreachable"]);
+const PAGE_CODES = new Set(["run_failed", "connection_lost", "unreachable", "server_error"]);
 
 type Status = "idle" | "running" | "finished" | "stopped" | "failed";
 
@@ -132,10 +132,13 @@ export function Investigation({
       if (!response.ok || !response.body) {
         const body: unknown = await response.json().catch(() => null);
         if (!live()) return stopped();
-        const code = body && typeof body === "object" && "error" in body ? String(body.error) : "unreachable";
+        // The server answered, so a reply that isn't one of its codes (a host's
+        // own error page, a timeout in front of it) is the server's trouble,
+        // not the visitor's connection.
+        const code = body && typeof body === "object" && "error" in body ? String(body.error) : "server_error";
         const wait = Number(response.headers.get("retry-after"));
         if (Number.isFinite(wait) && wait > 0) setRetryAfter(wait);
-        return fail(PAGE_CODES.has(code) ? "unreachable" : code);
+        return fail(PAGE_CODES.has(code) ? "server_error" : code);
       }
 
       let done = false;
