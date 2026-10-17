@@ -13,15 +13,19 @@ import type { HeroCaseProps } from "./types";
 // /?hero=rewind: the case as a file whose trail runs back in time. The quote
 // and the name it is shared under sit on top; under them the steps of the
 // judge's lineage, newest first, down to the earliest trace. As the page opens
-// a year counter beside the trail runs back from the year of the run to the
-// earliest trace's year while the steps arrive, the earliest step is marked
-// as it lands, and the verdict is set down last. Only the earliest trace's
-// year is printed: the other steps carry none on purpose, since a page's date
-// may be its own or that of the work it cites.
+// the steps arrive one by one, then the earliest trace's year runs back from
+// the year of the run and lands, its dot is marked, the work is written in
+// beside it, and the verdict is set down last. Only the earliest trace's year
+// is printed: the other steps carry none on purpose, since a page's date may be
+// its own or that of the work it cites. The count runs only on the earliest
+// row, before its text is there, so no year it passes stands beside a step.
 
-// When the counter starts and how far apart the steps arrive, in ms.
-const COUNT_AT = 450;
-const STEP_MS = 520;
+// When the first step arrives, how far apart the steps arrive, and how long the
+// year takes to run back, in ms. The count is linear and quick, so the years it
+// passes go by too fast to read as dates.
+const FIRST_AT = 150;
+const STEP_MS = 420;
+const COUNT_MS = 650;
 const at = (ms: number) => ({ "--at": `${ms}ms` }) as CSSProperties;
 
 type Row = { key: string; change: LineageStep["change"]; text: string; node: { id: string; host: string } };
@@ -46,11 +50,20 @@ export function rewindFile({ featured, trace }: Pick<HeroCaseProps, "featured" |
     .map((s, i) => ({ key: `${s.node.id}-${i}`, change: s.change, text: s.note.replace(/\.$/, ""), node: s.node }))
     .reverse();
 
-  // The counter shows the year, so the row doesn't print it again: "1980,
-  // Narcotics Anonymous literature" reads as the work beside a 1980. A trace
-  // that is only a year, or names an author, stays as the judge gave it.
-  const lead = `${date}, `;
-  const text = year && trace.earliest.trace.startsWith(lead) ? trace.earliest.trace.slice(lead.length) : trace.earliest.trace;
+  // The year is drawn large in the row, so the text beside it doesn't print it
+  // again: "1980, Narcotics Anonymous literature" and "Winston Churchill, 1940"
+  // read as the work or the author beside the year, and a trace that is only a
+  // year is the year alone. A screen reader hears the trace as the judge gave it.
+  const full = trace.earliest.trace;
+  const text = !date
+    ? full
+    : full === date
+      ? null
+      : full.startsWith(`${date}, `)
+        ? full.slice(date.length + 2)
+        : full.endsWith(`, ${date}`)
+          ? full.slice(0, -(date.length + 2))
+          : full;
 
   return {
     rows,
@@ -62,9 +75,9 @@ export function rewindFile({ featured, trace }: Pick<HeroCaseProps, "featured" |
   };
 }
 
-// The gutter (wide enough for a four-digit year), the dot, the step. --gutter
-// is set in the module, so the trail's line can run under the dots.
-const ROW = "grid grid-cols-[var(--gutter)_1rem_minmax(0,1fr)] gap-x-3";
+// The dot, then the step. The trail's line runs down the dots' column.
+const ROW = "grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3";
+const FIRST_RING = "size-3 border-2 border-accent bg-card";
 const LINK = "underline decoration-line underline-offset-4 hover:text-foreground hover:decoration-foreground";
 
 // The stretch of the trail's line from a row's dot down to the next one's. It
@@ -73,7 +86,7 @@ function Segment({ at: ms }: { at: number }) {
   return (
     <span
       aria-hidden="true"
-      className={`${styles.segment} absolute top-3 -bottom-6 left-[calc(var(--gutter)+1.25rem-0.5px)] w-px bg-foreground/25`}
+      className={`${styles.segment} absolute top-3 -bottom-6 left-[calc(0.5rem-0.5px)] w-px bg-foreground/25`}
       style={{ ...at(ms + 120), "--rewind-run": `${STEP_MS}ms` } as CSSProperties}
     />
   );
@@ -86,12 +99,13 @@ export function HeroRewind({ featured, trace, intro }: HeroCaseProps) {
   const { rows, earliest, more, year, count } = rewindFile({ featured, trace });
   const sources = run.nodes.filter((n) => n.check.status !== "not_found").length;
 
-  // The steps arrive STEP_MS apart while the counter runs, and it lands once the
-  // earliest has settled in. Then the credit is struck, where the run found it
+  // The steps arrive STEP_MS apart, the "more steps" row first. The earliest
+  // row arrives with only its dot and year, the year runs back and lands, and
+  // then its text is written in, the credit is struck where the run found it
   // wrong, and the verdict is set down.
-  const arrive = (i: number) => COUNT_AT + 150 + i * STEP_MS;
-  const land = arrive(rows.length) + 380;
-  const counting = { "--rewind-run": `${land - COUNT_AT}ms` };
+  const arrive = (i: number) => FIRST_AT + (i + (more > 0 ? 1 : 0)) * STEP_MS;
+  const counting = arrive(rows.length) + 60;
+  const land = count ? counting + COUNT_MS : arrive(rows.length) + 200;
   const struck = output.verdict === "misattributed";
 
   return (
@@ -132,17 +146,16 @@ export function HeroRewind({ featured, trace, intro }: HeroCaseProps) {
           )}
         </p>
 
-        {/* Each row: a gutter for the year, the trail's dot, then the step. Only the
-            earliest row has a year, so the gutter stays empty above it. */}
-        <div className={`${styles.trail} mt-4 border-t border-line pt-4`}>
-          <p className={`${ROW} mb-3 text-xs font-medium tracking-wider text-muted uppercase`}>
-            <span className="col-start-3">Traced back, newest first</span>
+        {/* Each row: the trail's dot, then the step. Only the earliest row has a year. */}
+        <div className="mt-4 border-t border-line pt-4">
+          <p className="mb-3 text-xs font-medium tracking-wider text-muted uppercase">
+            {rows.length > 0 || more > 0 ? "Traced back, newest first" : "Earliest trace found"}
           </p>
           <ol className="flex flex-col gap-3">
             {more > 0 && (
-              <li className={`hero-step ${ROW} relative text-xs text-muted`} style={at(COUNT_AT)}>
-                <Segment at={COUNT_AT} />
-                <span aria-hidden="true" className="relative col-start-2 flex h-5 items-center justify-center">
+              <li className={`hero-step ${ROW} relative text-xs text-muted`} style={at(FIRST_AT)}>
+                <Segment at={FIRST_AT} />
+                <span aria-hidden="true" className="relative flex h-5 items-center justify-center">
                   <span className="block size-1.5 rounded-full bg-foreground/35" />
                 </span>
                 <Link href={href} className={`self-center ${LINK}`}>
@@ -153,8 +166,10 @@ export function HeroRewind({ featured, trace, intro }: HeroCaseProps) {
             {rows.map((row, i) => (
               <li key={row.key} className={`hero-step ${ROW} relative`} style={at(arrive(i))}>
                 <Segment at={arrive(i)} />
-                <span aria-hidden="true" className="relative col-start-2 flex h-6 items-center justify-center">
-                  <span className={`block shrink-0 rounded-full ${CHANGE[row.change].marker}`} />
+                <span aria-hidden="true" className="relative flex h-6 items-center justify-center">
+                  {/* Where the trail's first page isn't the earliest trace, its dot is an open
+                      ring, so the filled one stays the earliest trace's alone. */}
+                  <span className={`block shrink-0 rounded-full ${row.change === "first" ? FIRST_RING : CHANGE[row.change].marker}`} />
                 </span>
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-3">
                   <span className={row.change === "credit" ? "font-serif text-lg leading-6" : "text-sm leading-6"}>{row.text}</span>
@@ -164,32 +179,36 @@ export function HeroRewind({ featured, trace, intro }: HeroCaseProps) {
                 </span>
               </li>
             ))}
-            {/* The counter shows from the start, so the row arrives in parts around it. */}
-            <li className={ROW}>
-              {/* The counter: the year being read back to, which stops on the earliest
-                  trace's, on the line of its row: both boxes end at the same line, which puts
-                  their baselines level. A screen reader gets the year in the row. */}
-              <span aria-hidden="true" className="hero-step relative h-7" style={at(COUNT_AT - 150)}>
-                {year && (
-                  <span
-                    className={`${count ? styles.count : ""} absolute right-0 bottom-0 block font-serif text-[1.6rem] leading-none font-semibold text-accent-ink tabular-nums sm:text-[2.6rem]`}
-                    style={{ ...at(COUNT_AT), ...counting, "--rewind-from": count?.from, "--rewind-to": count?.to } as CSSProperties}
-                  >
-                    {year}
-                  </span>
-                )}
-              </span>
-              <span aria-hidden="true" className="hero-step relative flex h-7 items-center justify-center" style={at(arrive(rows.length))}>
+            {/* The earliest row arrives in parts: its dot and year first, the year runs
+                back and lands, then the work is written in beside it. */}
+            <li className={`${ROW} relative`}>
+              <span aria-hidden="true" className="hero-step relative flex h-9 items-center justify-center sm:h-10" style={at(arrive(rows.length))}>
                 <span className={`${styles.landing} block shrink-0 rounded-full ${CHANGE.first.marker}`} style={at(land)} />
               </span>
-              <span className="hero-step min-w-0" style={at(arrive(rows.length))}>
-                <span className="block font-serif text-xl leading-7 text-accent-ink sm:text-[1.4rem]">
-                  {year && earliest.text !== trace.earliest.trace && <span className="sr-only">{year}, </span>}
-                  <span className="marker" style={at(land + 50)}>
-                    {earliest.text}
-                  </span>
+              <span className="min-w-0">
+                <span className="sr-only">{trace.earliest.trace}</span>
+                <span aria-hidden="true" className="flex flex-wrap items-baseline gap-x-3 font-serif text-accent-ink">
+                  {year && (
+                    <span className="hero-step inline-block text-[2rem] leading-9 font-semibold tabular-nums sm:text-[2.4rem] sm:leading-10" style={at(arrive(rows.length))}>
+                      {/* The year in the markup keeps the box's width; the module draws the
+                          count over it. A trace that is only a year is marked here. */}
+                      <span
+                        className={`${count ? styles.count : ""} ${earliest.text ? "" : "marker"} relative`}
+                        style={{ ...at(land + 150), "--count-at": `${counting}ms`, "--count-run": `${COUNT_MS}ms`, "--rewind-from": count?.from, "--rewind-to": count?.to } as CSSProperties}
+                      >
+                        {year}
+                      </span>
+                    </span>
+                  )}
+                  {earliest.text && (
+                    <span className="hero-step inline-block text-xl leading-7 sm:text-[1.4rem]" style={at(land - 80)}>
+                      <span className="marker" style={at(land + 150)}>
+                        {earliest.text}
+                      </span>
+                    </span>
+                  )}
                 </span>
-                <span className="mt-0.5 block text-xs text-muted">
+                <span className="hero-step mt-0.5 block text-xs text-muted" style={at(land)}>
                   {earliest.first ? "First seen" : "Earliest trace"}
                   {earliest.via && " · via "}
                   {earliest.via &&
