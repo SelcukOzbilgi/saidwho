@@ -53,8 +53,16 @@ describe("RunSoFar", () => {
 });
 
 describe("Tick", () => {
-  it("sends the value as plain text, one character after another", () => {
-    expect(renderToStaticMarkup(createElement(Tick, { value: "$0.0072" })).replace(/<[^>]+>/g, "")).toBe("$0.0072");
+  it("sends the value once as plain text, in one piece", () => {
+    const html = renderToStaticMarkup(createElement(Tick, { value: "$0.0072" }));
+    expect(html).toContain('<span class="sr-only">$0.0072</span>');
+    expect(html.replace(/<[^>]+>/g, "")).toBe("$0.0072");
     expect(renderToStaticMarkup(createElement(Tick, { value: 13 })).replace(/<[^>]+>/g, "")).toBe("13");
+  });
+
+  it("draws the rolling digits from an attribute, hidden from assistive tech", () => {
+    const html = renderToStaticMarkup(createElement(Tick, { value: 16 }));
+    expect(html).toMatch(/<span aria-hidden="true" class="[^"]*select-none/);
+    expect(html.match(/data-char="(.)"/g)).toEqual(['data-char="1"', 'data-char="6"']);
   });
 });
