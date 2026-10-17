@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { FEATURED_CASE_ID, findCase } from "../cases/cases";
-import { Hero } from "./hero";
-import { earliestTrace } from "./verdict-card";
+import { verdictWords } from "../lib/run-state";
+import { Hero, heroTrace } from "./hero";
 
 const featured = findCase(FEATURED_CASE_ID)!;
 const render = (example: typeof featured | undefined = featured) =>
@@ -21,15 +21,16 @@ describe("Hero", () => {
     expect(html).toContain(`href="/cases/${FEATURED_CASE_ID}"`);
   });
 
-  it("tells the featured case from the saved run: the quote, the struck credit and the earliest trace", () => {
+  it("sets the saved quote as a blockquote and corrects its credit with the saved trace and verdict", () => {
     const html = render();
-    const { run } = featured;
-    const earliest = earliestTrace(run.verdict!.output, run.nodes)!;
-    expect(text(html)).toContain(run.quote);
-    expect(html).toMatch(new RegExp(`<s [^>]*>${run.popularAttribution}</s>`));
+    const { output, credit, earliest } = heroTrace(featured)!;
+    expect(html).toMatch(new RegExp(`<blockquote[^>]*lang="${featured.run.language}"`));
+    expect(text(html)).toContain(featured.run.quote);
+    expect(html).toMatch(new RegExp(`<s [^>]*>${credit}</s>`));
     expect(html).toContain(`<span class="sr-only">${earliest.trace}</span>`);
     expect(text(html)).toContain(`via ${earliest.via}`);
-    expect(html).toContain("Albert Einstein probably didn&#x27;t say it");
+    expect(text(html)).toContain(verdictWords(output.verdict));
+    expect(text(html)).toContain(`${output.confidence} confidence`);
   });
 
   it("strikes the credit only when the run found it wrong", () => {
@@ -39,10 +40,33 @@ describe("Hero", () => {
     expect(html).not.toContain("<s ");
   });
 
+  it("takes replacement case copy and confidence from the run", () => {
+    const example = structuredClone(featured);
+    example.caseId = "another-case";
+    example.run.quote = "A different saved quote.";
+    example.run.language = "fr";
+    example.run.popularAttribution = "Another name";
+    example.run.verdict!.output.verdict = "contested";
+    example.run.verdict!.output.confidence = "medium";
+    example.run.verdict!.output.earliest_author = "Another source";
+    example.run.verdict!.output.earliest_date = "1972";
+    const html = render(example);
+    expect(text(html)).toContain("A different saved quote.");
+    expect(html).toContain('lang="fr"');
+    // Contested: the name is not crossed out, since the run didn't find it wrong.
+    expect(text(html)).toContain("Another name");
+    expect(html).not.toContain("<s ");
+    expect(text(html)).toContain("Another source, 1972");
+    expect(text(html)).toContain("medium confidence");
+    expect(text(html)).toContain(verdictWords("contested"));
+    expect(html).toContain('href="/cases/another-case"');
+    expect(text(html)).not.toContain(featured.run.quote);
+  });
+
   it("is rendered as it ends, so it reads without JavaScript; only the stylesheet plays it", () => {
     const html = render();
     expect(html).not.toContain("<script");
-    expect(html).not.toMatch(/opacity:\s*0/);
+    expect(html).not.toMatch(/opacity:\s*0|visibility:\s*hidden|display:\s*none|\shidden[\s=>]|--marker-reach/);
     expect(html).not.toContain("hero-rewind");
   });
 
