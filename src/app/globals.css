@@ -269,7 +269,7 @@ details[open] .menu-panel {
   --marker-reach: var(--marker-start);
 }
 [data-reveal="in"] .reveal-marker {
-  transition: --marker-reach 950ms cubic-bezier(0.55, 0.1, 0.3, 1);
+  transition: --marker-reach var(--marker-pace);
   transition-delay: calc(var(--i, 0) * 80ms + 420ms);
 }
 .reveal-draw-y {
@@ -299,9 +299,10 @@ details[open] .menu-panel {
    --marker-reach is how far the pen has got: the stroke is solid up to there
    and fades out just past it, like a felt tip's edge, so moving it from
    --marker-start (nothing on the page yet) to 100% draws the stroke on.
-   Registered, so it moves smoothly; a browser that can't register it shows
-   the stroke whole. Slice lays the words out as one strip
-   when they wrap, so the pen finishes a line before it starts the next. */
+   Registered, so it moves smoothly; a browser that can't register it doesn't
+   draw it but puts the whole stroke down partway through. Slice lays the words
+   out as one strip when they wrap, so the pen finishes a line before it starts
+   the next. */
 @property --marker-reach {
   syntax: "<length-percentage>";
   inherits: false;
@@ -310,6 +311,7 @@ details[open] .menu-panel {
 .marker {
   --marker: color-mix(in srgb, var(--accent) 22%, transparent);
   --marker-start: -0.4em;
+  --marker-pace: 950ms cubic-bezier(0.55, 0.1, 0.3, 1);
   background-image: linear-gradient(
     to right,
     var(--marker) var(--marker-reach, 100%),
@@ -773,7 +775,7 @@ form[data-ready] .run-go {
   transform: scaleX(0);
 }
 [data-reveal="wait"] .ev-marker {
-  background-color: transparent;
+  --marker-reach: var(--marker-start);
 }
 [data-reveal="in"] .ev-cell {
   transition:
@@ -786,7 +788,7 @@ form[data-ready] .run-go {
   transition-delay: calc(var(--at, 0ms) + var(--bar-wait, 60ms));
 }
 [data-reveal="in"] .ev-marker {
-  transition: background-color 300ms ease-out;
+  transition: --marker-reach var(--marker-pace);
   transition-delay: var(--at, 0ms);
 }
 .ev-bar {

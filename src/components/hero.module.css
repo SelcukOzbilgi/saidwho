@@ -112,7 +112,7 @@
   }
 
   .case:not(:global(.hero-rewind)) .marker {
-    animation: draw 950ms cubic-bezier(0.55, 0.1, 0.3, 1) 1900ms both;
+    animation: draw var(--marker-pace) 1900ms both;
   }
 
   .case:not(:global(.hero-rewind)) .verdict {
