@@ -6,7 +6,7 @@ import { roughTime, RunPreview, typicalRun } from "./run-preview";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, "");
 const render = (props: Partial<Parameters<typeof RunPreview>[0]> = {}) =>
-  renderToStaticMarkup(createElement(RunPreview, { quote: "", credit: "", language: null, typical: null, ...props }));
+  renderToStaticMarkup(createElement(RunPreview, { quote: "", credit: "", language: null, typical: null, arrivals: 0, ...props }));
 
 describe("typicalRun", () => {
   it("takes the lowest and highest time and cost, leaving out runs without either", () => {

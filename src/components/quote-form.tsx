@@ -196,6 +196,9 @@ const UNCHECKED: Record<KeyName, Checked> = { nebius: { key: "", status: IDLE },
 export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = null, onStart, onStop, ref }: Props) {
   const id = useId();
   const [quote, setQuote] = useState("");
+  // Counts the times the quote came in whole (an example picked, text pasted),
+  // so the preview plays its arrival then and not on each key typed.
+  const [arrivals, setArrivals] = useState(0);
   const [popularAttribution, setPopularAttribution] = useState("");
   const [language, setLanguage] = useState("");
   const [mode, setMode] = useState<"trial" | "byok">(initialMode(trialOpen, needsCode));
@@ -380,6 +383,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = 
               id={`${id}-quote`}
               value={quote}
               onChange={(e) => setQuote(e.target.value)}
+              onPaste={() => setArrivals((n) => n + 1)}
               maxLength={500}
               rows={4}
               required
@@ -398,6 +402,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = 
                     setQuote(example.quote);
                     setPopularAttribution(example.popularAttribution);
                     setLanguage(example.language);
+                    setArrivals((n) => n + 1);
                   }}
                   className={`${CHIP} disabled:opacity-50 disabled:hover:border-line disabled:hover:bg-transparent`}
                 >
@@ -448,7 +453,13 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = 
           {/* On a wide screen the keys run longer than the quote's fields; the
               room left under them shows what the run will come back with. */}
           <div className="mt-5 hidden lg:flex lg:flex-1">
-            <RunPreview quote={quote} credit={popularAttribution} language={languageNamed(language)} typical={typical} />
+            <RunPreview
+              quote={quote}
+              credit={popularAttribution}
+              language={languageNamed(language)}
+              typical={typical}
+              arrivals={arrivals}
+            />
           </div>
         </div>
 

@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 // How long the saved runs took and what they cost on Nebius, lowest and highest.
 export type TypicalRun = { seconds: readonly [number, number]; usd: readonly [number, number] };
 
@@ -17,22 +19,31 @@ export const roughTime = (seconds: number): string =>
 
 const PENDING = ["Verdict", "Earliest trace", "Every page it read"] as const;
 
+// Each part of an arrival starts a beat after the one before it.
+const beat = (i: number) => ({ animationDelay: `${i * 70}ms` }) as CSSProperties;
+
 // Under the quote's own fields on a wide screen, where the keys next to them
 // run longer: the case the run will end with, drawn from what has been typed
 // so far. The quote, the name and the language fill in as they are typed;
-// what only the run can say waits as an empty bar. Below it, how long the
-// saved runs took and what they cost, for a visitor paying with their own keys.
+// what only the run can say waits as an empty bar. When the quote comes in
+// whole, an example picked or text pasted, they come in again one after
+// another and the bars draw in, so the click shows where it went (globals.css,
+// Run page). Below it, how long the saved runs took and what they cost, for a
+// visitor paying with their own keys.
 export function RunPreview({
   quote,
   credit,
   language,
   typical,
+  arrivals,
 }: {
   quote: string;
   credit: string;
   // The language's code and name, when one was picked.
   language: { code: string; name: string } | null;
   typical: TypicalRun | null;
+  // How many times the quote has come in whole; each one plays the arrival.
+  arrivals: number;
 }) {
   const said = quote.trim();
   const name = credit.trim();
@@ -40,18 +51,18 @@ export function RunPreview({
   return (
     <figure aria-label="What you'll get back" className="flex min-w-0 flex-1 flex-col rounded-sm border border-dashed border-line px-4 py-3.5">
       <figcaption className="text-xs text-muted">What you&apos;ll get back</figcaption>
-      {/* Keyed on whether there is a quote yet, so the words ease in once, not on
-          every key. One line: the field right above shows all of it. */}
+      {/* Keyed on the arrivals and on whether there is a quote yet, so the words
+          ease in then, not on every key. One line: the field above shows all of it. */}
       <blockquote
-        key={said ? "said" : "empty"}
+        key={`${arrivals}-${said ? "said" : "empty"}`}
         lang={language?.code}
         dir="auto"
-        className="arrive mt-1.5 truncate font-serif text-lg leading-snug italic"
+        className="preview-in mt-1.5 truncate font-serif text-lg leading-snug italic"
       >
         {said ? `“${said}”` : <span className="text-muted">Your quote shows here as you type it.</span>}
       </blockquote>
       <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-        <span key={name ? "name" : "none"} className="arrive">
+        <span key={`${arrivals}-${name ? "name" : "none"}`} className="preview-in" style={beat(1)}>
           {name ? (
             <>
               Usually credited to <span className="text-foreground">{name}</span>
@@ -61,7 +72,11 @@ export function RunPreview({
           )}
         </span>
         {language && (
-          <span key={language.code} className="arrive rounded-full border border-line px-2 py-px text-[11px]">
+          <span
+            key={`${arrivals}-${language.code}`}
+            className="preview-in rounded-full border border-line px-2 py-px text-[11px]"
+            style={beat(2)}
+          >
             {language.name}
           </span>
         )}
@@ -69,10 +84,16 @@ export function RunPreview({
 
       {/* What only the run can say, side by side, each an empty bar until then. */}
       <dl className="mt-3 grid grid-cols-3 gap-4 border-t border-line pt-3 text-xs">
-        {PENDING.map((label) => (
+        {PENDING.map((label, i) => (
           <div key={label} className="min-w-0">
             <dt className="truncate text-muted">{label}</dt>
-            <dd className="mt-1.5 h-1.5 rounded-full bg-foreground/[0.07]">
+            <dd className="mt-1.5 h-1.5">
+              <span
+                key={`${arrivals}-${said ? 1 : 0}`}
+                aria-hidden="true"
+                className="preview-bar block h-full rounded-full bg-foreground/[0.07]"
+                style={beat(i + 3)}
+              />
               <span className="sr-only">After the run</span>
             </dd>
           </div>

@@ -589,6 +589,31 @@ details[open] .menu-panel {
 
 /* Run page */
 
+/* The preview under the quote's fields (run-preview.tsx): when the quote
+   comes in whole, its words come in one after another and the bars for what
+   the run will say draw in. Each part is remounted for it, so the animation
+   plays from the start; under reduced motion it is simply there. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .preview-in {
+    animation: preview-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .preview-bar {
+    animation: preview-bar 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left;
+  }
+}
+@keyframes preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes preview-bar {
+  from {
+    transform: scaleX(0);
+  }
+}
+
 /* The page opens in reading order: the heading, then the form's parts, one
    after another, the way it is filled in. It plays from the first paint, in CSS
    alone, and only where scripts run and motion is welcome, so without
