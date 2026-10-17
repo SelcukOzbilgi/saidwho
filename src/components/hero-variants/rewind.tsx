@@ -239,7 +239,7 @@ export function HeroRewind({ featured, trace, intro }: HeroCaseProps) {
               </span>
               {output.confidence} confidence
             </span>
-            <span className="mt-1.5 block font-serif text-xl leading-tight font-semibold">{HEADLINE[output.verdict](credit)}</span>
+            <span className="mt-1.5 block font-serif text-xl leading-tight font-semibold text-balance">{HEADLINE[output.verdict](credit)}</span>
           </span>
           <Link href={href} className={`text-sm ${LINK}`}>
             See every step
