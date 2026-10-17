@@ -48,6 +48,9 @@ export function Progress({ running, aside, phase, finished, plan, searches, page
   const at = STEPS.findIndex((step) => step.phase === phase);
   const confirmed = nodes.filter((n) => n.check.status !== "not_found").length;
   const share = stepShare({ phase, plan, searches, pages, readUrls });
+  // The Genealogist's pages are read while citations are followed, so the
+  // reading count can still climb then; its tick waits until the count is in.
+  const readingDone = phase === "judging" || finished || pages === null || readUrls.length >= pages;
   // The counts roll to each new value as the run reports it.
   const detail: Partial<Record<Phase, ReactNode>> = {
     searching: searches ? (
@@ -85,7 +88,7 @@ export function Progress({ running, aside, phase, finished, plan, searches, page
               <StepBar state={state} share={state === "now" ? share : null} />
               <p className={`flex items-center gap-1 text-xs font-medium transition-colors duration-300 sm:mt-1.5 ${state === "later" ? "text-muted" : ""}`}>
                 {step.label}
-                {state === "done" && (
+                {state === "done" && (step.phase !== "reading" || readingDone) && (
                   <Pop key="done" className="text-muted">
                     <Check aria-hidden className="size-3" strokeWidth={2.5} />
                   </Pop>

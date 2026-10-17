@@ -5,6 +5,7 @@ import { plural } from "../lib/plural";
 import type { LogEntry, Phase, RunState } from "../lib/run-state";
 import { Enter, Pop, Swap } from "./case-motion";
 import { Tick } from "./tick";
+import { unmark } from "./timeline";
 
 type Props = Pick<RunState, "phase" | "plan" | "searches" | "pages" | "readUrls" | "nodes" | "leads" | "log"> & {
   // Whether the run log already announces each step to screen readers. A replay's
@@ -156,7 +157,7 @@ export function RunSoFar({ phase, plan, searches, pages, readUrls, nodes, leads,
               <ul className="flex flex-col gap-1 text-foreground/85">
                 {leads.map((lead, i) => (
                   <Enter as="li" key={i} rise={6} delay={at(i)} className="break-words">
-                    {lead.work} <span className="font-mono text-[11px] text-muted">cited by {lead.fromNode}</span>
+                    {unmark(lead.work)} <span className="font-mono text-[11px] text-muted">cited by {lead.fromNode}</span>
                   </Enter>
                 ))}
               </ul>
