@@ -214,4 +214,58 @@ describe("Investigation", () => {
     expect(key("nebius").getAttribute("aria-invalid")).toBe("true");
     expect(container!.textContent).toContain("Nebius rejected this key");
   });
+
+  it("puts the cursor on the refused key once, even when the form was opened while it was checked", async () => {
+    let nebiusChecks = 0;
+    let answerCheck: (() => void) | null = null;
+    let fixed = false;
+    const searchFailed = (query: string): RunEvent => ({ type: "search_failed", query, reason: "upstream" });
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      if (url === "/api/keys/check") {
+        const body = JSON.parse(String(init.body)) as Record<string, string>;
+        if (!body.nebiusApiKey) return new Response(JSON.stringify({ tavily: { state: "works", creditsLeft: 500 } }));
+        if (fixed) return new Response(JSON.stringify({ nebius: { state: "works", creditsLeft: null } }));
+        nebiusChecks++;
+        if (nebiusChecks > 1) await new Promise<void>((resolve) => (answerCheck = resolve));
+        return new Response(JSON.stringify({ nebius: { state: nebiusChecks > 1 ? "rejected" : "unknown" } }));
+      }
+      return wholeStream([
+        STARTED,
+        { type: "planned", tier: "super", costUsd: 0, usageKnown: true, latencyMs: 9, variants: [], candidateAuthors: [], queries: ['"Q"', "Q origin"] },
+        searchFailed('"Q"'),
+        searchFailed("Q origin"),
+        { type: "judge_skipped", reason: "no verified evidence" },
+        { type: "done", nebiusUsd: 0, tavilyCredits: 0, unknownCostCalls: 0, seconds: 1 },
+      ]);
+    });
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    await mount(false);
+    const key = (name: string) => container!.querySelector<HTMLInputElement>(`input[id$="-${name}"]`)!;
+    await act(async () => {
+      for (const [name, value] of [["nebius", "fake-visitor-nebius-key-0042"], ["tavily", "fake-visitor-tavily-key-4f2a"]]) {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(key(name), value);
+        key(name).dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+    await typeAndRun("A quote I saw");
+
+    await act(async () => button("Try again")!.click());
+    await act(async () => button("Run another quote")!.click());
+    expect(formBox().hidden).toBe(false);
+    await act(async () => answerCheck!());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(document.activeElement).toBe(key("nebius"));
+
+    // Nothing is left waiting to steal the cursor the next time the form opens.
+    fixed = true;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(key("nebius"), "fake-visitor-nebius-key-0043");
+      key("nebius").dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => container!.querySelector("form")!.requestSubmit());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(formBox().hidden).toBe(true);
+    await act(async () => button("Run another quote")!.click());
+    expect(document.activeElement).toBe(quoteField());
+  });
 });

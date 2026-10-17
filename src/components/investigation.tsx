@@ -204,8 +204,10 @@ export function Investigation({
 
   // The ways forward under a problem. One that changes the form opens it first.
   const act = (action: ProblemAction) => {
+    // Read from the ref, not this render: "Try again" reopens seconds later,
+    // and the visitor may have opened the form themselves by then.
     const reopen = (then: () => void) => {
-      if (formOpen) return then();
+      if (wasOpen.current) return then();
       onReopen.current = then;
       setEditing(true);
     };
@@ -220,16 +222,20 @@ export function Investigation({
       // Shown only if the checks take a moment, so a run that starts at once
       // (the trial, keys already checked) doesn't flash it.
       const slow = setTimeout(() => setRetrying(true), 150);
-      void form.current.resubmit().then((sent) => {
-        retryInFlight.current = false;
-        clearTimeout(slow);
-        if (!mounted.current) return;
-        setRetrying(false);
-        // A key refused in the check before the run, or a form no longer ready
-        // to run, can't say so from under a run: the form opens on what to fix.
-        if (sent.outcome === "refused") reopen(() => form.current?.focusKey(sent.key));
-        else if (sent.outcome === "not_ready") reopen(() => (sent.key ? form.current?.focusKey(sent.key) : toQuote()));
-      });
+      void form.current
+        .resubmit()
+        .then((sent) => {
+          if (!mounted.current) return;
+          // A key refused in the check before the run, or a form no longer ready
+          // to run, can't say so from under a run: the form opens on what to fix.
+          if (sent.outcome === "refused") reopen(() => form.current?.focusKey(sent.key));
+          else if (sent.outcome === "not_ready") reopen(() => (sent.key ? form.current?.focusKey(sent.key) : toQuote()));
+        })
+        .finally(() => {
+          retryInFlight.current = false;
+          clearTimeout(slow);
+          if (mounted.current) setRetrying(false);
+        });
     }
   };
   const card = (p: Problem, eyebrow: string, ref?: React.Ref<HTMLElement>) => (
