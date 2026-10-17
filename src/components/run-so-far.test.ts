@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { RunEvent } from "../agent/events";
+import { broaden, MAX_QUERIES } from "../agent/queries";
 import { initialRunState, reduceRun } from "../lib/run-state";
 import { stepShare } from "./progress";
 import { RunSoFar, searchMarks } from "./run-so-far";
@@ -28,6 +29,37 @@ describe("searchMarks", () => {
     const state = run(searched(QUERIES[0], 1), searched(QUERIES[1], 0));
     expect(searchMarks(QUERIES, state.log, false).map((mark) => mark.state)).toEqual(["done", "done", "waiting"]);
     expect(searchMarks(QUERIES, state.log, false)[0].results).toBe(1);
+  });
+});
+
+describe("searchMarks with a widened search", () => {
+  const wider = broaden(QUERIES[0])!;
+
+  it("keeps the planned query under way while its looser search runs, then shows what that found", () => {
+    expect(searchMarks(QUERIES, run(searched(QUERIES[0], 0)).log, true).slice(0, 2)).toEqual([
+      { state: "now", results: 0 },
+      { state: "waiting", results: null },
+    ]);
+    const state = run(searched(QUERIES[0], 0), searched(wider, 3));
+    expect(searchMarks(QUERIES, state.log, true).slice(0, 2)).toEqual([
+      { state: "done", results: 0, wider: 3 },
+      { state: "now", results: null },
+    ]);
+  });
+
+  it("leaves the planned query at what it found when the looser search fails", () => {
+    const state = run(searched(QUERIES[0], 0), { type: "search_failed", query: wider, reason: "timeout" });
+    expect(searchMarks(QUERIES, state.log, true).slice(0, 2)).toEqual([
+      { state: "done", results: 0 },
+      { state: "now", results: null },
+    ]);
+  });
+
+  it("doesn't mark the last planned query under way once a widening has taken its place", () => {
+    const five = ['"A saying"', "b", "c", "d", "e"];
+    expect(five).toHaveLength(MAX_QUERIES);
+    const state = run(searched(five[0], 0), searched(wider, 1), ...five.slice(1, 4).map((q) => searched(q, 1)));
+    expect(searchMarks(five, state.log, true).map((mark) => mark.state)).toEqual(["done", "done", "done", "done", "waiting"]);
   });
 });
 

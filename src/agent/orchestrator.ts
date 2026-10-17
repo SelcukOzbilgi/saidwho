@@ -14,7 +14,7 @@ import { CASCADE, type ModelPolicy, type ModelSpec } from "./models";
 import { selectPassages } from "./passages";
 import { citedWork, judge } from "./judge";
 import { mayHoldWork, namesWork } from "./library-pages";
-import { broaden, isExtraRequote, queryKey, shapeQuery, tidyModelText } from "./queries";
+import { broaden, isExtraRequote, MAX_QUERIES, queryKey, shapeQuery, tidyModelText } from "./queries";
 import { cleanDate, genealogistOutputSchema, plannerOutputSchema, type PlannerOutput, readerOutputSchema, type ReaderOutput } from "./schemas";
 import { callStructured, type StructuredResult, worthRetrying } from "./structured";
 import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, normalizeText } from "./verifier";
@@ -23,7 +23,8 @@ import { carriesSaying, checkSnippet, keptDates, matchSnippet, mentionsName, nor
 // them so the agent has to find the trail itself.
 export const ANSWER_SITES = ["quoteinvestigator.com", "wikiquote.org", "wikipedia.org"];
 
-export const MAX_QUERIES = 5;
+// In queries.ts, so the run page can follow the searches without this file.
+export { MAX_QUERIES };
 const RESULTS_PER_QUERY = 5;
 export const MAX_PAGES = 20;
 export const READER_CHARS = 6_000;

@@ -32,6 +32,13 @@ describe("Hero", () => {
     expect(html).toContain("Albert Einstein probably didn&#x27;t say it");
   });
 
+  it("strikes the credit only when the run found it wrong", () => {
+    const right = findCase("so-much-owed")!;
+    const html = render(right);
+    expect(text(html)).toContain(right.run.popularAttribution!);
+    expect(html).not.toContain("<s ");
+  });
+
   it("is rendered as it ends, so it reads without JavaScript; only the stylesheet plays it", () => {
     const html = render();
     expect(html).not.toContain("<script");

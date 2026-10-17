@@ -1,6 +1,7 @@
 import { Check, X } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { broaden, MAX_QUERIES, queryKey } from "../agent/queries";
 import { plural } from "../lib/plural";
 import type { LogEntry, Phase, RunState } from "../lib/run-state";
 import { Enter, Pop, Swap } from "./case-motion";
@@ -21,13 +22,17 @@ const STEP: Record<Phase, string> = {
   judging: "Judging",
 };
 
-export type SearchMark = { state: "done" | "failed" | "now" | "waiting"; results: number | null };
+// wider: what the looser search run straight after a planned one that found
+// nothing came back with, when it came back.
+export type SearchMark = { state: "done" | "failed" | "now" | "waiting"; results: number | null; wider?: number };
 
 // Where each of the Planner's searches has got, from the Search lines in the
-// log, which name the query they ran. Searches run one at a time in the plan's
-// order, so while the run is searching, the first one not yet back is the one
-// under way. A query the run widened shows the plain query's result, and a
-// last query a widened one took the place of stays waiting.
+// log, which name the query they ran. Searches run one at a time, and this
+// walks them in the orchestrator's order: the plan's, with a looser query (see
+// broaden) straight after a planned one with quotes that found nothing, which
+// pushes the last planned query past MAX_QUERIES. The looser search counts for
+// the query it widened. While the run is searching, the first search not yet
+// back is the one under way.
 export function searchMarks(queries: readonly string[], log: readonly LogEntry[], searching: boolean): SearchMark[] {
   const back = new Map<string, SearchMark>();
   for (const entry of log) {
@@ -39,16 +44,25 @@ export function searchMarks(queries: readonly string[], log: readonly LogEntry[]
       if (at > 0) back.set(entry.text.slice(at + 3), { state: "failed", results: null });
     }
   }
-  let next = searching;
-  return queries.map((query) => {
+  const marks: SearchMark[] = queries.map(() => ({ state: "waiting", results: null }));
+  // Each search the run makes, with the planned query it stands for.
+  const toRun = queries.map((query, of) => ({ query, of }));
+  for (let i = 0; i < toRun.length && i < MAX_QUERIES; i++) {
+    const { query, of } = toRun[i];
     const mark = back.get(query);
-    if (mark) return mark;
-    if (next) {
-      next = false;
-      return { state: "now", results: null };
+    const widening = query !== queries[of];
+    if (!mark) {
+      if (searching) marks[of] = { ...marks[of], state: "now" };
+      break;
     }
-    return { state: "waiting", results: null };
-  });
+    if (!widening) marks[of] = mark;
+    // A looser search that failed leaves the planned one at what it found.
+    else if (mark.state === "done") marks[of] = { ...marks[of], state: "done", wider: mark.results! };
+    else marks[of] = { ...marks[of], state: "done" };
+    const wider = !widening && mark.results === 0 ? broaden(query) : null;
+    if (wider && !toRun.some((q) => queryKey(q.query) === queryKey(wider))) toRun.splice(i + 1, 0, { query: wider, of });
+  }
+  return marks;
 }
 
 // The plan's lines come in one after another, in the order the Planner gave
@@ -114,6 +128,7 @@ export function RunSoFar({ phase, plan, searches, pages, readUrls, nodes, leads,
                     {marks[i].results !== null && (
                       <Enter as="span" key="results" rise={0} className="ml-0.5 font-mono text-[11px] whitespace-nowrap text-muted">
                         {plural(marks[i].results!, "result")}
+                        {marks[i].wider !== undefined && `, widened to ${marks[i].wider}`}
                       </Enter>
                     )}
                     {marks[i].state === "failed" && <span className="ml-0.5 font-mono text-[11px] text-bad">failed</span>}

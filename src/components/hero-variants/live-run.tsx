@@ -216,10 +216,15 @@ export function HeroLiveRun({ featured, trace, intro }: HeroCaseProps) {
           Usually credited to
         </p>
         <p className="hero-step mt-0.5 font-serif text-xl leading-snug sm:text-2xl" style={at(CREDIT)}>
-          {/* s: no longer taken as right once the run is done. The name stays in the text, so it is still read out. */}
-          <s className="strike no-underline" style={at(times.strike)}>
-            {credit}
-          </s>
+          {/* s: no longer taken as right once the run is done, if the run says the name is wrong. The name
+              stays in the text, so it is still read out. */}
+          {output.verdict === "misattributed" ? (
+            <s className="strike no-underline" style={at(times.strike)}>
+              {credit}
+            </s>
+          ) : (
+            credit
+          )}
         </p>
 
         <ol className="mt-3.5 border-t border-line text-sm">

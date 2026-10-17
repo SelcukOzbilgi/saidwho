@@ -8,6 +8,8 @@ import { isFunctionWord, normalizeText } from "./verifier";
 // Two, so a two-character Chinese title or a three-letter word still goes.
 const MIN_QUERY_CHARS = 2;
 export const MAX_QUERY_CHARS = 300;
+// How many web searches a run makes before reading, widened ones included.
+export const MAX_QUERIES = 5;
 // A quoted span longer than this many words is searched as a fragment of
 // FRAGMENT_WORDS. In the first eval, queries quoting a whole long saying came
 // back empty far more often than shorter quoted parts of it or unquoted queries.

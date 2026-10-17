@@ -49,7 +49,9 @@ describe("Hero headline", () => {
     const html = render(example);
     expect(text(html)).toContain("A different saved quote.");
     expect(html).toContain('lang="fr"');
-    expect(html).toMatch(/<s [^>]*>Another name<\/s>/);
+    // Contested: the name is not crossed out, since the run didn't find it wrong.
+    expect(text(html)).toContain("Another name");
+    expect(html).not.toContain("<s ");
     expect(text(html)).toContain("Another source, 1972");
     expect(text(html)).toContain("medium confidence");
     expect(text(html)).toContain(verdictWords("contested"));

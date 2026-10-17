@@ -112,10 +112,15 @@ export function Hero({ featured, version }: { featured: ExampleCase | undefined;
                 <div className="hero-step" style={at(AT.credit)}>
                   <dt className="text-xs font-medium uppercase tracking-wider text-muted">Usually credited to</dt>
                   <dd className="mt-1 font-serif text-2xl">
-                    {/* s: no longer taken as right. The line is drawn over it, so it can be struck in front of the reader. */}
-                    <s className="strike no-underline" style={at(AT.strike)}>
-                      {credit}
-                    </s>
+                    {/* s: no longer taken as right. The line is drawn over it, so it can be struck in front of the reader.
+                        Only when the run says the name is wrong. */}
+                    {output.verdict === "misattributed" ? (
+                      <s className="strike no-underline" style={at(AT.strike)}>
+                        {credit}
+                      </s>
+                    ) : (
+                      credit
+                    )}
                   </dd>
                 </div>
                 <div className="hero-step" style={at(AT.origin - 150)}>

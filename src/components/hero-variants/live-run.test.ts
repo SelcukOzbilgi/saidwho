@@ -31,6 +31,13 @@ describe("Hero at ?hero=run", () => {
     expect(html).toMatch(new RegExp(`<s [^>]*>${run.popularAttribution}</s>`));
   });
 
+  it("strikes the name only when the run found it wrong", () => {
+    const right = findCase("so-much-owed")!;
+    const html = renderToStaticMarkup(createElement(Hero, { featured: right, version: "run" }));
+    expect(text(html)).toContain(right.run.popularAttribution!);
+    expect(html).not.toContain("<s ");
+  });
+
   it("plays the case's own steps, with the numbers its events hold", () => {
     const steps = runSteps(featured);
     expect(steps.map((s) => s.name)).toEqual(["Planner", "Search", "Readers", "Checker", "Genealogist", "Judge"]);

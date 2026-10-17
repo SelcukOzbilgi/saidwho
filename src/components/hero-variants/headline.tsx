@@ -26,7 +26,12 @@ export function HeroHeadline({ featured, trace: { output, credit, earliest }, in
           <div className={styles.credit}>
             <dt className={styles.label}>Usually credited to</dt>
             <dd className="font-serif">
-              <s className={`strike no-underline ${styles.strike}`}>{credit}</s>
+              {/* Struck only when the run says the name is wrong. */}
+              {output.verdict === "misattributed" ? (
+                <s className={`strike no-underline ${styles.strike}`}>{credit}</s>
+              ) : (
+                credit
+              )}
             </dd>
           </div>
           <div className={styles.origin}>
