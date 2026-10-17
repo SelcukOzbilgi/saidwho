@@ -380,65 +380,12 @@ details[open] .menu-panel {
   }
 }
 
-/* Run your own: a tab with a sheet under it. Asked for from the header or a
-   button, the sheet unfolds down from its tab once it is in view (RunSheet sets
-   data-open). Scrolled to, or without JavaScript, it is simply open. */
-.run-sheet[data-open="wait"] .run-panel {
-  clip-path: inset(0 0 100% 0);
-}
-.run-sheet[data-open="wait"] .run-tab {
-  transform: translateY(0.75rem);
-}
-.run-sheet[data-open="play"] .run-tab {
-  animation: run-tab 240ms ease-out both;
-}
-.run-sheet[data-open="play"] .run-panel {
-  animation: run-unfold 460ms cubic-bezier(0.2, 0.7, 0.2, 1) 160ms both;
-}
-.run-sheet[data-open="play"] .run-row {
-  animation: hero-step 320ms ease-out both;
-  animation-delay: calc(360ms + var(--i, 0) * 70ms);
-}
-@keyframes run-tab {
-  from {
-    transform: translateY(0.75rem);
-  }
-}
-@keyframes run-unfold {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-/* Who pays: a thumb under the two choices, on whichever radio is checked. The
-   choices stack on a phone and sit side by side from the sm width up. */
-.seg-thumb {
-  transition: transform 260ms ease-out;
-}
-.seg:has(> label:nth-of-type(2) input:checked) .seg-thumb {
-  transform: translateY(100%);
-}
-/* While a run is going the choice is locked: the thumb dims, its words stay readable. */
-.seg:has(input:checked:disabled) .seg-thumb {
-  opacity: 0.7;
-}
-@media (min-width: 40rem) {
-  .seg:has(> label:nth-of-type(2) input:checked) .seg-thumb {
-    transform: translateX(100%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hero-trace *,
   .hero-trace *::after,
-  .run-sheet *,
   .hiw-loop-dot {
     animation: none !important;
   }
-  .seg-thumb,
   [data-reveal] * {
     transition: none !important;
   }
@@ -502,5 +449,94 @@ details[open] .menu-panel {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+}
+
+/* Run page */
+
+/* The page opens in reading order: the heading, then the form's parts, one
+   after another, the way it is filled in. It plays from the first paint, in CSS
+   alone, and only where scripts run and motion is welcome, so without
+   JavaScript, or with reduced motion, everything is simply there. A form opened
+   again for another run plays it once more, from being hidden. --i is a part's
+   place in that order. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .run-in {
+    animation: run-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 80ms);
+  }
+}
+@keyframes run-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* A step's number gives way to a tick once that part is filled in. */
+.step-mark :is(.step-n, .step-tick) {
+  transition:
+    opacity 200ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.step-mark .step-tick,
+.step-mark[data-done] .step-n {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.step-mark[data-done] .step-tick {
+  opacity: 1;
+  transform: none;
+}
+
+/* Who pays: the checked card's dot fills from its middle. */
+.pay-dot-fill {
+  transform: scale(0);
+  transition: transform 200ms ease-out;
+}
+.pay-card:has(input:checked) .pay-dot {
+  border-color: var(--foreground);
+}
+.pay-card:has(input:checked) .pay-dot-fill {
+  transform: none;
+}
+/* While a run is going the choice is locked: the dot dims, the words stay readable. */
+.pay-card:has(input:checked:disabled) .pay-dot-fill {
+  opacity: 0.6;
+}
+
+/* Once the form has all it needs, the arrow on its button nudges forward once. */
+form[data-ready] .run-go {
+  animation: run-go 600ms ease-out;
+}
+@keyframes run-go {
+  40% {
+    transform: translateX(4px);
+  }
+}
+
+/* The run bar's dot rings out while the run is going. */
+.run-ping {
+  animation: run-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes run-ping {
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-mark :is(.step-n, .step-tick),
+  .pay-dot-fill {
+    transition: none;
+  }
+  form[data-ready] .run-go,
+  .run-ping {
+    animation: none;
+  }
+  .run-ping {
+    display: none;
   }
 }

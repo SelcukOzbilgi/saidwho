@@ -35,8 +35,8 @@ export default async function RunPage() {
           // Only whether a code is needed; the code never leaves the server.
           needsCode={Boolean(env.TRIAL_ACCESS_CODE)}
           savesRuns={runStoreFromEnv(env) !== null}
-          tab={
-            <h1 id="run-title" className="font-serif text-2xl font-semibold sm:text-3xl">
+          heading={
+            <h1 id="run-title" className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
               Run your own
             </h1>
           }

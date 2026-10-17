@@ -16,9 +16,8 @@ let root: Root | null = null;
 let container: HTMLElement | null = null;
 
 async function mount({ trialOpen = false, needsCode = false, running = false, onStart = () => {} }: Options = {}) {
-  // Inside the "Run your own" section, as on the home page.
+  // Inside the run page's section.
   const section = document.createElement("section");
-  section.id = "run";
   container = document.createElement("div");
   section.append(container);
   document.body.append(section);
@@ -101,55 +100,40 @@ describe("QuoteForm in a page: arriving through an access code link", () => {
   const radio = (label: string) =>
     [...container!.querySelectorAll("label")].find((l) => l.textContent?.includes(label))!.querySelector("input")!;
 
-  // Where the page scrolled to, as the element scrollIntoView was called on.
-  const watchScroll = () => {
-    const scrolled: Element[] = [];
-    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (this: Element) {
-      scrolled.push(this);
-    });
-    return scrolled;
-  };
-
-  const expectReadyToRun = (section: HTMLElement, scrolled: Element[]) => {
+  const expectReadyToRun = () => {
     expect(radio("Free trial, with an access code").checked).toBe(true);
     expect(codeField()?.value).toBe(CODE);
     expect(document.activeElement).toBe(quoteField());
-    expect(scrolled).toEqual([section]);
     expect(window.location.hash).toBe("");
-    expect(window.location.pathname + window.location.search).toBe("/?ref=devpost");
+    expect(window.location.pathname + window.location.search).toBe("/run?ref=devpost");
   };
 
-  it("picks the trial, fills the code, moves to the form and cleans the address on load", async () => {
-    window.history.replaceState(null, "", `/?ref=devpost#code=${CODE}`);
-    const scrolled = watchScroll();
-    const { section } = await mount({ trialOpen: true, needsCode: true });
-    expectReadyToRun(section, scrolled);
+  it("picks the trial, fills the code, puts the cursor in the quote and cleans the address on load", async () => {
+    window.history.replaceState(null, "", `/run?ref=devpost#code=${CODE}`);
+    await mount({ trialOpen: true, needsCode: true });
+    expectReadyToRun();
   });
 
   it("does the same when the link is opened in a tab already on the page", async () => {
-    window.history.replaceState(null, "", "/?ref=devpost");
-    const scrolled = watchScroll();
-    const { section } = await mount({ trialOpen: true, needsCode: true });
+    window.history.replaceState(null, "", "/run?ref=devpost");
+    await mount({ trialOpen: true, needsCode: true });
     expect(radio("My own Nebius and Tavily keys").checked).toBe(true);
-    expect(scrolled).toEqual([]);
     await act(async () => {
-      window.history.replaceState(null, "", `/?ref=devpost#code=${CODE}`);
+      window.history.replaceState(null, "", `/run?ref=devpost#code=${CODE}`);
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
-    expectReadyToRun(section, scrolled);
+    expectReadyToRun();
   });
 
-  it("still moves to the form and cleans the address, but fills nothing, when the trial is off or needs no code", async () => {
+  it("still cleans the address, but fills nothing, when the trial is off or needs no code", async () => {
     for (const [state, keysRadio] of [
       [{ trialOpen: false, needsCode: true }, "My own Nebius and Tavily keys"],
       [{ trialOpen: true, needsCode: false }, "Free trial, on us"],
     ] as const) {
-      window.history.replaceState(null, "", `/?ref=devpost#code=${CODE}`);
-      const scrolled = watchScroll();
-      const { section } = await mount(state);
+      window.history.replaceState(null, "", `/run?ref=devpost#code=${CODE}`);
+      await mount(state);
       expect(codeField()).toBeNull();
       expect(radio(keysRadio).checked).toBe(true);
-      expect(scrolled).toEqual([section]);
       expect(document.activeElement).toBe(quoteField());
       expect(window.location.hash).toBe("");
       await act(async () => root?.unmount());
@@ -159,12 +143,10 @@ describe("QuoteForm in a page: arriving through an access code link", () => {
     }
   });
 
-  it("leaves the page where it is without a code in the link", async () => {
-    window.history.replaceState(null, "", "/#cases");
-    const scrolled = watchScroll();
+  it("leaves the cursor and the address alone without a code in the link", async () => {
+    window.history.replaceState(null, "", "/run#top");
     await mount({ trialOpen: true, needsCode: true });
-    expect(scrolled).toEqual([]);
     expect(document.activeElement).not.toBe(quoteField());
-    expect(window.location.hash).toBe("#cases");
+    expect(window.location.hash).toBe("#top");
   });
 });
