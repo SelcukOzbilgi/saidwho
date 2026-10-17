@@ -365,26 +365,20 @@ details[open] .menu-panel {
 }
 
 /* Home: featured case */
-/* The featured case plays what its run found, in order, once Reveal (above)
-   sees it: the trail's steps land down their line, then the verdict is
-   pressed on, then the cost row. featured-case.tsx gives each part two start
-   times, --narrow for a phone, where the verdict sits above the trail and goes
-   first, and --wide for the two columns, where the trail goes first; the rules
-   below add each part's own small offset. The marker, its ring and the line
+/* The featured case plays what its run found, in order, once it is seen:
+   FeaturedPlay in featured-play.tsx sets data-reveal on each of its three
+   parts (verdict, trail, cost row) when that part's turn comes, and --start
+   is an element's offset within its part. The marker, its ring and the line
    drawn between steps use the case page's lineage timing (Case block), so the
    two read as one thing. Without data-reveal, everything is in place. */
 .fc-part {
-  --start: var(--narrow, 0ms);
-}
-@media (min-width: 64rem) {
-  .fc-part {
-    --start: var(--wide, 0ms);
-  }
+  --start: 0ms;
 }
 .fc-segment {
   transform-origin: top;
 }
-[data-reveal="wait"] :is(.fc-stamp, .fc-after, .fc-headline, .fc-reason, .fc-heading, .fc-marker, .fc-chip, .fc-note, .fc-footer) {
+[data-reveal="wait"] :is(.fc-stamp, .fc-after, .fc-headline, .fc-reason, .fc-heading, .fc-marker, .fc-chip, .fc-note),
+.fc-footer[data-reveal="wait"] {
   opacity: 0;
 }
 [data-reveal="wait"] .fc-segment {
@@ -403,7 +397,8 @@ details[open] .menu-panel {
   [data-reveal="in"] .fc-reason {
     animation: fc-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 400ms) both;
   }
-  [data-reveal="in"] :is(.fc-heading, .fc-footer) {
+  [data-reveal="in"] .fc-heading,
+  .fc-footer[data-reveal="in"] {
     animation: fc-rise 380ms ease-out var(--start) both;
   }
   [data-reveal="in"] .fc-marker {

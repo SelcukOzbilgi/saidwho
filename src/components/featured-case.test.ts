@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CASES, FEATURED_CASE_ID, findCase } from "../cases/cases";
-import { FeaturedCase, plainNote, playLeads, trailOf } from "./featured-case";
+import { FeaturedCase, plainNote, playPlan, trailOf } from "./featured-case";
 
 const featured = findCase(FEATURED_CASE_ID);
 
@@ -50,23 +50,30 @@ describe("trailOf", () => {
   });
 });
 
-describe("playLeads", () => {
+describe("playPlan", () => {
+  const order = (cues: { act: string }[]) => cues.map((c) => c.act);
+
   it("plays the trail before the verdict side by side, and the verdict first on a phone, the cost row last in both", () => {
     for (const steps of [2, 3]) {
-      const { wide, narrow } = playLeads(steps);
-      expect(wide.trail).toBeLessThan(wide.verdict);
-      expect(wide.verdict).toBeLessThan(wide.footer);
-      expect(narrow.verdict).toBeLessThan(narrow.trail);
-      expect(narrow.trail).toBeLessThan(narrow.footer);
+      const { wide, narrow } = playPlan(steps);
+      expect(order(wide)).toEqual(["trail", "verdict", "footer"]);
+      expect(order(narrow)).toEqual(["verdict", "trail", "footer"]);
     }
-    expect(playLeads(3).wide.verdict).toBeGreaterThan(playLeads(2).wide.verdict);
+    expect(playPlan(3).wide[1].gap).toBeGreaterThan(playPlan(2).wide[1].gap);
   });
 
-  it("starts the verdict at once when there is no trail to wait for", () => {
-    const { wide, narrow } = playLeads(0);
-    expect(wide.verdict).toBe(0);
-    expect(narrow.verdict).toBe(0);
-    expect(wide.footer).toBe(narrow.footer);
+  it("starts the first part at once", () => {
+    for (const steps of [0, 2, 3]) {
+      const { wide, narrow } = playPlan(steps);
+      expect(wide[0].gap).toBe(0);
+      expect(narrow[0].gap).toBe(0);
+    }
+  });
+
+  it("goes from the verdict to the cost row when there is no trail", () => {
+    const { wide, narrow } = playPlan(0);
+    expect(order(wide)).toEqual(["verdict", "footer"]);
+    expect(narrow).toEqual(wide);
   });
 });
 
@@ -144,6 +151,7 @@ describe("FeaturedCase", () => {
   it("is rendered finished, so it reads the same without JavaScript or motion", () => {
     const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured!, afterHero: true }));
     expect(html).not.toContain("data-reveal");
+    expect(html.match(/data-act="(\w+)"/g)).toEqual(['data-act="verdict"', 'data-act="trail"', 'data-act="footer"']);
     expect(html).not.toMatch(/opacity:\s*0/);
   });
 });

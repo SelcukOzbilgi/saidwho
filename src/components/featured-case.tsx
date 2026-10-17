@@ -6,7 +6,7 @@ import { type LineageStep, MAX_LINEAGE_STEPS } from "../agent/schemas";
 import type { ExampleCase } from "../cases/cases";
 import { type RunState, verdictWords } from "../lib/run-state";
 import { UltraSaving } from "./progress";
-import { Reveal } from "./reveal";
+import { type Cue, FeaturedPlay, type Plan } from "./featured-play";
 import { CHANGE } from "./lineage";
 import { RUN_PAGE } from "./sections";
 import { unmark } from "./timeline";
@@ -52,37 +52,51 @@ export function trailOf(run: RunState, max: number = TRAIL_STEPS): { steps: Trai
 
 // The section plays what the run found, in order, as it scrolls into view:
 // on a wide screen, where the trail sits beside the verdict, the steps land
-// down their line one after another, the credit moving with them, and only then
-// is the verdict pressed on, the reasoning under it, and the cost last. On a
-// phone the verdict sits above the trail, so it plays in reading order: verdict,
-// then trail, then cost. The times are the leads below; each part's own offset
-// from its lead is in the Home: featured case block of globals.css. The server
-// renders the finished section, which is what shows without JavaScript, with
-// reduced motion, or when the section is already on screen as the page opens.
+// down their line one after another (the marker with its ring, the change chip
+// sliding out from the line, then the page and note, and the line drawing on to
+// the next marker), and as the last one lands the verdict is pressed on, the
+// reasoning under it, and the cost last. On a phone the verdict sits above the
+// trail, so it plays in reading order: verdict, then trail, then cost, each
+// part waiting until it is on screen. FeaturedPlay starts the parts; each
+// element's own offset within its part is in the Home: featured case block of
+// globals.css. The server renders the finished section, which is what shows
+// without JavaScript, with reduced motion, or when the section is already on
+// screen as the page opens.
 
 // From one step landing to the next; the line takes most of it to draw down.
-const STEP = 600;
-
-type Leads = { trail: number; verdict: number; footer: number };
-
-// When the trail, the verdict and the footer row start, in ms after the section
-// comes into view, for each layout. steps is how many steps the trail shows.
-export function playLeads(steps: number): { narrow: Leads; wide: Leads } {
-  // The last step lands, then its chip and note settle.
-  const trailTakes = steps > 0 ? 150 + (steps - 1) * STEP + 500 : 0;
-  const verdictTakes = 650;
-  return {
-    wide: { trail: 0, verdict: trailTakes, footer: trailTakes + verdictTakes },
-    narrow: { verdict: 0, trail: steps > 0 ? 700 : 0, footer: steps > 0 ? 700 + trailTakes : verdictTakes },
-  };
-}
-
-// Each animated part takes both start times; globals.css picks one by width.
-const startAt = (leads: { narrow: Leads; wide: Leads }, part: keyof Leads, offset = 0) =>
-  ({ "--narrow": `${leads.narrow[part] + offset}ms`, "--wide": `${leads.wide[part] + offset}ms` }) as CSSProperties;
+const STEP = 500;
 
 // The step a trail line belongs to lands this long after the trail starts.
 const stepAt = (i: number) => 150 + i * STEP;
+
+// The order the parts play in for each layout, and how long each waits after
+// the one before it starts. steps is how many steps the trail shows.
+export function playPlan(steps: number): Plan {
+  if (steps === 0) {
+    const cues: Cue[] = [
+      { act: "verdict", gap: 0 },
+      { act: "footer", gap: 650 },
+    ];
+    return { wide: cues, narrow: cues };
+  }
+  const lastLands = stepAt(steps - 1);
+  return {
+    // The verdict lands with the last step, so a quick scroll still sees it.
+    wide: [
+      { act: "trail", gap: 0 },
+      { act: "verdict", gap: lastLands + 200 },
+      { act: "footer", gap: 650 },
+    ],
+    // Here the cost row comes after the trail has settled.
+    narrow: [
+      { act: "verdict", gap: 0 },
+      { act: "trail", gap: 700 },
+      { act: "footer", gap: lastLands + 500 },
+    ],
+  };
+}
+
+const startAt = (ms: number) => ({ "--start": `${ms}ms` }) as CSSProperties;
 
 // afterHero: the hero above already shows the quote, the name it is shared
 // under and the earliest trace, so this section starts at the verdict.
@@ -94,7 +108,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
   const { steps, more } = trailOf(run);
   const sources = run.nodes.filter((n) => n.check.status !== "not_found").length;
   const earliest = earliestTrace(output, run.nodes);
-  const leads = playLeads(steps.length);
+  const plan = playPlan(steps.length);
 
   return (
     <section
@@ -102,7 +116,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
       aria-labelledby="featured-title"
       className="scroll-mt-6 rounded-sm border border-line bg-card p-5 shadow-sm sm:p-8"
     >
-      <Reveal>
+      <FeaturedPlay plan={plan}>
         <p className="text-sm text-muted">
           {afterHero ? "The run behind that trace, saved as it happened" : "One finished run, saved as it happened"}
         </p>
@@ -124,7 +138,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
         )}
 
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
-          <div className="fc-part" style={startAt(leads, "verdict")}>
+          <div className="fc-part" data-act="verdict">
             <p className="text-xs text-muted">
               {/* Set like the case page's verdict stamp, and pressed on once the trail has led to it. */}
               <span
@@ -150,7 +164,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
           </div>
 
           {steps.length > 0 && (
-            <div className="fc-part" style={startAt(leads, "trail")}>
+            <div className="fc-part" data-act="trail">
               <h3 className="fc-heading mb-4 text-xs font-medium uppercase tracking-wider text-muted">
                 How it got to the version people share
               </h3>
@@ -163,7 +177,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
                   <li
                     key={`${node.id}-${i}`}
                     className="fc-part relative grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3 pb-5 last:pb-0"
-                    style={startAt(leads, "trail", stepAt(i))}
+                    style={startAt(stepAt(i))}
                   >
                     {/* The stretch of line down to the next step, behind the markers. */}
                     {i < steps.length - 1 && (
@@ -191,7 +205,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
                 ))}
               </ol>
               {more > 0 && (
-                <p className="fc-part fc-heading mt-4 pl-7 text-xs text-muted" style={startAt(leads, "trail", stepAt(steps.length - 1) + 300)}>
+                <p className="fc-part fc-heading mt-4 pl-7 text-xs text-muted" style={startAt(stepAt(steps.length - 1) + 300)}>
                   {more} more step{more === 1 ? "" : "s"} in the{" "}
                   <Link href={href} className="underline decoration-line underline-offset-4 hover:decoration-foreground">
                     full case
@@ -205,7 +219,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
 
         <div
           className="fc-part fc-footer mt-8 flex flex-col items-start gap-3 border-t border-line pt-6 sm:flex-row sm:items-center"
-          style={startAt(leads, "footer")}
+          data-act="footer"
         >
           <Link
             href={href}
@@ -227,7 +241,7 @@ export function FeaturedCase({ example, afterHero = false }: { example: ExampleC
             </span>
           </div>
         </div>
-      </Reveal>
+      </FeaturedPlay>
     </section>
   );
 }
