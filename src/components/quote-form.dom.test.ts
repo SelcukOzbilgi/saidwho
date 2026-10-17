@@ -261,6 +261,20 @@ describe("QuoteForm in a page: checking the visitor's keys", () => {
     expect(onStart.mock.calls[0][0].keys).toEqual({ mode: "byok", nebiusApiKey: NEBIUS, tavilyApiKey: TAVILY });
   });
 
+  it("stops a run whose key is refused in the check before it, and puts the cursor in that key", async () => {
+    stubCheck({ nebius: { state: "works" }, tavily: { state: "rejected" } });
+    const onStart = vi.fn();
+    const { form } = await mount({ onStart });
+    await act(async () => setValue(quoteField(), "A quote I saw"));
+    await act(async () => setValue(keyField("nebius"), NEBIUS));
+    await act(async () => setValue(keyField("tavily"), TAVILY));
+    await act(async () => form.requestSubmit());
+    await settle();
+    expect(onStart).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(keyField("tavily"));
+    expect(statusLine("tavily").textContent).toContain("Tavily rejected this key.");
+  });
+
   it("lets the run go when the keys couldn't be checked", async () => {
     stubCheck(async () => new Response(JSON.stringify({ error: "too_many_checks" }), { status: 429 }));
     const onStart = vi.fn();

@@ -302,7 +302,8 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
     );
     setPreparing(false);
     const refused = KEY_NAMES.find((_, i) => statuses[i].state === "rejected");
-    if (refused) return fieldOf(refused)?.focus();
+    // Focused once the fields are unlocked again, after this render.
+    if (refused) return void (wantFocus.current = refused);
     onStart(sent);
   };
 
@@ -415,7 +416,8 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
           </div>
         </div>
 
-        <fieldset disabled={running} className="run-in min-w-0" style={order(5)}>
+        {/* Locked while the keys are checked before a run, so the run starts with the keys that were checked. */}
+        <fieldset disabled={running || preparing} className="run-in min-w-0" style={order(5)}>
           <legend className="mb-3 flex items-center gap-2.5 text-lg font-medium">
             {/* Ticked once the keys are in and none is refused or still being asked about. */}
             <StepMark n={2} done={keysIn && !rejected && !checking} />
