@@ -19,15 +19,19 @@ export const metadata: Metadata = {
 // The saved cases don't change between requests, so they are counted once.
 const REJECTIONS = checkerRejections(CASES);
 
-export default function Home() {
+// Two versions of the hero while one is picked: /?hero=b shows the second.
+// Reading the query makes "/" render on each request instead of once at build;
+// when one is chosen, this goes, with the version prop and the other version.
+export default async function Home({ searchParams }: PageProps<"/">) {
   const featured = findCase(FEATURED_CASE_ID);
+  const hero = (await searchParams).hero === "b" ? "b" : "a";
 
   return (
     // One gap between every section, the hero's included, so the page keeps one rhythm.
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-20 px-4 pb-10 sm:gap-32 sm:px-6 sm:pb-14">
       <CodeLinkForward />
       {/* The first screen: the name, what it does, and the featured case in one move. */}
-      <Hero featured={featured} />
+      <Hero featured={featured} version={hero} />
 
       {/* What a run ends with comes next, so a first visit sees it before being asked for anything. */}
       {featured && <FeaturedCase example={featured} afterHero={heroTrace(featured) !== null} />}

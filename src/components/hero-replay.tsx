@@ -23,7 +23,7 @@ export function HeroReplay() {
       ref={ref}
       type="button"
       onClick={replay}
-      className="hero-replay -my-1 items-center gap-1 rounded-full px-2 py-1 hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent-ink"
+      className="hero-replay -my-1 shrink-0 items-center whitespace-nowrap gap-1 rounded-full px-2 py-1 hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent-ink"
     >
       <RotateCcw aria-hidden="true" className="size-3" />
       Play again
