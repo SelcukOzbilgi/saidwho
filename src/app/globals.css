@@ -591,3 +591,137 @@ form[data-ready] .run-go {
     animation: none;
   }
 }
+
+/* Home: eval and cases */
+
+/* The three-way table fills in a column at a time, in the order of its heading's
+   claim (--at, set in eval-numbers.tsx): the setups, the verdicts, the years,
+   then the cost, whose bars draw from the left. The heading's "about a tenth"
+   is marked last, once the mix's short bar has landed. Like the rest of the
+   home page it hangs on Reveal's data-reveal, so without it all is in place. */
+[data-reveal="wait"] .ev-cell {
+  opacity: 0;
+  transform: translateY(6px);
+}
+[data-reveal="wait"] .ev-cell .ev-bar {
+  transform: scaleX(0);
+}
+[data-reveal="wait"] .ev-marker {
+  background-color: transparent;
+}
+[data-reveal="in"] .ev-cell {
+  transition:
+    opacity 360ms ease-out,
+    transform 360ms ease-out;
+  transition-delay: var(--at, 0ms);
+}
+[data-reveal="in"] .ev-cell .ev-bar {
+  transition: transform var(--bar-ms, 450ms) ease-out;
+  transition-delay: calc(var(--at, 0ms) + var(--bar-wait, 60ms));
+}
+[data-reveal="in"] .ev-marker {
+  transition: background-color 300ms ease-out;
+  transition-delay: var(--at, 0ms);
+}
+.ev-bar {
+  transform-origin: left;
+}
+
+/* A row under the pointer keeps its full ink and the others fade back, so its
+   verdicts, years and cost read as one setup's. Borrowed from the row focus in
+   micka_design's Table on 21st.dev, without its sliding background. */
+.ev-rows > tr {
+  transition: opacity 200ms ease-out;
+}
+@media (hover: hover) {
+  .ev-rows:hover > tr:not(:hover) {
+    opacity: 0.45;
+  }
+}
+
+/* Case cards, set by ArriveList in arrive-list.tsx: a card rises in as it is
+   scrolled to, its verdict is pressed on like the case page's stamp, and then
+   the chip says whether that verdict matches the known answer. --wait spaces
+   out cards seen together. */
+.cg-card[data-arrive="wait"] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.cg-card[data-arrive="wait"] .cg-verdict {
+  opacity: 0;
+  transform: scale(1.25) rotate(-2deg);
+}
+.cg-card[data-arrive="wait"] .cg-match {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.cg-card[data-arrive="in"] {
+  transition:
+    opacity 420ms ease-out,
+    transform 420ms ease-out;
+  transition-delay: var(--wait, 0ms);
+}
+/* An overshooting curve gives the stamp its small dip past its size. */
+.cg-card[data-arrive="in"] .cg-verdict {
+  transform-origin: left center;
+  transition:
+    opacity 140ms ease-out calc(var(--wait, 0ms) + 260ms),
+    transform 360ms cubic-bezier(0.3, 1.35, 0.55, 1) calc(var(--wait, 0ms) + 260ms);
+}
+.cg-card[data-arrive="in"] .cg-match {
+  transition:
+    opacity 300ms ease-out calc(var(--wait, 0ms) + 560ms),
+    transform 300ms ease-out calc(var(--wait, 0ms) + 560ms);
+}
+
+/* Hovered or focused, a card's figures give way to its earliest trace: two
+   lines stacked in one grid cell that trade places, the way the chip labels
+   cross-fade in ddoemonn's Filter Grid on 21st.dev, with a short rise added. */
+.cg-figures,
+.cg-trace {
+  transition:
+    opacity 220ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cg-trace {
+  opacity: 0;
+  transform: translateY(0.6em);
+}
+/* Hover only where there is a pointer, so a tap on a phone doesn't leave a
+   card stuck on its trace; keyboard focus shows it everywhere. */
+.cg-link:focus-visible .cg-figures {
+  opacity: 0;
+  transform: translateY(-0.6em);
+}
+.cg-link:focus-visible .cg-trace {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) {
+  .cg-link:hover .cg-figures {
+    opacity: 0;
+    transform: translateY(-0.6em);
+  }
+  .cg-link:hover .cg-trace {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-rows > tr,
+  .cg-card,
+  .cg-card *,
+  .cg-figures,
+  .cg-trace {
+    transition: none !important;
+  }
+  .cg-link:focus-visible :is(.cg-figures, .cg-trace) {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) and (hover: hover) {
+  .cg-link:hover :is(.cg-figures, .cg-trace) {
+    transform: none;
+  }
+}

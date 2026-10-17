@@ -1,48 +1,40 @@
 "use client";
 
 import { animate } from "motion/react";
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 import { onFirstView } from "./reveal";
 
-// A whole number that counts up from zero the first time it scrolls into view,
-// so the score reads as an amount. The server renders the number itself, which
-// is what shows without JavaScript, with reduced motion, or when it is already
-// on screen as the page opens.
-export function CountUp({ value }: { value: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
+// Counts from zero up to value the first time el scrolls into view, handing
+// each step to show, so a score reads as an amount. The server renders the
+// finished state, which is what stays without JavaScript, with reduced motion,
+// or when el is already on screen as the page opens. Motion's easeOut is the
+// same curve as CSS ease-out, so whatever show moves keeps pace with the count.
+export function useCountUp(
+  ref: RefObject<HTMLElement | null>,
+  value: number,
+  show: (n: number) => void,
+  { delay = 0, duration = 0.9 }: { delay?: number; duration?: number } = {},
+) {
+  // show is read when it runs, so a new function each render doesn't restart the count.
+  const step = useRef(show);
+  useEffect(() => {
+    step.current = show;
+  });
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     let counting: ReturnType<typeof animate> | undefined;
-    const show = (n: number) => (el.textContent = String(Math.round(n)));
     const stop = onFirstView(
       el,
-      () => (counting = animate(0, value, { duration: 0.9, ease: "easeOut", onUpdate: show })),
-      () => show(0),
+      () => (counting = animate(0, value, { delay, duration, ease: "easeOut", onUpdate: (n) => step.current(n) })),
+      () => step.current(0),
     );
     return () => {
       stop?.();
       counting?.stop();
-      show(value);
+      step.current(value);
     };
-  }, [value]);
-
-  // The real number stays in the page for screen readers, find-in-page and
-  // translators, whatever the digits on screen are doing. The digits keep the
-  // width of the final number, so the words after them don't shift as it counts.
-  return (
-    <>
-      <span className="sr-only">{value}</span>
-      <span
-        ref={ref}
-        aria-hidden="true"
-        className="inline-block text-right tabular-nums"
-        style={{ minWidth: `${String(value).length}ch` }}
-      >
-        {value}
-      </span>
-    </>
-  );
+  }, [ref, value, delay, duration]);
 }
