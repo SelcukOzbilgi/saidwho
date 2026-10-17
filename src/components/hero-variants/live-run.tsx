@@ -132,11 +132,12 @@ export function runSteps({ events, run }: Pick<ExampleCase, "events" | "run">): 
 // When each part starts, in ms after the page opens: the credit, then the steps
 // one after another, then what the run found. A step runs for STEP; the Readers
 // and the Genealogist get a little longer, since they do the most.
+// Short enough that the answer lands about four seconds in.
 const CREDIT = 150;
-const FIRST = 450;
-const STEP = 480;
-const LONGER = 220;
-const GAP = 60;
+const FIRST = 400;
+const STEP = 330;
+const LONGER = 150;
+const GAP = 40;
 const LONG: ReadonlySet<StepName> = new Set(["Readers", "Genealogist"]);
 
 export function playTimes(steps: readonly RunStep[]) {
@@ -148,7 +149,7 @@ export function playTimes(steps: readonly RunStep[]) {
     return { start, dur };
   });
   // Then the result: the strike, the trace written in, the verdict pressed on, the totals.
-  return { times, strike: t + 100, trace: t + 450, verdict: t + 1350, totals: t + 1550 };
+  return { times, strike: t + 80, trace: t + 350, verdict: t + 1200, totals: t + 1350 };
 }
 
 const ms = (n: number) => `${n}ms`;
@@ -196,7 +197,7 @@ export function HeroLiveRun({ featured, trace, intro }: HeroCaseProps) {
         aria-label="The run behind one finished case, played back in short"
         // hero-trace: the global trace rules play the strike, the marker and the
         // written trace, HeroReplay plays it again, and reduced motion stops it all.
-        className={`hero-trace ${styles.panel} rounded-sm border border-line bg-card p-5 shadow-sm sm:px-6`}
+        className={`hero-trace ${styles.panel} rounded-sm border border-line bg-card px-5 py-4 shadow-sm sm:px-6`}
       >
         <div className="flex items-center justify-between gap-3 text-xs text-muted">
           <span>One saved run, played back</span>
@@ -206,19 +207,22 @@ export function HeroLiveRun({ featured, trace, intro }: HeroCaseProps) {
         <blockquote
           lang={run.language ?? undefined}
           dir="auto"
-          className="mt-2.5 font-serif text-xl leading-snug italic sm:text-[1.4rem]"
+          className="mt-2 font-serif text-xl leading-snug italic sm:text-[1.4rem]"
         >
           “{run.quote}”
         </blockquote>
-        <p className="hero-step mt-1.5 text-sm text-muted" style={at(CREDIT)}>
-          Usually credited to{" "}
+        {/* The name on its own line, as big as the trace that replaces it, so the strike reads as the run's answer. */}
+        <p className="hero-step mt-2.5 text-xs font-medium tracking-wider text-muted uppercase" style={at(CREDIT)}>
+          Usually credited to
+        </p>
+        <p className="hero-step mt-0.5 font-serif text-xl leading-snug sm:text-2xl" style={at(CREDIT)}>
           {/* s: no longer taken as right once the run is done. The name stays in the text, so it is still read out. */}
-          <s className="strike font-serif text-base text-foreground no-underline" style={at(times.strike)}>
+          <s className="strike no-underline" style={at(times.strike)}>
             {credit}
           </s>
         </p>
 
-        <ol className="mt-4 border-t border-line text-sm">
+        <ol className="mt-3.5 border-t border-line text-sm">
           {steps.map((step, i) => {
             const { start, dur } = times.times[i];
             return (
@@ -247,10 +251,13 @@ export function HeroLiveRun({ featured, trace, intro }: HeroCaseProps) {
           })}
         </ol>
 
-        <div className="mt-3.5 grid gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div className="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
           <div className="min-w-0">
-            <p className="text-xs font-medium tracking-wider text-muted uppercase">Earliest trace found</p>
-            <p className="mt-0.5 font-serif text-xl leading-snug text-accent-ink sm:text-[1.4rem]">
+            {/* Arrives with the trace it names; until then its space stays held, so nothing moves. */}
+            <p className="hero-step text-xs font-medium tracking-wider text-muted uppercase" style={at(times.trace - 150)}>
+              Earliest trace found
+            </p>
+            <p className="mt-0.5 font-serif text-xl leading-snug text-accent-ink sm:text-2xl">
               <span className="sr-only">{earliest.trace}</span>
               <span aria-hidden="true" className="marker" style={at(times.verdict - 200)}>
                 {Array.from(earliest.trace).map((char, i) => (
@@ -279,7 +286,7 @@ export function HeroLiveRun({ featured, trace, intro }: HeroCaseProps) {
           <p className="hero-step flex items-center gap-2 text-xs text-muted sm:flex-col sm:items-end sm:gap-1 sm:pt-0.5 sm:text-right" style={at(times.verdict)}>
             {/* Set like the case page's stamp, and pressed on as the run ends. */}
             <span
-              className={`${styles.stamp} rounded-sm border-[1.5px] border-current px-1.5 py-px font-semibold tracking-wider uppercase ${VERDICT_LOOK[output.verdict]}`}
+              className={`${styles.stamp} rounded-sm border-[1.5px] border-current px-2 py-0.5 text-sm font-semibold tracking-wider uppercase ${VERDICT_LOOK[output.verdict]}`}
             >
               {verdictWords(output.verdict)}
             </span>
@@ -287,14 +294,13 @@ export function HeroLiveRun({ featured, trace, intro }: HeroCaseProps) {
           </p>
         </div>
 
+        {/* What the run took in all, counted up once it is done. The rule and the link
+            arrive with the totals, so the panel never shows an empty footer. */}
         <figcaption
-          className="mt-3.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line pt-3"
+          className="hero-step mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line pt-2.5"
+          style={{ ...at(times.totals), "--start": ms(times.totals), "--dur": ms(700) } as CSSProperties}
         >
-          {/* What the run took in all, counted up once it is done. */}
-          <span
-            className="hero-step font-mono text-xs text-muted tabular-nums"
-            style={{ ...at(times.totals), "--start": ms(times.totals), "--dur": ms(700) } as CSSProperties}
-          >
+          <span className="font-mono text-xs text-muted tabular-nums">
             <Count value={sources} /> {word(sources, "source")} · <Cost usd={run.nebiusUsd} /> on Nebius
             {run.seconds !== null && (
               <>
