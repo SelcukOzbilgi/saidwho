@@ -14,8 +14,10 @@ export type KeyStatus =
 
 export const IDLE: KeyStatus = { state: "idle" };
 
-// A little over the server's own five seconds a provider, so its answer wins.
-export const CHECK_TIMEOUT_MS = 7_000;
+// Over the server's slowest answer, so its answer wins: up to two seconds to
+// count the check (LIMITER_TIMEOUT_MS), then up to five for the providers,
+// which are asked side by side, with room for the trip there and back.
+export const CHECK_TIMEOUT_MS = 9_000;
 
 const FIELDS: Record<KeyName, "nebiusApiKey" | "tavilyApiKey"> = { nebius: "nebiusApiKey", tavily: "tavilyApiKey" };
 
