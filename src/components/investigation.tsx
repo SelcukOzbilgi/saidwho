@@ -72,6 +72,10 @@ export function Investigation({
   const [savedId, setSavedId] = useState<string | null>(null);
   // The form, opened again under a run that has ended.
   const [editing, setEditing] = useState(false);
+  // "Try again" waiting on the key checks a run starts with, which can take a
+  // few seconds while the form is hidden.
+  const [retrying, setRetrying] = useState(false);
+  const retryInFlight = useRef(false);
   const controller = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const top = useRef<HTMLDivElement>(null);
@@ -205,15 +209,31 @@ export function Investigation({
       onReopen.current = then;
       setEditing(true);
     };
+    const toQuote = () => top.current?.querySelector("textarea")?.focus({ preventScroll: true });
     if (action === "fix_nebius" || action === "fix_tavily") {
       const name = action === "fix_nebius" ? "nebius" : "tavily";
       reopen(() => form.current?.focusKey(name));
     } else if (action === "own_keys") reopen(() => form.current?.useOwnKeys());
-    else if (action === "edit") reopen(() => top.current?.querySelector("textarea")?.focus({ preventScroll: true }));
-    else if (action === "retry") form.current?.resubmit();
+    else if (action === "edit") reopen(toQuote);
+    else if (action === "retry" && form.current && !retryInFlight.current) {
+      retryInFlight.current = true;
+      // Shown only if the checks take a moment, so a run that starts at once
+      // (the trial, keys already checked) doesn't flash it.
+      const slow = setTimeout(() => setRetrying(true), 150);
+      void form.current.resubmit().then((sent) => {
+        retryInFlight.current = false;
+        clearTimeout(slow);
+        if (!mounted.current) return;
+        setRetrying(false);
+        // A key refused in the check before the run, or a form no longer ready
+        // to run, can't say so from under a run: the form opens on what to fix.
+        if (sent.outcome === "refused") reopen(() => form.current?.focusKey(sent.key));
+        else if (sent.outcome === "not_ready") reopen(() => (sent.key ? form.current?.focusKey(sent.key) : toQuote()));
+      });
+    }
   };
   const card = (p: Problem, eyebrow: string, ref?: React.Ref<HTMLElement>) => (
-    <ProblemCard ref={ref} problem={p} eyebrow={eyebrow} onAction={act} />
+    <ProblemCard ref={ref} problem={p} eyebrow={eyebrow} onAction={act} busy={retrying ? "retry" : null} />
   );
 
   // A run turned down at the door leaves the form up and the button in focus,

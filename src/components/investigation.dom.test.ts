@@ -161,4 +161,57 @@ describe("Investigation", () => {
     expect(key("nebius").value).toBe(NEBIUS);
     expect(key("nebius").getAttribute("aria-invalid")).toBe("true");
   });
+
+  it("opens the form on a key that \"Try again\" finds refused, instead of doing nothing", async () => {
+    let nebiusChecks = 0;
+    let runs = 0;
+    let answerCheck: (() => void) | null = null;
+    const searchFailed = (query: string): RunEvent => ({ type: "search_failed", query, reason: "upstream" });
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      if (url === "/api/keys/check") {
+        const body = JSON.parse(String(init.body)) as Record<string, string>;
+        if (!body.nebiusApiKey) return new Response(JSON.stringify({ tavily: { state: "works", creditsLeft: 500 } }));
+        nebiusChecks++;
+        // The check "Try again" makes waits, so the test can see the button while it does.
+        if (nebiusChecks > 1) await new Promise<void>((resolve) => (answerCheck = resolve));
+        return new Response(JSON.stringify({ nebius: { state: nebiusChecks > 1 ? "rejected" : "unknown" } }));
+      }
+      runs++;
+      return wholeStream([
+        STARTED,
+        { type: "planned", tier: "super", costUsd: 0, usageKnown: true, latencyMs: 9, variants: [], candidateAuthors: [], queries: ['"Q"', "Q origin"] },
+        searchFailed('"Q"'),
+        searchFailed("Q origin"),
+        { type: "judge_skipped", reason: "no verified evidence" },
+        { type: "done", nebiusUsd: 0, tavilyCredits: 0, unknownCostCalls: 0, seconds: 1 },
+      ]);
+    });
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    await mount(false);
+    const key = (name: string) => container!.querySelector<HTMLInputElement>(`input[id$="-${name}"]`)!;
+    await act(async () => {
+      for (const [name, value] of [["nebius", "fake-visitor-nebius-key-0042"], ["tavily", "fake-visitor-tavily-key-4f2a"]]) {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(key(name), value);
+        key(name).dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+    await typeAndRun("A quote I saw");
+    expect(container!.querySelector('[role="alert"]')!.textContent).toContain("Tavily didn't answer");
+    expect(formBox().hidden).toBe(true);
+
+    await act(async () => button("Try again")!.click());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 200)));
+    const busy = [...container!.querySelectorAll('[role="alert"] button')].find((b) => b.textContent?.includes("Checking your keys")) as HTMLButtonElement;
+    expect(busy.disabled).toBe(true);
+    expect(busy.getAttribute("aria-busy")).toBe("true");
+
+    await act(async () => answerCheck!());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(runs).toBe(1);
+    expect(nebiusChecks).toBe(2);
+    expect(formBox().hidden).toBe(false);
+    expect(document.activeElement).toBe(key("nebius"));
+    expect(key("nebius").getAttribute("aria-invalid")).toBe("true");
+    expect(container!.textContent).toContain("Nebius rejected this key");
+  });
 });

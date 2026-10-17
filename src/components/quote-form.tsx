@@ -147,9 +147,20 @@ export type QuoteFormHandle = {
   markRejected: (name: KeyName) => void;
   // Picks the visitor's own keys and puts the cursor in the first empty one.
   useOwnKeys: () => void;
-  // The same request again, through the same checks.
-  resubmit: () => void;
+  // The same request again, through the same checks. Says how it went, since
+  // the form may be hidden under a run and can't show a refused key itself.
+  resubmit: () => Promise<Submitted>;
 };
+
+// What asking for a run came to: it started, a key was refused in the check
+// before it, the form isn't filled in enough to run, or a run or check was
+// already under way.
+export type Submitted =
+  | { outcome: "started" }
+  | { outcome: "refused"; key: KeyName }
+  // key: the visitor's own key that's missing or refused, when that's what is in the way.
+  | { outcome: "not_ready"; key?: KeyName }
+  | { outcome: "busy" };
 
 // The option the form starts on. An open trial costs the visitor nothing, so it
 // comes first. A trial behind a code starts on the visitor's own keys instead:
@@ -284,9 +295,16 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
   // A run on the visitor's own keys starts once both have an answer. A refused
   // key stops it here, before anything is spent; one that couldn't be checked
   // lets it go, since the run itself will say if the key is wrong.
-  const go = async () => {
-    if (running || preparing || !ready) return;
-    if (mode === "trial") return onStart(request());
+  const go = async (): Promise<Submitted> => {
+    if (running || preparing) return { outcome: "busy" };
+    if (!ready) {
+      const gap = quoteIn ? (rejected ?? (mode === "byok" ? KEY_NAMES.find((name) => !keyOf(name)) : undefined)) : undefined;
+      return gap ? { outcome: "not_ready", key: gap } : { outcome: "not_ready" };
+    }
+    if (mode === "trial") {
+      onStart(request());
+      return { outcome: "started" };
+    }
     const sent = request();
     const need = KEY_NAMES.filter((name) => {
       const { key, status } = known.current[name];
@@ -302,9 +320,13 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
     );
     setPreparing(false);
     const refused = KEY_NAMES.find((_, i) => statuses[i].state === "rejected");
-    // Focused once the fields are unlocked again, after this render.
-    if (refused) return void (wantFocus.current = refused);
+    if (refused) {
+      // Focused once the fields are unlocked again, after this render.
+      wantFocus.current = refused;
+      return { outcome: "refused", key: refused };
+    }
     onStart(sent);
+    return { outcome: "started" };
   };
 
   const submit = (event: React.FormEvent) => {
@@ -319,7 +341,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
       if (key) put(name, key, { state: "rejected" });
     },
     useOwnKeys: () => focusField(KEY_NAMES.find((name) => !keyOf(name)) ?? "nebius"),
-    resubmit: () => void go(),
+    resubmit: go,
   }));
 
   const field = `${FIELD} px-3 py-2.5 disabled:opacity-60`;

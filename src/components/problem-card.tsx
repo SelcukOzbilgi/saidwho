@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CircleAlert, TriangleAlert } from "lucide-react";
+import { ArrowRight, CircleAlert, LoaderCircle, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useId } from "react";
 
@@ -31,12 +31,16 @@ export function ProblemCard({
   problem,
   eyebrow,
   onAction,
+  busy = null,
 }: {
   ref?: React.Ref<HTMLElement>;
   problem: Problem;
   // A word or two over the title: "Ended early", "The run didn't start".
   eyebrow: string;
   onAction: (action: ProblemAction) => void;
+  // A way forward that is under way. "Try again" checks the keys first, which
+  // can take a few seconds, so its button says so and can't be pressed twice.
+  busy?: ProblemAction | null;
 }) {
   const id = useId();
   const bad = problem.tone === "bad";
@@ -72,8 +76,22 @@ export function ProblemCard({
                     <ArrowRight aria-hidden="true" className="size-3.5" />
                   </Link>
                 ) : (
-                  <button key={action} type="button" onClick={() => onAction(action)} className={i === 0 ? FIRST : OTHER}>
-                    {LABELS[action]}
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => onAction(action)}
+                    disabled={busy === action}
+                    aria-busy={busy === action || undefined}
+                    className={cn(i === 0 ? FIRST : OTHER, "disabled:cursor-wait disabled:opacity-70")}
+                  >
+                    {busy === action ? (
+                      <>
+                        Checking your keys
+                        <LoaderCircle aria-hidden="true" className="key-spin size-3.5" />
+                      </>
+                    ) : (
+                      LABELS[action]
+                    )}
                   </button>
                 ),
               )}
