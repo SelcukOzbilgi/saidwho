@@ -150,3 +150,21 @@ describe("QuoteForm in a page: arriving through an access code link", () => {
     expect(window.location.hash).toBe("#top");
   });
 });
+
+describe("QuoteForm in a page: who pays", () => {
+  // What a screen reader takes from an element's aria-labelledby or aria-describedby.
+  const textOf = (ids: string | null) =>
+    (ids ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id)?.textContent?.trim())
+      .join(" ");
+
+  it("names each choice by its title and describes it with its tag and line", async () => {
+    await mount({ trialOpen: false });
+    const [trial, keys] = [...container!.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+    expect(textOf(trial.getAttribute("aria-labelledby"))).toBe("Free trial");
+    expect(textOf(trial.getAttribute("aria-describedby"))).toMatch(/^Not offered on this site Trial runs are paid/);
+    expect(textOf(keys.getAttribute("aria-labelledby"))).toBe("My own Nebius and Tavily keys");
+    expect(textOf(keys.getAttribute("aria-describedby"))).toMatch(/^Works on any copy of the site/);
+  });
+});

@@ -425,6 +425,9 @@ function PayCard({
   tag?: string;
   children: ReactNode;
 }) {
+  // The radio is named by the title alone; the tag and the line under it are
+  // its description, so a screen reader doesn't read a sentence as a name.
+  const id = useId();
   return (
     <label
       className={cn(
@@ -432,18 +435,33 @@ function PayCard({
         disabled && "cursor-not-allowed border-dashed bg-transparent hover:border-line",
       )}
     >
-      <input type="radio" name={name} checked={checked} onChange={onSelect} disabled={disabled} className="sr-only" />
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={onSelect}
+        disabled={disabled}
+        aria-labelledby={`${id}-title`}
+        aria-describedby={tag ? `${id}-tag ${id}-text` : `${id}-text`}
+        className="sr-only"
+      />
       <span aria-hidden="true" className="pay-dot mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-line">
         <span className="pay-dot-fill size-2 rounded-full bg-foreground" />
       </span>
       <span className="flex min-w-0 flex-col gap-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-snug font-medium">
-          <span className={disabled ? "text-muted" : undefined}>{title}</span>
+          <span id={`${id}-title`} className={disabled ? "text-muted" : undefined}>
+            {title}
+          </span>
           {tag && (
-            <span className="rounded-full border border-line px-2 py-px text-[11px] font-normal text-muted">{tag}</span>
+            <span id={`${id}-tag`} className="rounded-full border border-line px-2 py-px text-[11px] font-normal text-muted">
+              {tag}
+            </span>
           )}
         </span>
-        <span className="text-xs leading-relaxed text-muted">{children}</span>
+        <span id={`${id}-text`} className="text-xs leading-relaxed text-muted">
+          {children}
+        </span>
       </span>
     </label>
   );
