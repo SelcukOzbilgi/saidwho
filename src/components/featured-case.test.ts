@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CASES, FEATURED_CASE_ID, findCase } from "../cases/cases";
-import { FeaturedCase, plainNote, trailOf } from "./featured-case";
+import { FeaturedCase, plainNote, playPlan, trailOf } from "./featured-case";
 
 const featured = findCase(FEATURED_CASE_ID);
 
@@ -47,6 +47,33 @@ describe("trailOf", () => {
       nodes: run.nodes.map((n) => (n.id === first ? { ...n, check: { ...n.check, status: "not_found" as const } } : n)),
     };
     expect(trailOf(unconfirmed)).toEqual({ steps: [], more: 0 });
+  });
+});
+
+describe("playPlan", () => {
+  const order = (cues: { act: string }[]) => cues.map((c) => c.act);
+
+  it("plays the trail before the verdict side by side, and the verdict first on a phone, the cost row last in both", () => {
+    for (const steps of [2, 3]) {
+      const { wide, narrow } = playPlan(steps);
+      expect(order(wide)).toEqual(["trail", "verdict", "footer"]);
+      expect(order(narrow)).toEqual(["verdict", "trail", "footer"]);
+    }
+    expect(playPlan(3).wide[1].gap).toBeGreaterThan(playPlan(2).wide[1].gap);
+  });
+
+  it("starts the first part at once", () => {
+    for (const steps of [0, 2, 3]) {
+      const { wide, narrow } = playPlan(steps);
+      expect(wide[0].gap).toBe(0);
+      expect(narrow[0].gap).toBe(0);
+    }
+  });
+
+  it("goes from the verdict to the cost row when there is no trail", () => {
+    const { wide, narrow } = playPlan(0);
+    expect(order(wide)).toEqual(["verdict", "footer"]);
+    expect(narrow).toEqual(wide);
   });
 });
 
@@ -112,5 +139,19 @@ describe("FeaturedCase", () => {
     const noVerdict = CASES.find((c) => !c.run.verdict);
     const example = noVerdict ?? { ...featured!, run: { ...featured!.run, verdict: null } };
     expect(renderToStaticMarkup(createElement(FeaturedCase, { example }))).toBe("");
+  });
+
+  it("draws one stretch of line between each pair of steps", () => {
+    const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured!, afterHero: true }));
+    const steps = trailOf(featured!.run).steps.length;
+    expect(html.match(/fc-segment/g)).toHaveLength(steps - 1);
+    expect(html.match(/fc-marker/g)).toHaveLength(steps);
+  });
+
+  it("is rendered finished, so it reads the same without JavaScript or motion", () => {
+    const html = renderToStaticMarkup(createElement(FeaturedCase, { example: featured!, afterHero: true }));
+    expect(html).not.toContain("data-reveal");
+    expect(html.match(/data-act="(\w+)"/g)).toEqual(['data-act="verdict"', 'data-act="trail"', 'data-act="footer"']);
+    expect(html).not.toMatch(/opacity:\s*0/);
   });
 });

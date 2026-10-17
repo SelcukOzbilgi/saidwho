@@ -372,6 +372,96 @@ details[open] .menu-panel {
   }
 }
 
+/* Home: featured case */
+/* The featured case plays what its run found, in order, once it is seen:
+   FeaturedPlay in featured-play.tsx sets data-reveal on each of its three
+   parts (verdict, trail, cost row) when that part's turn comes, and --start
+   is an element's offset within its part. The marker, its ring and the line
+   drawn between steps use the case page's lineage timing (Case block), so the
+   two read as one thing. Without data-reveal, everything is in place. */
+.fc-part {
+  --start: 0ms;
+}
+.fc-segment {
+  transform-origin: top;
+}
+[data-reveal="wait"] :is(.fc-stamp, .fc-after, .fc-headline, .fc-reason, .fc-heading, .fc-marker, .fc-chip, .fc-note),
+.fc-footer[data-reveal="wait"] {
+  opacity: 0;
+}
+[data-reveal="wait"] .fc-segment {
+  transform: scaleY(0);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal="in"] .fc-stamp {
+    animation: fc-stamp 360ms cubic-bezier(0.3, 1.35, 0.55, 1) var(--start) both;
+  }
+  [data-reveal="in"] .fc-after {
+    animation: fc-rise 300ms ease-out calc(var(--start) + 150ms) both;
+  }
+  [data-reveal="in"] .fc-headline {
+    animation: fc-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 200ms) both;
+  }
+  [data-reveal="in"] .fc-reason {
+    animation: fc-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 400ms) both;
+  }
+  [data-reveal="in"] .fc-heading,
+  .fc-footer[data-reveal="in"] {
+    animation: fc-rise 380ms ease-out var(--start) both;
+  }
+  [data-reveal="in"] .fc-marker {
+    animation: fc-land 340ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--start) both;
+  }
+  [data-reveal="in"] .fc-marker::after {
+    animation: lineage-land 520ms ease-out calc(var(--start) + 120ms) both;
+  }
+  [data-reveal="in"] .fc-chip {
+    animation: fc-slide 300ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 60ms) both;
+  }
+  [data-reveal="in"] .fc-note {
+    animation: fc-rise 280ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 120ms) both;
+  }
+  /* Drawn from this step's marker, reaching the next as it lands. */
+  [data-reveal="in"] .fc-segment {
+    animation: fc-draw var(--draw, 500ms) cubic-bezier(0.65, 0, 0.35, 1) calc(var(--start) + 100ms) both;
+  }
+}
+
+/* The verdict's word lands a little large and tilted, dips past its size and
+   settles, as Stamp in case-motion.tsx presses it on during a run. */
+@keyframes fc-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.4) rotate(-4deg);
+  }
+  30% {
+    opacity: 1;
+  }
+}
+@keyframes fc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fc-land {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+@keyframes fc-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+@keyframes fc-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+
 /* Case */
 /* The case page's diagrams reveal in order as they scroll into view. useReveal
    in case-motion.tsx sets data-reveal on the list: "armed" hides the parts
