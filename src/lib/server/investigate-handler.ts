@@ -72,7 +72,11 @@ const fail = (
   headers: Record<string, string> = {},
 ): Response => Response.json({ error, ...extra }, { status, headers: { "Cache-Control": "no-store", ...headers } });
 
-const LIMIT_ERRORS = { runs: "too_many_runs", trial: "trial_limit_reached" } as const;
+const LIMIT_ERRORS: Record<Limit["name"], string> = {
+  runs: "too_many_runs",
+  trial: "trial_limit_reached",
+  keys: "too_many_checks",
+};
 
 const KEY_ERRORS = {
   byok_incomplete: 400,

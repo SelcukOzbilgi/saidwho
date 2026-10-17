@@ -48,7 +48,11 @@ const post = (json: unknown, signal?: AbortSignal, headers: Record<string, strin
   });
 
 // The window each limit's count lands in, so a give-back can be matched to its hit.
-const WINDOW_STARTS = { runs: Date.parse("2026-10-12T10:00:00Z"), trial: Date.parse("2026-10-12T00:00:00Z") };
+const WINDOW_STARTS: Record<Limit["name"], number> = {
+  runs: Date.parse("2026-10-12T10:00:00Z"),
+  trial: Date.parse("2026-10-12T00:00:00Z"),
+  keys: Date.parse("2026-10-12T10:00:00Z"),
+};
 
 // A limiter that remembers who it was asked about and what it gave back, and can be made to fail.
 function spyLimiter(
