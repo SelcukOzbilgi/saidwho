@@ -74,8 +74,11 @@ export function Hero({ featured, version }: { featured: ExampleCase | undefined;
       // with its content in the middle, so the space above it matches the space
       // below and the next section only shows after a scroll. That space below
       // is the page's first section gap. On a phone the hero is taller than the
-      // window, so the gap below it is the page's usual one.
-      className="flex min-h-[calc(100svh-var(--site-header-height,3.5rem))] flex-col justify-center pt-10 pb-(--section-gap) sm:min-h-[calc(100svh-var(--site-header-height,4.25rem))] sm:py-16"
+      // window, so the gap below it is the page's usual one. The hero errs a
+      // pixel taller rather than letting the next section's top edge into the
+      // window: HeaderHeight measures in whole pixels (a 66.8px header is 67),
+      // and until it runs the fallback is a little under the header's height.
+      className="flex min-h-[calc(100svh-var(--site-header-height,3.25rem)+1px)] flex-col justify-center pt-10 pb-(--section-gap) sm:min-h-[calc(100svh-var(--site-header-height,4rem)+1px)] sm:py-16"
     >
       <h1 id="hero-title" className="font-serif text-[clamp(4rem,15vw,10.5rem)] leading-[0.95] font-semibold tracking-tight">
         <Wordmark />

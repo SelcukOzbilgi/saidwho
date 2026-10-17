@@ -1,7 +1,7 @@
 /* /?hero=rewind. The steps, the strike and the marker play from the global
-   hero-trace rules in globals.css; this adds the counter running back in time,
-   the trail's line drawing down from step to step, the earliest step's dot landing, and
-   the verdict pressed on. As there, it plays only where scripts run and motion
+   hero-trace rules in globals.css; this adds the earliest year running back in
+   time, the trail's line drawing down from step to step, the earliest step's
+   dot landing, and the verdict pressed on. As there, it plays only where scripts run and motion
    is welcome, and HeroReplay sets hero-rewind for a moment to play it again;
    otherwise the file stays as the server drew it, at its end. */
 
@@ -25,11 +25,13 @@
     inset: 0;
     color: var(--accent-ink);
   }
+  /* Linear and quick: the years it passes go by in a frame or two each, so none
+     reads as a date, and it stops dead on the judge's year. */
   .file:not(:global(.hero-rewind)) .count::after {
     animation:
-      rewind-count var(--rewind-run) cubic-bezier(0.33, 0.15, 0.4, 1) both,
+      rewind-count var(--count-run) linear both,
       rewind-land 360ms ease-out both;
-    animation-delay: var(--at), calc(var(--at) + var(--rewind-run));
+    animation-delay: var(--count-at), calc(var(--count-at) + var(--count-run));
   }
   .file:not(:global(.hero-rewind)) .segment {
     animation: rewind-draw var(--rewind-run) ease-out both;
@@ -42,16 +44,6 @@
   .file:not(:global(.hero-rewind)) .stamp {
     animation: rewind-stamp 360ms cubic-bezier(0.3, 1.35, 0.55, 1) both;
     animation-delay: var(--at);
-  }
-}
-
-/* The year's column, wide enough for four digits of the counter. */
-.trail {
-  --gutter: 3.75rem;
-}
-@media (width >= 40rem) {
-  .trail {
-    --gutter: 6.5rem;
   }
 }
 
