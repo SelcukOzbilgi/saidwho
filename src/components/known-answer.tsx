@@ -1,6 +1,7 @@
 import type { JudgeOutput } from "../agent/schemas";
 import type { EvalCase } from "../eval/cases";
 import { hostOf } from "../lib/run-state";
+import { FOCUS_RING } from "./focus-ring";
 import { VERDICT_LOOK } from "./verdict-card";
 
 // The test set's verdict is about the popular credit, not the saying: a quote
@@ -57,7 +58,7 @@ export function KnownAnswer({ known, reached }: { known: EvalCase; reached: Judg
         {known.references.map((url, i) => (
           <span key={url}>
             {i > 0 && ", "}
-            <a href={url} rel="noopener noreferrer" className="py-1 underline underline-offset-2 hover:text-foreground">
+            <a href={url} rel="noopener noreferrer" className={`rounded-sm py-1 underline underline-offset-2 hover:text-foreground ${FOCUS_RING}`}>
               {hostOf(url)}
             </a>
           </span>

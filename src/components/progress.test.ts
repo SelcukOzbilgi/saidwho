@@ -38,7 +38,7 @@ describe("Progress", () => {
         nodes: [],
         running: false,
       }),
-    ).replace(/<[^>]+>/g, " ");
+    ).replace(/<[^>]+>/g, "");
     expect(text).toContain("1 of 1 page, 0 confirmed");
     expect(text).toContain("1 cited work, 0 pages found");
   });
