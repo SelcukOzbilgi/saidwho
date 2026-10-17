@@ -9,12 +9,13 @@ import { Rationale } from "./verdict-card";
 // Each kind of change has a chip and a marker on the line. The marker's shape
 // differs too, so the kinds don't rest on color alone: the first page is a
 // filled dot with a halo, a change of credit a filled dot, a change of wording
-// or language an open ring.
+// or language an open ring. The text color is for the ring that spreads from a
+// marker as it lands.
 export const CHANGE: Record<LineageStep["change"], { label: string; look: string; marker: string }> = {
-  first: { label: "First seen", look: "bg-accent text-on-accent", marker: "size-3.5 bg-accent ring-4 ring-accent/20" },
-  wording: { label: "Wording changes", look: "bg-foreground/10 text-foreground", marker: "size-3 border-2 border-foreground/45 bg-card" },
-  translation: { label: "In another language", look: "bg-warn/15 text-warn", marker: "size-3 border-2 border-warn bg-card" },
-  credit: { label: "Credit changes", look: "bg-bad/15 text-bad", marker: "size-3 bg-bad" },
+  first: { label: "First seen", look: "bg-accent text-on-accent", marker: "size-3.5 bg-accent text-accent ring-4 ring-accent/20" },
+  wording: { label: "Wording changes", look: "bg-foreground/10 text-foreground", marker: "size-3 border-2 border-foreground/45 bg-card text-foreground/45" },
+  translation: { label: "In another language", look: "bg-warn/15 text-warn", marker: "size-3 border-2 border-warn bg-card text-warn" },
+  credit: { label: "Credit changes", look: "bg-bad/15 text-bad", marker: "size-3 bg-bad text-bad" },
 };
 
 // How the saying got to the form people share, as the judge traced it: where it
@@ -24,8 +25,9 @@ export const CHANGE: Record<LineageStep["change"], { label: string; look: string
 // one a step means is in its note. The timeline below has the dates.
 //
 // The steps sit on one line from the first page down, which reads the same at
-// any width and can't break into rows the way a strip of cards did. The line
-// draws itself from step to step when it comes into view.
+// any width and can't break into rows the way a strip of cards did. When the
+// list comes into view it plays down the line in order, a step at a time (the
+// Case block in globals.css has the timing).
 export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes: readonly EvidenceNode[] }) {
   const confirmed = new Map(nodes.filter((n) => n.check.status !== "not_found").map((n) => [n.id, n]));
   const shown = steps
@@ -58,13 +60,13 @@ export function Lineage({ steps, nodes }: { steps: readonly LineageStep[]; nodes
             <span aria-hidden className="relative flex h-5 items-center justify-center">
               <span className={`lineage-marker block shrink-0 rounded-full ${CHANGE[step.change].marker}`} />
             </span>
-            <div className="lineage-text flex min-w-0 items-center gap-2 text-xs text-muted">
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${CHANGE[step.change].look}`}>
+            <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
+              <span className={`lineage-chip shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${CHANGE[step.change].look}`}>
                 {CHANGE[step.change].label}
               </span>
               <a
                 href={`#node-${node.id}`}
-                className={`-my-1 truncate rounded-sm py-1 underline decoration-line underline-offset-2 hover:decoration-foreground ${FOCUS_RING}`}
+                className={`lineage-text -my-1 truncate rounded-sm py-1 underline decoration-line underline-offset-2 hover:decoration-foreground ${FOCUS_RING}`}
               >
                 <span className="font-mono">{node.id}</span> {node.host}
               </a>

@@ -454,8 +454,11 @@ details[open] .menu-panel {
    one part of a long list. Without JavaScript, or for a list already on screen
    at load, nothing is set and the markup stays as the server drew it. --i is a
    lineage step's place in its list. */
-[data-reveal="armed"] :is(.lineage-marker, .lineage-text, .reveal-item:not([data-seen])) {
+[data-reveal="armed"] :is(.lineage-marker, .lineage-chip, .lineage-text, .reveal-item:not([data-seen])) {
   opacity: 0;
+}
+[data-reveal="armed"] .lineage-chip {
+  transform: translateX(-8px);
 }
 [data-reveal="armed"] .lineage-marker {
   transform: scale(0.3);
@@ -467,26 +470,65 @@ details[open] .menu-panel {
   transform: scaleY(0);
 }
 
-/* The lineage goes one step at a time: the marker lands, its words come in, then
-   the line draws down toward the next step. */
+/* The lineage goes one step at a time, each a --step apart: the marker lands a
+   touch past its size and a ring spreads from it, the change chip slides in
+   from the line, the note follows, and then the line draws down to the next
+   step, reaching it as that step's marker lands. The marker pop and the line
+   drawn between steps follow kuratlielia's Timeline on 21st.dev. */
 .lineage-segment {
   transform-origin: top;
 }
+.lineage-marker {
+  position: relative;
+}
+.lineage-marker::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1.5px solid currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+[data-reveal] {
+  --step: 300ms;
+}
 [data-reveal="shown"] .lineage-marker {
   transition:
-    opacity 200ms ease-out,
+    opacity 150ms ease-out,
+    transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition-delay: calc(var(--i, 0) * var(--step));
+}
+[data-reveal="shown"] .lineage-marker::after {
+  animation: lineage-land 520ms ease-out both;
+  animation-delay: calc(var(--i, 0) * var(--step) + 120ms);
+}
+[data-reveal="shown"] .lineage-chip {
+  transition:
+    opacity 220ms ease-out,
     transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: calc(var(--i, 0) * 160ms);
+  transition-delay: calc(var(--i, 0) * var(--step) + 60ms);
 }
 [data-reveal="shown"] .lineage-text {
   transition:
     opacity 280ms ease-out,
     transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: calc(var(--i, 0) * 160ms + 60ms);
+  transition-delay: calc(var(--i, 0) * var(--step) + 120ms);
 }
 [data-reveal="shown"] .lineage-segment {
-  transition: transform 220ms ease-out;
-  transition-delay: calc(var(--i, 0) * 160ms + 120ms);
+  transition: transform 200ms cubic-bezier(0.65, 0, 0.35, 1);
+  transition-delay: calc(var(--i, 0) * var(--step) + 100ms);
+}
+
+@keyframes lineage-land {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
 }
 
 /* Timeline cards come in as each is scrolled to; --wait spaces out those seen together, oldest first. */
@@ -498,10 +540,13 @@ details[open] .menu-panel {
 }
 
 @media (prefers-reduced-motion: reduce), print {
-  [data-reveal="armed"] :is(.lineage-marker, .lineage-text, .lineage-segment, .reveal-item) {
+  [data-reveal="armed"] :is(.lineage-marker, .lineage-chip, .lineage-text, .lineage-segment, .reveal-item) {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .lineage-marker::after {
+    animation: none !important;
   }
 }
 
