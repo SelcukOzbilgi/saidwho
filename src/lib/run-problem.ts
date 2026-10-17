@@ -101,7 +101,7 @@ export function refusal(code: string, retryAfter: number | null = null): Problem
 // or the verdict card says enough. status is how the page saw it end; code is
 // set when the stream broke (run_failed, connection_lost).
 export function runProblem(
-  run: Pick<RunState, "verdict" | "stopped" | "trouble" | "searches">,
+  run: Pick<RunState, "verdict" | "stopped" | "trouble" | "searches" | "plan">,
   { status, code, paidBy }: { status: "running" | "finished" | "stopped" | "failed"; code: string | null; paidBy: PaidBy },
 ): Problem | null {
   if (status === "running" || status === "stopped") return null;
@@ -189,7 +189,6 @@ export function runProblem(
       at: "searching",
     };
   }
-  if (nebius?.kind === "rate_limit") return { ...slowDown("Nebius"), at: PHASE_OF[nebius.step] };
   if (run.stopped === "budget") {
     return {
       tone: "warn",
@@ -208,6 +207,12 @@ export function runProblem(
       short: "reached its time limit",
       actions: ["retry", "edit"],
     };
+  }
+  // trouble keeps the last error any step hit, and isn't cleared when a later
+  // call works, so a rate limit counts only where it ended the run: a plan that
+  // never came, or the Judge's call. One reader turned away doesn't.
+  if (nebius?.kind === "rate_limit" && ((nebius.step === "plan" && !run.plan) || nebius.step === "judge")) {
+    return { ...slowDown("Nebius"), at: PHASE_OF[nebius.step] };
   }
   // The Judge's own call failing is the last step, so nothing else will say so.
   if (nebius?.step === "judge" && ["timeout", "upstream", "network", "unknown"].includes(nebius.kind)) {

@@ -53,6 +53,37 @@ describe("runProblem", () => {
     expect(ended(run)?.title).toBe(title);
   });
 
+  it("doesn't blame a rate limit that didn't end the run", () => {
+    const readFailed: RunEvent = {
+      type: "page_read",
+      ...SPEND,
+      url: "https://a.example/p",
+      host: "a.example",
+      outcome: "failed",
+      reason: "rate_limit: Too many requests.",
+    };
+    const capped = play(STARTED, PLANNED, readFailed, { type: "budget_exceeded", spentUsd: 0.5, maxUsd: 0.5 }, DONE);
+    expect(ended(capped)?.title).toBe("The run reached its spending cap");
+    const timedOut = play(STARTED, PLANNED, readFailed, { type: "aborted" }, DONE);
+    expect(ended(timedOut)?.title).toBe("The run reached its time limit");
+    const foundNothing = play(STARTED, PLANNED, readFailed, { type: "judge_skipped", reason: "no verified evidence" }, DONE);
+    expect(ended(foundNothing)).toBeNull();
+    // A plan turned away once and then made on the second try.
+    const planLater = play(
+      STARTED,
+      { type: "plan_failed", ...SPEND, reason: "rate_limit: Too many requests." },
+      PLANNED,
+      { type: "judge_skipped", reason: "no verified evidence" },
+      DONE,
+    );
+    expect(ended(planLater)).toBeNull();
+  });
+
+  it("names a rate limit on the Judge's call, which ends the run", () => {
+    const run = play(STARTED, PLANNED, { type: "judge_failed", ...SPEND, reason: "rate_limit: Too many requests." }, DONE);
+    expect(ended(run)).toMatchObject({ title: "Nebius asked the run to slow down", actions: ["retry"], at: "judging" });
+  });
+
   it("says the spending cap stopped the run, in a warning tone", () => {
     const run = play(STARTED, PLANNED, { type: "budget_exceeded", spentUsd: 0.5, maxUsd: 0.5 }, DONE);
     expect(ended(run)).toMatchObject({ tone: "warn", title: "The run reached its spending cap" });
