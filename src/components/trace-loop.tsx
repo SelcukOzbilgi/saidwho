@@ -2,12 +2,13 @@
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
-// The Genealogist's loop on the How it works diagram: a line from its step's
+// The Genealogist's loop on the How it works run map: a line from its step's
 // node out to the left, up, and back into the Readers' node, since what it
 // finds is read and checked again. The line is drawn from where the two nodes
 // actually are, and drawn again whenever the list reflows, so it fits at every
 // width and text size. Once it has drawn in, a dot runs it once for each round
-// a run may take. It is decoration: the steps say the same in words.
+// a run may take (globals.css times both from the map). It is decoration: the
+// steps say the same in words.
 
 type Geometry = { width: number; height: number; d: string; head: string };
 
@@ -27,8 +28,8 @@ export function TraceLoop({ from, to, rounds }: { from: string; to: string; roun
 
     const measure = () => {
       const box = container.getBoundingClientRect();
-      // From each node's center and its untransformed width, since the nodes are
-      // scaled down, around their centers, until the list comes into view.
+      // From each node's center and its untransformed width, so a node that is
+      // scaled around its center while it plays in still gives its resting edge.
       const edge = (node: HTMLElement) => {
         const r = node.getBoundingClientRect();
         return { x: r.left + r.width / 2 - node.offsetWidth / 2 - box.left, y: r.top + r.height / 2 - box.top };
