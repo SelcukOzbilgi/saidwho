@@ -77,7 +77,7 @@ describe("Hero, version b", () => {
     expect(titles).toEqual(dated.map((n) => `${n.host}, ${n.date!.slice(0, 4)}`));
     expect(html.match(/hero-mark/g)).toHaveLength(dated.length);
     const kept = run.nodes.filter((n) => n.check.status !== "not_found").length;
-    expect(text(html)).toContain(`${kept - dated.length} give none`);
+    expect(text(html)).toContain(`${kept - dated.length} give no year`);
   });
 
   it("is rendered as it ends, so it reads without JavaScript", () => {

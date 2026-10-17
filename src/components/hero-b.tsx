@@ -10,10 +10,10 @@ import { HEADLINE, VERDICT_LOOK } from "./verdict-card";
 
 // The second version of the hero's trace, shown at /?hero=b while one of the two
 // is picked. The quote sits next to the copy, and under both runs a strip of
-// years with a mark for each page the run kept, at the year that page gives for
-// the saying. The marks land in the order the run found them, then the oldest
-// is picked out and named. The strip is the year strip from eugeneshilow's
-// Heat Strip on 21st.dev, its bars turned into one mark per page.
+// years with a mark for each page the Checker kept, placed as the case page's
+// timeline places it. The marks land in the order the run found them, then the
+// oldest is picked out and named. The strip is the year strip from
+// eugeneshilow's Heat Strip on 21st.dev, its bars turned into one mark per page.
 
 type Trace = NonNullable<ReturnType<typeof heroTrace>>;
 
@@ -21,8 +21,8 @@ export type StripMark = { id: string; host: string; year: number; stack: number;
 
 // The pages the Checker kept that carry a year, in the order the run found them,
 // each with its place in the stack for its year. A page's date is its own or
-// that of the older work it cites (see the Reader in the orchestrator), which is
-// why the strip says "the year it gives".
+// that of the older work it cites (see the Reader in the orchestrator), the
+// same date the case page's timeline sorts by.
 export function yearStrip(nodes: readonly EvidenceNode[], earliestId: string | null) {
   const kept = nodes.filter((n) => n.check.status !== "not_found");
   const stacks = new Map<number, number>();
@@ -84,7 +84,7 @@ export function HeroStrip({ featured, trace }: { featured: ExampleCase; trace: T
       <div className="flex items-baseline justify-between gap-3 text-xs text-muted">
         <span>
           {plotted
-            ? `The pages the Checker kept, each at the year it gives for the saying${strip.undated > 0 ? `; ${strip.undated} ${strip.undated === 1 ? "gives" : "give"} none` : ""}`
+            ? `Where the quote turns up, a mark for each page the Checker kept${strip.undated > 0 ? `; ${strip.undated} ${strip.undated === 1 ? "gives" : "give"} no year` : ""}`
             : "One quote, traced"}
         </span>
         <HeroReplay />
@@ -141,7 +141,7 @@ export function HeroStrip({ featured, trace }: { featured: ExampleCase; trace: T
           {earliest.via && <p className="mt-0.5 text-sm text-muted">via {earliest.via}</p>}
         </div>
 
-        <figcaption className="hero-step text-sm sm:text-right" style={at(picked + 700)}>
+        <div className="hero-step text-sm sm:text-right" style={at(picked + 700)}>
           <span className={`text-xs font-medium uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>
             {verdictWords(output.verdict)}
           </span>
@@ -153,7 +153,7 @@ export function HeroStrip({ featured, trace }: { featured: ExampleCase; trace: T
           >
             See every step
           </Link>
-        </figcaption>
+        </div>
       </div>
     </figure>
   );

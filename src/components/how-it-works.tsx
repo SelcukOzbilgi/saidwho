@@ -102,7 +102,8 @@ export function HowItWorks({ rejections, cases }: { rejections: CheckerRejection
       </Reveal>
 
       {/* The card plays a run through the steps; on a wide screen it stays in view
-          while the list next to it says what each step does. */}
+          while the list next to it says what each step does. The sticky card beside
+          a list is the layout of scrollxui's Features With Panel on 21st.dev. */}
       <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start lg:gap-16">
         <div className="lg:sticky lg:top-[calc(var(--site-header-height,4.25rem)+1.5rem)]">
           <RunMap steps={STEPS} rounds={TRACE_ROUNDS} roundsLabel={rounds} thrownOut={snippet?.short ?? null} />
