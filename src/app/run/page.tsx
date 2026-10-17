@@ -28,7 +28,7 @@ export default async function RunPage() {
     env.DAILY_BUDGET_USD >= TRIAL_RESERVE_USD;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-20 px-4 pt-10 pb-10 sm:gap-32 sm:px-6 sm:pt-16 sm:pb-14">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-(--section-gap) px-4 pt-10 pb-10 sm:px-6 sm:pt-16 sm:pb-14">
       <section aria-labelledby="run-title">
         <Investigation
           trialOpen={trialOpen}

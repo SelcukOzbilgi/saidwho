@@ -3,7 +3,6 @@ import type { CSSProperties } from "react";
 
 import type { ExampleCase } from "../cases/cases";
 import { verdictWords } from "../lib/run-state";
-import { HeroQuote, HeroStrip } from "./hero-b";
 import { HeroReplay } from "./hero-replay";
 import { Wordmark } from "./logo-mark";
 import { RUN_PAGE } from "./sections";
@@ -29,27 +28,24 @@ export function heroTrace(featured: ExampleCase | undefined) {
   return output && credit && earliest ? { output, credit, earliest } : null;
 }
 
-// version picks between two ways of telling the case while one is chosen: "a",
-// the card below, and "b", the year strip in hero-b.tsx (/?hero=b).
-export function Hero({ featured, version = "a" }: { featured: ExampleCase | undefined; version?: "a" | "b" }) {
-  const trace = heroTrace(featured);
-  const { output, credit, earliest } = trace ?? {};
-  const b = version === "b" && featured && trace;
+export function Hero({ featured }: { featured: ExampleCase | undefined }) {
+  const { output, credit, earliest } = heroTrace(featured) ?? {};
 
   return (
     <section
       aria-labelledby="hero-title"
-      // As tall as what's in it: the page's gap below it is the same as between the other sections.
-      // In version b the trace is split between the quote and the strip, so the whole section plays it.
-      className={`pt-10 sm:pt-16 ${b ? "hero-trace" : ""}`}
+      // The first screen is the hero alone: it fills the window under the header,
+      // with its content in the middle, so the space above it matches the space
+      // below and the next section only shows after a scroll. That space below
+      // is the page's first section gap. On a phone the hero is taller than the
+      // window, so the gap below it is the page's usual one.
+      className="flex min-h-[calc(100svh-var(--site-header-height,3.5rem))] flex-col justify-center pt-10 pb-(--section-gap) sm:min-h-[calc(100svh-var(--site-header-height,4.25rem))] sm:py-16"
     >
       <h1 id="hero-title" className="font-serif text-[clamp(4rem,15vw,10.5rem)] leading-[0.95] font-semibold tracking-tight">
         <Wordmark />
       </h1>
 
-      <div
-        className={`mt-6 grid gap-10 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 ${b ? "items-center" : "items-start"}`}
-      >
+      <div className="mt-6 grid items-start gap-10 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
         <div>
           <p className="max-w-xl text-lg leading-7 sm:text-xl sm:leading-8">
             Ask a chatbot where a quote comes from and it will often guess a source. Said Who? goes and finds the pages
@@ -74,9 +70,7 @@ export function Hero({ featured, version = "a" }: { featured: ExampleCase | unde
           </div>
         </div>
 
-        {b && <HeroQuote featured={featured} trace={trace} />}
-
-        {!b && featured && output && credit && earliest && (
+        {featured && output && credit && earliest && (
           <figure
             aria-label="One finished case, in short"
             // globals.css plays the trace only where scripts run and motion is welcome.
@@ -138,12 +132,6 @@ export function Hero({ featured, version = "a" }: { featured: ExampleCase | unde
           </figure>
         )}
       </div>
-
-      {b && (
-        <div className="mt-6">
-          <HeroStrip featured={featured} trace={trace} />
-        </div>
-      )}
     </section>
   );
 }

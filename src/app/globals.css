@@ -60,6 +60,8 @@
    is the one-row bar's height, a little taller from the sm width up. */
 html {
   scroll-padding-top: var(--site-header-height, 3.5rem);
+  /* The one gap between the sections of a page, and above the hero. */
+  --section-gap: 5rem;
   /* Jumps to a section on this page glide there; layout.tsx keeps route changes instant. */
   scroll-behavior: smooth;
 }
@@ -82,6 +84,7 @@ html {
 @media (min-width: 40rem) {
   html {
     scroll-padding-top: var(--site-header-height, 4.25rem);
+    --section-gap: 9rem;
   }
 }
 
@@ -693,46 +696,7 @@ form[data-ready] .run-go {
   }
 }
 
-/* Home: hero and how it works */
-
-/* The hero's year strip (hero-b.tsx): the line draws in, the marks land on it
-   in the order the run found them, then the oldest is ringed and named. The
-   same gate as the trace above, so without JavaScript, or with reduced motion,
-   it shows how it ends. */
-.hero-axis {
-  transform-origin: left;
-}
-@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  .hero-trace:not(.hero-rewind) .hero-axis {
-    animation: hero-axis 600ms ease-out both;
-    animation-delay: var(--at);
-  }
-  .hero-trace:not(.hero-rewind) .hero-mark {
-    animation: hero-mark 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: var(--at);
-  }
-  .hero-trace:not(.hero-rewind) .hero-pick {
-    animation: hero-pick 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: var(--at);
-  }
-}
-@keyframes hero-axis {
-  from {
-    transform: scaleX(0);
-  }
-}
-@keyframes hero-mark {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-}
-@keyframes hero-pick {
-  from {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-}
+/* Home: how it works */
 
 /* How it works: the run map (run-map.tsx). PlayOnView sets data-run on it:
    "wait" holds every step at its start, "play" runs them in order from the

@@ -19,33 +19,31 @@ export const metadata: Metadata = {
 // The saved cases don't change between requests, so they are counted once.
 const REJECTIONS = checkerRejections(CASES);
 
-// Two versions of the hero while one is picked: /?hero=b shows the second.
-// Reading the query makes "/" render on each request instead of once at build;
-// when one is chosen, this goes, with the version prop and the other version.
-export default async function Home({ searchParams }: PageProps<"/">) {
+export default function Home() {
   const featured = findCase(FEATURED_CASE_ID);
-  const hero = (await searchParams).hero === "b" ? "b" : "a";
 
   return (
-    // One gap between every section, the hero's included, so the page keeps one rhythm.
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-20 px-4 pb-10 sm:gap-32 sm:px-6 sm:pb-14">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-10 sm:px-6 sm:pb-14">
       <CodeLinkForward />
       {/* The first screen: the name, what it does, and the featured case in one move. */}
-      <Hero featured={featured} version={hero} />
+      <Hero featured={featured} />
 
-      {/* What a run ends with comes next, so a first visit sees it before being asked for anything. */}
-      {featured && <FeaturedCase example={featured} afterHero={heroTrace(featured) !== null} />}
+      {/* Every section after the first screen, one gap apart, so the page keeps one rhythm. */}
+      <div className="flex flex-col gap-(--section-gap)">
+        {/* What a run ends with comes next, so a first visit sees it before being asked for anything. */}
+        {featured && <FeaturedCase example={featured} afterHero={heroTrace(featured) !== null} />}
 
-      {/* Then how it got there, and how often it gets there, before the rest of the cases. */}
-      <HowItWorks rejections={REJECTIONS} cases={CASES.length} />
-      <EvalNumbers />
+        {/* Then how it got there, and how often it gets there, before the rest of the cases. */}
+        <HowItWorks rejections={REJECTIONS} cases={CASES.length} />
+        <EvalNumbers />
 
-      <CaseGallery
-        cases={featured ? CASES.filter((c) => c !== featured) : CASES}
-        title={featured ? "More finished cases" : undefined}
-      />
+        <CaseGallery
+          cases={featured ? CASES.filter((c) => c !== featured) : CASES}
+          title={featured ? "More finished cases" : undefined}
+        />
 
-      <SiteFooter />
+        <SiteFooter />
+      </div>
     </main>
   );
 }
