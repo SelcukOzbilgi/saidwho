@@ -263,12 +263,13 @@ details[open] .menu-panel {
   transition: transform 450ms ease-out;
   transition-delay: calc(var(--i, 0) * 80ms + 120ms);
 }
-/* A marker stroke that is put down once its words are in. */
+/* A marker stroke that is drawn over its words once they are in, left to
+   right at a pen's pace, the same stroke as the hero's. */
 [data-reveal="wait"] .reveal-marker {
-  background-color: transparent;
+  --marker-reach: var(--marker-start);
 }
 [data-reveal="in"] .reveal-marker {
-  transition: background-color 500ms ease-out;
+  transition: --marker-reach 950ms cubic-bezier(0.55, 0.1, 0.3, 1);
   transition-delay: calc(var(--i, 0) * 80ms + 420ms);
 }
 .reveal-draw-y {
@@ -294,13 +295,28 @@ details[open] .menu-panel {
   transform-origin: left;
 }
 
-/* A marker pen's stroke behind a few words, in the banner's orange. Clone
-   gives each line its own stroke when the words wrap. */
+/* A marker pen's stroke behind a few words, in the banner's orange.
+   --marker-reach is how far the pen has got: the stroke is solid up to there
+   and fades out just past it, like a felt tip's edge, so moving it from
+   --marker-start (nothing on the page yet) to 100% draws the stroke on.
+   Registered, so it moves smoothly; a browser that can't register it shows
+   the stroke whole. Slice lays the words out as one strip
+   when they wrap, so the pen finishes a line before it starts the next. */
+@property --marker-reach {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
 .marker {
   --marker: color-mix(in srgb, var(--accent) 22%, transparent);
-  background-color: var(--marker);
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+  --marker-start: -0.4em;
+  background-image: linear-gradient(
+    to right,
+    var(--marker) var(--marker-reach, 100%),
+    transparent calc(var(--marker-reach, 100%) + 0.4em)
+  );
+  box-decoration-break: slice;
+  -webkit-box-decoration-break: slice;
   padding-inline: 0.08em;
   margin-inline: -0.08em;
 }
@@ -311,54 +327,22 @@ details[open] .menu-panel {
 }
 
 /* The hero's trace plays once, as the page opens: the credit is struck out and
-   the origin written in. It plays from the first paint, in CSS alone, and only
-   where scripts run and motion is welcome, so without JavaScript, or with
-   reduced motion, it shows how it ends. HeroReplay sets hero-rewind for a
-   moment to play it again. */
+   the origin written in (hero.module.css). It plays from the first paint, in
+   CSS alone, and only where scripts run and motion is welcome, so without
+   JavaScript, or with reduced motion, it shows how it ends. HeroReplay sets
+   hero-rewind for a moment to play it again. */
 .hero-replay {
   display: none;
 }
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  .hero-trace:not(.hero-rewind) .hero-step {
-    animation: hero-step 380ms ease-out both;
-    animation-delay: var(--at);
-  }
-  .hero-trace:not(.hero-rewind) .strike::after {
-    animation: hero-strike 420ms ease-out both;
-    animation-delay: var(--at);
-  }
-  .hero-trace:not(.hero-rewind) .marker {
-    animation: hero-marker 450ms ease-out both;
-    animation-delay: var(--at);
-  }
-  .hero-trace:not(.hero-rewind) .hero-char {
-    animation: hero-char 1ms linear both;
-    animation-delay: calc(var(--at) + var(--c) * 24ms);
-  }
   .hero-replay {
     display: inline-flex;
   }
 }
 
-@keyframes hero-step {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
 @keyframes hero-strike {
   from {
     transform: scaleX(0);
-  }
-}
-@keyframes hero-marker {
-  from {
-    background-color: transparent;
-  }
-}
-@keyframes hero-char {
-  from {
-    opacity: 0;
   }
 }
 

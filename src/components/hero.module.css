@@ -1,18 +1,4 @@
-/* Only this candidate adjusts the wordmark and breathing room. The section
-   still fills the viewport and centres the whole composition as one piece. */
-:global(section):has(> .headline) {
-  /* HeaderHeight rounds its measurement up; cover that fractional pixel too. */
-  min-height: calc(100svh - var(--site-header-height, 3.5rem) + 1px);
-  padding-block: 3rem;
-}
-
-:global(section):has(> .headline) > h1 {
-  font-size: clamp(4rem, 8vw, 8rem);
-}
-
-.headline {
-  margin-top: 1.75rem;
-}
+/* The hero's case: the quote as a headline, its credit corrected in place. */
 
 .overline {
   display: flex;
@@ -106,42 +92,11 @@
   text-decoration-color: var(--foreground);
 }
 
-.intro {
-  margin-top: 1.75rem;
-  border-top: 1px solid var(--line);
-  padding-top: 1.5rem;
-}
-
-.intro > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  column-gap: 4rem;
-}
-
-.intro p:first-child {
-  grid-row: span 2;
-  max-width: 35rem;
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-.intro p + p {
-  margin-top: 0;
-  font-size: 0.9375rem;
-  line-height: 1.65;
-}
-
-.intro p + div {
-  margin-top: 1rem;
-}
-
-.intro a {
-  padding: 0.75rem 1rem;
-  font-size: 0.8125rem;
-}
-
-/* The server sends the finished correction. These animations borrow the
-   existing pen marks, but stay scoped here so the candidates can merge. */
+/* The server sends the finished correction, and it plays only where scripts
+   run and motion is welcome. The name is struck, the earliest trace is written
+   in a letter at a time, and then the marker is drawn over it from left to
+   right at a pen's pace, as the red line was drawn through the name. The
+   verdict is set down as the marker lifts. */
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .case:not(:global(.hero-rewind)) .strike::after {
     animation: strike 420ms ease-out 650ms both;
@@ -157,11 +112,11 @@
   }
 
   .case:not(:global(.hero-rewind)) .marker {
-    animation: marker 400ms ease-out 1950ms both;
+    animation: draw 950ms cubic-bezier(0.55, 0.1, 0.3, 1) 1900ms both;
   }
 
   .case:not(:global(.hero-rewind)) .verdict {
-    animation: arrive 350ms ease-out 2250ms both;
+    animation: arrive 350ms ease-out 2650ms both;
   }
 }
 
@@ -177,8 +132,9 @@
   from { opacity: 0; }
 }
 
-@keyframes marker {
-  from { background-color: transparent; }
+/* --marker-reach is registered in globals.css, so it moves smoothly. */
+@keyframes draw {
+  from { --marker-reach: var(--marker-start); }
 }
 
 @media (max-width: 47.99rem) {
@@ -186,24 +142,10 @@
     flex-direction: column;
     gap: 1.25rem;
   }
-
-  .intro > div {
-    display: block;
-  }
-
-  .intro p + p {
-    margin-top: 0.75rem;
-  }
 }
 
 @media (max-width: 39.99rem) {
-  :global(section):has(> .headline) {
-    padding-block: 2.5rem;
-  }
-
-  .headline { margin-top: 1.5rem; }
   .quote { font-size: 2.5rem; }
   .correction { margin-top: 1.5rem; }
   .verdict { gap: 1rem; }
-  .intro { margin-top: 1.5rem; }
 }
