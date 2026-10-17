@@ -552,12 +552,68 @@ form[data-ready] .run-go {
   }
 }
 
+/* A key's check: the icons at the field's end sit on one spot and the one for
+   the field's state fades in as the last fades out. The line under the field
+   is remounted with each state, so a new answer rises in a little. */
+.key-icons > .key-icon {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 180ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.key-box[data-state="checking"] .key-icon[data-for="checking"],
+.key-box[data-state="works"] .key-icon[data-for="works"],
+.key-box[data-state="rejected"] .key-icon[data-for="rejected"],
+.key-box[data-state="unknown"] .key-icon[data-for="unknown"] {
+  opacity: 1;
+  transform: none;
+}
+.key-spin {
+  animation: key-spin 900ms linear infinite;
+}
+@keyframes key-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .key-line {
+    display: inline-block;
+    animation: key-line 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* A refused key's field nudges once, so the eye finds which of the two it is. */
+  .key-box[data-state="rejected"] {
+    animation: key-refused 320ms ease-out;
+  }
+}
+@keyframes key-line {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+@keyframes key-refused {
+  25% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .step-mark :is(.step-n, .step-tick),
-  .pay-dot-fill {
+  .pay-dot-fill,
+  .key-icons > .key-icon {
     transition: none;
   }
   form[data-ready] .run-go {
+    animation: none;
+  }
+  /* The words still say it's checking, without the turn. */
+  .key-spin {
     animation: none;
   }
 }
