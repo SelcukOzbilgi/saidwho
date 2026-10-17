@@ -40,14 +40,15 @@ export function Hero({ featured, version = "a" }: { featured: ExampleCase | unde
     <section
       aria-labelledby="hero-title"
       // As tall as what's in it: the page's gap below it is the same as between the other sections.
-      className="pt-10 sm:pt-16"
+      // In version b the trace is split between the quote and the strip, so the whole section plays it.
+      className={`pt-10 sm:pt-16 ${b ? "hero-trace" : ""}`}
     >
       <h1 id="hero-title" className="font-serif text-[clamp(4rem,15vw,10.5rem)] leading-[0.95] font-semibold tracking-tight">
         <Wordmark />
       </h1>
 
       <div
-        className={`mt-6 grid gap-10 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 ${b ? "items-end" : "items-start"}`}
+        className={`mt-6 grid gap-10 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 ${b ? "items-center" : "items-start"}`}
       >
         <div>
           <p className="max-w-xl text-lg leading-7 sm:text-xl sm:leading-8">
@@ -73,7 +74,7 @@ export function Hero({ featured, version = "a" }: { featured: ExampleCase | unde
           </div>
         </div>
 
-        {b && <HeroQuote featured={featured} credit={trace.credit} />}
+        {b && <HeroQuote featured={featured} trace={trace} />}
 
         {!b && featured && output && credit && earliest && (
           <figure
@@ -139,7 +140,7 @@ export function Hero({ featured, version = "a" }: { featured: ExampleCase | unde
       </div>
 
       {b && (
-        <div className="mt-8 sm:mt-10">
+        <div className="mt-6">
           <HeroStrip featured={featured} trace={trace} />
         </div>
       )}

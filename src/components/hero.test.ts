@@ -66,16 +66,20 @@ describe("Hero, version b", () => {
     expect(html).toContain('href="#featured"');
     expect(html).toContain('href="/run"');
     expect(html).toContain(`href="/cases/${FEATURED_CASE_ID}"`);
-    // Version a's card, with its struck credit, is not there.
-    expect(html).not.toContain("<s ");
+    // The credit is struck next to the quote, and version a's card is not there.
+    expect(html).toMatch(new RegExp(`<s [^>]*>${run.popularAttribution}</s>`));
+    expect(html).not.toContain("One finished case, in short");
   });
 
   it("puts a mark on the strip for each page the Checker kept that gives a year, in the order the run found them", () => {
     const html = renderB();
     const dated = run.nodes.filter((n) => n.check.status !== "not_found" && n.date);
     const titles = [...html.matchAll(/title="([^"]+)"/g)].map((m) => m[1]);
-    expect(titles).toEqual(dated.map((n) => `${n.host}, ${n.date!.slice(0, 4)}`));
+    expect(titles).toEqual(dated.map((n) => `${n.date!.slice(0, 4)}: ${n.host}`));
     expect(html.match(/hero-mark/g)).toHaveLength(dated.length);
+    // The strip is hidden from screen readers, so a line says what it shows.
+    const years = dated.map((n) => Number(n.date!.slice(0, 4)));
+    expect(text(html)).toContain(`${dated.length} dated pages, from ${Math.min(...years)} to ${Math.max(...years)}.`);
     const kept = run.nodes.filter((n) => n.check.status !== "not_found").length;
     expect(text(html)).toContain(`${kept - dated.length} give no year`);
   });
@@ -108,6 +112,7 @@ describe("yearStrip", () => {
     ]);
     expect(strip.kept).toBe(4);
     expect(strip.undated).toBe(1);
+    expect([strip.first, strip.last]).toEqual([1990, 2001]);
     expect([strip.from, strip.to]).toEqual([1988, 2003]);
     expect(strip.decades).toEqual([1990, 2000]);
   });

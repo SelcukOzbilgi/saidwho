@@ -12,7 +12,8 @@ import { HEADLINE, VERDICT_LOOK } from "./verdict-card";
 // is picked. The quote sits next to the copy, and under both runs a strip of
 // years with a mark for each page the Checker kept, placed as the case page's
 // timeline places it. The marks land in the order the run found them, then the
-// oldest is picked out and named. The strip is the year strip from
+// oldest is picked out and named, and only then is the credit next to the quote
+// struck out and the verdict given. The strip is the year strip from
 // eugeneshilow's Heat Strip on 21st.dev, its bars turned into one mark per page.
 
 type Trace = NonNullable<ReturnType<typeof heroTrace>>;
@@ -40,18 +41,29 @@ export function yearStrip(nodes: readonly EvidenceNode[], earliestId: string | n
   const to = Math.max(...years) + 2;
   const decades = [];
   for (let y = Math.ceil(from / 10) * 10; y <= to; y += 10) decades.push(y);
-  return { marks, kept: kept.length, undated: kept.length - marks.length, from, to, decades };
+  return { marks, kept: kept.length, undated: kept.length - marks.length, first: Math.min(...years), last: Math.max(...years), from, to, decades };
 }
 
 // When each part starts, in ms after the page opens: the strip, then one mark
-// every MARK_GAP, then the oldest is picked, named and judged.
+// every MARK_GAP, then the oldest is picked and named, and after it the credit
+// is struck and the verdict given.
 const AT = { axis: 150, marks: 450 } as const;
 const MARK_GAP = 70;
 const at = (ms: number) => ({ "--at": `${ms}ms` }) as CSSProperties;
 
-export function HeroQuote({ featured, credit }: { featured: ExampleCase; credit: string }) {
+export function stripTimes(marks: number) {
+  const picked = AT.marks + marks * MARK_GAP + 150;
+  return { picked, label: picked + 200, marker: picked + 500, strike: picked + 750, verdict: picked + 1050 };
+}
+
+// The quote, its credit and what the run made of it, next to the copy. The
+// credit is struck once the strip below has picked out the oldest page.
+export function HeroQuote({ featured, trace }: { featured: ExampleCase; trace: Trace }) {
+  const { output, credit } = trace;
+  const times = stripTimes(yearStrip(featured.run.nodes, output.earliest_node).marks.length);
+
   return (
-    <div className="lg:pb-1">
+    <div>
       <blockquote
         lang={featured.run.language ?? undefined}
         dir="auto"
@@ -60,27 +72,42 @@ export function HeroQuote({ featured, credit }: { featured: ExampleCase; credit:
         “{featured.run.quote}”
       </blockquote>
       <p className="mt-3 text-muted sm:text-lg">
-        Usually credited to <span className="text-foreground">{credit}</span>
+        Usually credited to{" "}
+        <s className="strike text-foreground no-underline" style={at(times.strike)}>
+          {credit}
+        </s>
       </p>
+      <div className="hero-step mt-5 border-t border-line pt-4 text-sm" style={at(times.verdict)}>
+        <span className={`text-xs font-medium uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>
+          {verdictWords(output.verdict)}
+        </span>
+        <span className="text-muted"> · {output.confidence} confidence</span>
+        <div className="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span className="font-medium">{HEADLINE[output.verdict](credit)}</span>
+          <Link
+            href={`/cases/${featured.caseId}`}
+            className="underline decoration-line underline-offset-4 hover:decoration-foreground"
+          >
+            See every step
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
 
 export function HeroStrip({ featured, trace }: { featured: ExampleCase; trace: Trace }) {
-  const { output, credit, earliest } = trace;
+  const { output, earliest } = trace;
   const strip = yearStrip(featured.run.nodes, output.earliest_node);
   const plotted = strip.marks.length >= 2;
   const span = strip.to - strip.from;
   const x = (year: number) => `${((year - strip.from) / span) * 100}%`;
   const oldest = strip.marks.find((m) => m.earliest);
-  const picked = AT.marks + strip.marks.length * MARK_GAP + 150;
+  const times = stripTimes(strip.marks.length);
 
   return (
-    <figure
-      aria-label="What one run found for this quote"
-      // globals.css plays the strip only where scripts run and motion is welcome.
-      className="hero-trace border-t border-line pt-4"
-    >
+    // The section around it carries hero-trace, so the strip and the struck credit play as one.
+    <figure aria-label="What one run found for this quote" className="border-t border-line pt-3">
       <div className="flex items-baseline justify-between gap-3 text-xs text-muted">
         <span>
           {plotted
@@ -91,70 +118,63 @@ export function HeroStrip({ featured, trace }: { featured: ExampleCase; trace: T
       </div>
 
       {plotted && (
-        <div aria-hidden="true" className="mt-3">
-          {/* The marks stand on the line, those of one year stacked in the order they were found. */}
-          <div className="relative h-10 [--step:11px] sm:h-12 sm:[--step:15px]">
-            <span className="hero-axis absolute inset-x-0 bottom-0 h-px bg-foreground/40" style={at(AT.axis)} />
-            {strip.marks.map((mark, i) => (
-              <span
-                key={mark.id}
-                title={`${mark.host}, ${mark.year}`}
-                className="absolute -ml-1 size-2 sm:-ml-1.5 sm:size-3"
-                style={{ left: x(mark.year), bottom: `calc(5px + ${mark.stack} * var(--step))` }}
-              >
+        <>
+          <p className="sr-only">
+            {strip.marks.length} dated pages, from {strip.first} to {strip.last}.
+          </p>
+          <div aria-hidden="true" className="mt-2">
+            {/* The marks stand on the line, those of one year stacked in the order they were found. */}
+            <div className="relative h-8 [--step:8px] sm:h-10 sm:[--step:12px]">
+              <span className="hero-axis absolute inset-x-0 bottom-0 h-px bg-foreground/40" style={at(AT.axis)} />
+              {strip.marks.map((mark, i) => (
                 <span
-                  className="hero-mark block size-full rounded-full border-[1.5px] border-foreground/60 bg-card"
-                  style={at(AT.marks + i * MARK_GAP)}
-                />
-                {/* The oldest lands like the rest and is filled in once all are down. */}
-                {mark.earliest && (
-                  <>
-                    <span className="hero-pick absolute inset-0 rounded-full bg-accent" style={at(picked)} />
-                    <span className="hero-pick absolute -inset-[3px] rounded-full ring-[3px] ring-accent/25 sm:-inset-[5px] sm:ring-4" style={at(picked + 80)} />
-                  </>
-                )}
-              </span>
-            ))}
+                  key={mark.id}
+                  title={`${mark.year}: ${mark.host}`}
+                  // The oldest sits above its neighbours, so a page from the next year can't cover it.
+                  className={`absolute -ml-[3px] size-1.5 sm:-ml-[5px] sm:size-2.5 ${mark.earliest ? "z-10" : ""}`}
+                  style={{ left: x(mark.year), bottom: `calc(5px + ${mark.stack} * var(--step))` }}
+                >
+                  <span
+                    className="hero-mark block size-full rounded-full border border-foreground/60 bg-card sm:border-[1.5px]"
+                    style={at(AT.marks + i * MARK_GAP)}
+                  />
+                  {/* The oldest lands like the rest and is filled in once all are down. */}
+                  {mark.earliest && (
+                    <>
+                      <span className="hero-pick absolute inset-0 rounded-full bg-accent" style={at(times.picked)} />
+                      <span
+                        className="hero-pick absolute -inset-[2px] rounded-full ring-2 ring-accent/25 sm:-inset-[4px] sm:ring-[3px]"
+                        style={at(times.picked + 80)}
+                      />
+                    </>
+                  )}
+                </span>
+              ))}
+            </div>
+            <div className="relative mt-1 h-4 font-mono text-[10px] tracking-wider text-muted tabular-nums">
+              {strip.decades.map((year) => (
+                <span key={year} className="absolute -translate-x-1/2" style={{ left: x(year) }}>
+                  {year}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="relative mt-1.5 h-4 font-mono text-[10px] tracking-wider text-muted tabular-nums">
-            {strip.decades.map((year) => (
-              <span key={year} className="absolute -translate-x-1/2" style={{ left: x(year) }}>
-                {year}
-              </span>
-            ))}
-          </div>
-        </div>
+        </>
       )}
 
-      <div className="mt-3 grid gap-x-10 gap-y-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-        {/* The oldest mark, named; a line down from it on the strip joins the two. */}
-        <div
-          className="hero-step relative"
-          style={{ ...at(picked + 200), ...(plotted && oldest ? { marginLeft: `max(0px, calc(${x(oldest.year)} - 0.6rem))` } : {}) }}
-        >
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">Earliest trace found</p>
-          <p className="mt-1 font-serif text-2xl text-accent-ink">
-            <span className="marker" style={at(picked + 500)}>
-              {earliest.trace}
-            </span>
-          </p>
-          {earliest.via && <p className="mt-0.5 text-sm text-muted">via {earliest.via}</p>}
-        </div>
-
-        <div className="hero-step text-sm sm:text-right" style={at(picked + 700)}>
-          <span className={`text-xs font-medium uppercase tracking-wider ${VERDICT_LOOK[output.verdict]}`}>
-            {verdictWords(output.verdict)}
+      {/* The oldest mark, named, starting under it on the strip. */}
+      <p
+        className="hero-step mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5"
+        style={{ ...at(times.label), ...(plotted && oldest ? { marginLeft: `max(0px, calc(${x(oldest.year)} - 0.6rem))` } : {}) }}
+      >
+        <span className="text-xs font-medium uppercase tracking-wider text-muted">Earliest trace found</span>
+        <span className="font-serif text-xl text-accent-ink sm:text-2xl">
+          <span className="marker" style={at(times.marker)}>
+            {earliest.trace}
           </span>
-          <span className="text-muted"> · {output.confidence} confidence</span>
-          <span className="mt-0.5 block font-medium">{HEADLINE[output.verdict](credit)}</span>
-          <Link
-            href={`/cases/${featured.caseId}`}
-            className="mt-1 inline-block underline decoration-line underline-offset-4 hover:decoration-foreground"
-          >
-            See every step
-          </Link>
-        </div>
-      </div>
+        </span>
+        {earliest.via && <span className="text-sm text-muted">via {earliest.via}</span>}
+      </p>
     </figure>
   );
 }
