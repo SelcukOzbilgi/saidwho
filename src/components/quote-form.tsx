@@ -471,7 +471,9 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
               Works on any copy of the site. Your keys are used for this one run and never stored.
             </PayCard>
           </div>
-          {mode === "trial" && needsCode && <AccessCodeField id={`${id}-code`} value={accessCode} onChange={setAccessCode} />}
+          {mode === "trial" && needsCode && (
+            <AccessCodeField id={`${id}-code`} value={accessCode} onChange={setAccessCode} running={running} />
+          )}
           {mode === "byok" && (
             <div className="arrive mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <KeyField
@@ -654,10 +656,21 @@ function PayCard({
   );
 }
 
-export function AccessCodeField({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+// running hides a code the visitor chose to show once a run starts, as the key fields do.
+export function AccessCodeField({
+  id,
+  value,
+  onChange,
+  running = false,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  running?: boolean;
+}) {
   return (
     <div className="arrive mt-5 grid gap-2">
-      <SecretInput id={id} label="Access code" value={value} onChange={(e) => onChange(e.target.value)} maxLength={200} />
+      <SecretInput id={id} label="Access code" value={value} onChange={(e) => onChange(e.target.value)} maxLength={200} running={running} />
       <p className="text-xs leading-relaxed text-muted">
         Hackathon judges get the code in the testing instructions. No code? Use your own keys, or open a finished
         case.

@@ -317,4 +317,17 @@ describe("QuoteForm in a page: checking the visitor's keys", () => {
     );
     expect(keyField("nebius").type).toBe("password");
   });
+
+  it("hides a shown access code again once a run starts, as it does a key", async () => {
+    await mount({ trialOpen: true, needsCode: true });
+    await act(async () => field<HTMLInputElement>('input[type="radio"]').click());
+    const code = () => field<HTMLInputElement>('input[id$="-code"]');
+    await act(async () => field<HTMLButtonElement>('button[aria-label="Show Access code"]').click());
+    expect(code().type).toBe("text");
+
+    await act(async () =>
+      root!.render(createElement(QuoteForm, { trialOpen: true, needsCode: true, savesRuns: false, running: true, onStart: () => {}, onStop: () => {} })),
+    );
+    expect(code().type).toBe("password");
+  });
 });
