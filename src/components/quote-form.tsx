@@ -6,6 +6,7 @@ import { type CSSProperties, type ReactNode, useEffect, useId, useImperativeHand
 
 import { checkKeys, IDLE, type KeyName, type KeyStatus, keyTail } from "../lib/key-check";
 import { cn } from "../lib/utils";
+import { RunPreview, type TypicalRun } from "./run-preview";
 
 export type QuoteRequest = {
   quote: string;
@@ -123,6 +124,11 @@ const LANGUAGES = [
   ["fa", "Persian"],
 ] as const;
 
+const languageNamed = (code: string) => {
+  const name = LANGUAGES.find(([c]) => c === code)?.[1];
+  return code && name ? { code, name } : null;
+};
+
 // A visible ring for keyboard focus, on top of the darker border any focus gets.
 const FIELD =
   "w-full rounded-sm border border-line bg-background outline-none focus:border-foreground/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-accent-ink";
@@ -134,6 +140,8 @@ type Props = {
   // Whether the server saves runs, so the form says so before one starts.
   savesRuns: boolean;
   running: boolean;
+  // How long the saved runs took and what they cost, for the preview; null without them.
+  typical?: TypicalRun | null;
   onStart: (request: QuoteRequest) => void;
   onStop: () => void;
   // What the run page can ask of the form once a run has ended.
@@ -185,7 +193,7 @@ const UNCHECKED: Record<KeyName, Checked> = { nebius: { key: "", status: IDLE },
 // Keys and the access code stay in this component's state: never in the URL,
 // storage or a log. A key is checked with its provider when it is pasted in,
 // when its field is left and before a run, never on each keystroke.
-export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, onStop, ref }: Props) {
+export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = null, onStart, onStop, ref }: Props) {
   const id = useId();
   const [quote, setQuote] = useState("");
   const [popularAttribution, setPopularAttribution] = useState("");
@@ -356,7 +364,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
       aria-label="Look up a quote"
     >
       <div className="grid gap-x-12 gap-y-10 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <div className="run-in min-w-0" style={order(4)}>
+        <div className="run-in min-w-0 lg:flex lg:flex-col" style={order(4)}>
           <div className="mb-3 flex items-center gap-2.5">
             <StepMark n={1} done={quoteIn} />
             <label htmlFor={`${id}-quote`} className="text-lg font-medium">
@@ -435,6 +443,12 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* On a wide screen the keys run longer than the quote's fields; the
+              room left under them shows what the run will come back with. */}
+          <div className="mt-5 hidden lg:flex lg:flex-1">
+            <RunPreview quote={quote} credit={popularAttribution} language={languageNamed(language)} typical={typical} />
           </div>
         </div>
 

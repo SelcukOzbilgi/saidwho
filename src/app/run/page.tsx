@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 
+import { CASES } from "../../cases/cases";
 import { Investigation } from "../../components/investigation";
+import { typicalRun } from "../../components/run-preview";
 import { SiteFooter } from "../../components/site-footer";
 import { env } from "../../lib/server/env";
 import { TRIAL_RESERVE_USD } from "../../lib/server/investigate-handler";
 import { trialRefusal } from "../../lib/server/run-keys";
 import { runStoreFromEnv } from "../../lib/server/run-store";
+
+// What the saved runs took and cost, for the form's preview; they don't change between requests.
+const TYPICAL = typicalRun(CASES.map((c) => c.run));
 
 const description = "Paste any quote and watch the agents look for where it first appeared, step by step.";
 
@@ -35,6 +40,7 @@ export default async function RunPage() {
           // Only whether a code is needed; the code never leaves the server.
           needsCode={Boolean(env.TRIAL_ACCESS_CODE)}
           savesRuns={runStoreFromEnv(env) !== null}
+          typical={TYPICAL}
           heading={
             <h1 id="run-title" className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
               Run your own

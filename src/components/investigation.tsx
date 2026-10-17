@@ -10,6 +10,7 @@ import { initialRunState, reduceRun, type RunState } from "../lib/run-state";
 import { readRunStream } from "../lib/run-stream";
 import { cn } from "../lib/utils";
 import { CaseLinks, QuoteForm, type QuoteFormHandle, type QuoteRequest } from "./quote-form";
+import type { TypicalRun } from "./run-preview";
 import { ProblemCard } from "./problem-card";
 import { RunView } from "./run-view";
 
@@ -51,12 +52,15 @@ export function Investigation({
   trialOpen,
   needsCode,
   savesRuns,
+  typical = null,
   heading,
   intro,
 }: {
   trialOpen: boolean;
   needsCode: boolean;
   savesRuns: boolean;
+  // How long the saved runs took and what they cost, for the form's preview.
+  typical?: TypicalRun | null;
   // The page's h1, and a line under it.
   heading: ReactNode;
   intro?: ReactNode;
@@ -273,6 +277,7 @@ export function Investigation({
             needsCode={needsCode}
             savesRuns={savesRuns}
             running={running}
+            typical={typical}
             onStart={start}
             onStop={() => controller.current?.abort()}
           />
