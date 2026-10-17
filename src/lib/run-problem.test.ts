@@ -149,6 +149,23 @@ describe("refusal", () => {
     expect(refusal("too_many_runs").text).not.toContain("Try again in");
   });
 
+  it("names only the part of the form the server couldn't take, the first one when it names two", () => {
+    const nebius = refusal("invalid_request", null, ["keys.nebiusApiKey"]);
+    expect(nebius).toMatchObject({ title: "The Nebius key can't be sent as it is", actions: ["fix_nebius"] });
+    expect(nebius.text).toContain("tokenfactory.nebius.com");
+    expect(nebius.text).not.toMatch(/quote|name|access code/i);
+    expect(refusal("invalid_request", null, ["keys.tavilyApiKey"]).actions).toEqual(["fix_tavily"]);
+    expect(refusal("invalid_request", null, ["keys.tavilyApiKey", "quote"]).title).toBe("The quote can't be sent as it is");
+    expect(refusal("invalid_request", null, ["popularAttribution"]).title).toBe("The name is too long");
+    expect(refusal("invalid_request", null, ["keys.accessCode"]).title).toBe("The access code can't be sent as it is");
+    // Without a field it knows, it says so plainly, not every rule at once.
+    for (const fields of [[], ["body"], ["keys"]]) {
+      const problem = refusal("invalid_request", null, fields);
+      expect(problem.title).toBe("Something in the form can't be sent");
+      expect(problem.text).not.toContain("500");
+    }
+  });
+
   it("blames the connection only when no answer came", () => {
     expect(refusal("unreachable")).toMatchObject({ title: "Couldn't reach the server", actions: ["retry", "cases"] });
     for (const code of ["server_error", "something_new"]) {

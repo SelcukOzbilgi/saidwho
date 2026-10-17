@@ -72,6 +72,8 @@ export function Investigation({
   // server asked the visitor to wait, when it did.
   const [problem, setProblem] = useState<string | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
+  // The parts of the form the server couldn't take, when it named them.
+  const [badFields, setBadFields] = useState<string[]>([]);
   // The id of the run's public page, once the server has saved it.
   const [savedId, setSavedId] = useState<string | null>(null);
   // The form, opened again under a run that has ended.
@@ -106,6 +108,7 @@ export function Investigation({
     dispatch({ type: "reset" });
     setProblem(null);
     setRetryAfter(null);
+    setBadFields([]);
     setSavedId(null);
     setPaidBy(request.keys.mode);
     setEditing(false);
@@ -142,6 +145,8 @@ export function Investigation({
         const code = body && typeof body === "object" && "error" in body ? String(body.error) : "server_error";
         const wait = Number(response.headers.get("retry-after"));
         if (Number.isFinite(wait) && wait > 0) setRetryAfter(wait);
+        const fields = body && typeof body === "object" && "fields" in body && Array.isArray(body.fields) ? body.fields : [];
+        setBadFields(fields.filter((field): field is string => typeof field === "string"));
         return fail(PAGE_CODES.has(code) ? "server_error" : code);
       }
 
@@ -284,7 +289,7 @@ export function Investigation({
         </div>
 
         {problem && !shown && (
-          <div className="arrive">{card(refusal(problem, retryAfter), "The run didn't start", problemLine)}</div>
+          <div className="arrive">{card(refusal(problem, retryAfter, badFields), "The run didn't start", problemLine)}</div>
         )}
 
         {status === "stopped" && !shown && <p className="arrive text-sm text-muted">You stopped the run before it began.</p>}

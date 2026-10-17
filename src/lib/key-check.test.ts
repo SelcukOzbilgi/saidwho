@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { checkKeys, keyTail } from "./key-check";
+import { checkKeys, keyProblem, keyRefused, keyTail } from "./key-check";
 
 const reply = (body: unknown, status = 200) => vi.fn(async () => new Response(JSON.stringify(body), { status }));
 
@@ -35,6 +35,39 @@ describe("checkKeys", () => {
     const send = vi.fn();
     expect(await checkKeys({ nebius: "" }, { fetch: send as unknown as typeof fetch })).toEqual({});
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("keys that can't be keys", () => {
+  it("names what is wrong with one, after trimming its ends", () => {
+    expect(keyProblem("  v1.abc-DEF_123  ")).toBeNull();
+    expect(keyProblem("tvly-abc def")).toBe("space");
+    expect(keyProblem("tvly-abc\u00e9")).toBe("character");
+    expect(keyProblem("\u201ctvly-abc\u201d")).toBe("character");
+    expect(keyProblem("x".repeat(513))).toBe("long");
+  });
+
+  it("answers for such a key without sending it, and still asks about the other", async () => {
+    const send = reply({ tavily: { state: "works", creditsLeft: 5 } });
+    const result = await checkKeys({ nebius: "has space", tavily: "tvly-ok" }, { fetch: send as unknown as typeof fetch });
+    expect(result).toEqual({ nebius: { state: "malformed", problem: "space" }, tavily: { state: "works", creditsLeft: 5 } });
+    const [, init] = send.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ tavilyApiKey: "tvly-ok" });
+  });
+
+  it("sends nothing when no key given is shaped like one", async () => {
+    const send = reply({});
+    expect(await checkKeys({ nebius: "a b" }, { fetch: send as unknown as typeof fetch })).toEqual({
+      nebius: { state: "malformed", problem: "space" },
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("blocks a run on a refused key or one that can't be a key, and nothing else", () => {
+    expect(keyRefused({ state: "rejected" })).toBe(true);
+    expect(keyRefused({ state: "malformed", problem: "space" })).toBe(true);
+    expect(keyRefused({ state: "unknown" })).toBe(false);
+    expect(keyRefused({ state: "works", creditsLeft: 0 })).toBe(false);
   });
 });
 

@@ -4,7 +4,7 @@ import { ArrowRight, Check, CircleAlert, CircleHelp, Eye, EyeOff, LoaderCircle, 
 import Link from "next/link";
 import { type CSSProperties, type ReactNode, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 
-import { checkKeys, IDLE, type KeyName, type KeyStatus, keyTail } from "../lib/key-check";
+import { checkKeys, IDLE, type KeyName, keyRefused, type KeyStatus, keyTail } from "../lib/key-check";
 import { cn } from "../lib/utils";
 import { RunPreview, type TypicalRun } from "./run-preview";
 
@@ -290,7 +290,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = 
 
   const quoteIn = quote.trim() !== "";
   const codeIn = !needsCode || accessCode.trim() !== "";
-  const rejected = mode === "byok" ? KEY_NAMES.find((name) => statusOf(name).state === "rejected") : undefined;
+  const rejected = mode === "byok" ? KEY_NAMES.find((name) => keyRefused(statusOf(name))) : undefined;
   const checking = mode === "byok" && KEY_NAMES.some((name) => statusOf(name).state === "checking");
   // The name is optional: left blank, the planner says who it's usually credited to.
   const keysIn = mode === "trial" ? codeIn : nebiusApiKey.trim() !== "" && tavilyApiKey.trim() !== "";
@@ -330,7 +330,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = 
       }),
     );
     setPreparing(false);
-    const refused = KEY_NAMES.find((_, i) => statuses[i].state === "rejected");
+    const refused = KEY_NAMES.find((_, i) => keyRefused(statuses[i]));
     if (refused) {
       // Focused once the fields are unlocked again, after this render.
       wantFocus.current = refused;
@@ -582,7 +582,11 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, typical = 
             {running ? (
               "Starting the run. It takes the form's place as soon as the Planner begins."
             ) : rejected ? (
-              `${PROVIDER[rejected].name} rejected the key above. Fix it to run.`
+              statusOf(rejected).state === "malformed" ? (
+                `The ${PROVIDER[rejected].name} key above can't be a key as it is. Fix it to run.`
+              ) : (
+                `${PROVIDER[rejected].name} rejected the key above. Fix it to run.`
+              )
             ) : ready ? (
               "A run takes up to about three minutes."
             ) : !keysIn && mode === "trial" ? (
@@ -747,10 +751,11 @@ function SecretInput({
         {label}
       </label>
       <div
-        data-state={status.state}
+        // A key that can't be one looks refused: same edge, same icon, same nudge.
+        data-state={status.state === "malformed" ? "rejected" : status.state}
         className={cn(
           "key-box flex items-center rounded-sm border bg-background transition-colors duration-200 focus-within:border-foreground/40 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent-ink",
-          status.state === "rejected" ? "border-bad focus-within:border-bad" : lowOnCredits ? "border-warn" : "border-line",
+          keyRefused(status) ? "border-bad focus-within:border-bad" : lowOnCredits ? "border-warn" : "border-line",
         )}
       >
         <input
@@ -765,7 +770,7 @@ function SecretInput({
           autoCorrect="off"
           spellCheck={false}
           maxLength={maxLength}
-          aria-invalid={status.state === "rejected" || undefined}
+          aria-invalid={keyRefused(status) || undefined}
           aria-describedby={describedBy}
           className="min-w-0 flex-1 bg-transparent px-3 py-2.5 font-mono text-sm outline-none"
         />
@@ -856,6 +861,17 @@ function KeyLine({ name, value, status }: { name: KeyName; value: string; status
       return (
         <span className="key-line text-bad">
           {provider} rejected this key. Copy it again from {where}, with nothing missing at either end.
+        </span>
+      );
+    case "malformed":
+      return (
+        <span className="key-line text-bad">
+          {status.problem === "space"
+            ? "There's a space inside it, and a key has none."
+            : status.problem === "long"
+              ? "That's longer than any key."
+              : "It has a character no key has, like a curly quote or an accented letter."}{" "}
+          Copy it again from {where}.
         </span>
       );
     case "unknown":

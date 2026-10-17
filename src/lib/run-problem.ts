@@ -47,8 +47,9 @@ const minutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
 // A run the server turned down before it started, by the code POST
 // /api/investigate returned, or one the page found on its own: unreachable when
 // no answer came, server_error when one came that wasn't a run or a code.
-// retryAfter is the Retry-After header in seconds, when the server sent one.
-export function refusal(code: string, retryAfter: number | null = null): Problem {
+// retryAfter is the Retry-After header in seconds, when the server sent one;
+// fields are the parts of the form the server couldn't take, when it named them.
+export function refusal(code: string, retryAfter: number | null = null, fields: readonly string[] = []): Problem {
   const wait = retryAfter ? ` Try again in about ${minutes(retryAfter)} ${minutes(retryAfter) === 1 ? "minute" : "minutes"}.` : "";
   const bad = (title: string, text: string, actions: ProblemAction[], short = title): Problem => ({
     tone: "bad",
@@ -60,11 +61,7 @@ export function refusal(code: string, retryAfter: number | null = null): Problem
   const warn = (title: string, text: string, actions: ProblemAction[]): Problem => ({ tone: "warn", title, text, short: title, actions });
   switch (code) {
     case "invalid_request":
-      return bad(
-        "Something in the form can't be sent",
-        "A quote can be up to 500 characters and a name up to 200. Keys and access codes are plain keyboard characters with no spaces.",
-        [],
-      );
+      return formProblem(fields) ?? bad("Something in the form can't be sent", "Check the fields above and try again.", []);
     case "invalid_json":
     case "expected_json":
       return bad("The server couldn't read the request", "Reload the page and try again.", ["retry"]);
@@ -102,6 +99,44 @@ export function refusal(code: string, retryAfter: number | null = null): Problem
         "This one is on the site, not you. Trying again in a minute usually works, or open a finished case.",
         ["retry", "cases"],
       );
+  }
+}
+
+// The form's parts in the order they are filled in, so a request that failed
+// on two of them names the first, the one to fix first.
+const FORM_ORDER = ["quote", "popularAttribution", "language", "keys.nebiusApiKey", "keys.tavilyApiKey", "keys.accessCode"] as const;
+
+// What the server couldn't take, said for that one part only.
+function formProblem(fields: readonly string[]): Problem | null {
+  const field = FORM_ORDER.find((name) => fields.includes(name));
+  const bad = (title: string, text: string, actions: ProblemAction[], short: string): Problem => ({ tone: "bad", title, text, short, actions });
+  const key = (provider: string, site: string, action: ProblemAction) =>
+    bad(
+      `The ${provider} key can't be sent as it is`,
+      `A key is one run of keyboard characters with no spaces inside. Copy it again from ${site}.`,
+      [action],
+      `${provider} key can't be sent`,
+    );
+  switch (field) {
+    case "quote":
+      return bad("The quote can't be sent as it is", "It needs at least one word, and up to 500 characters.", [], "quote can't be sent");
+    case "popularAttribution":
+      return bad("The name is too long", "Who it's usually credited to can be up to 200 characters.", [], "name too long");
+    case "language":
+      return bad("That language can't be sent", "Pick one from the list, or leave it as Not sure.", [], "language can't be sent");
+    case "keys.nebiusApiKey":
+      return key("Nebius", NEBIUS_KEYS, "fix_nebius");
+    case "keys.tavilyApiKey":
+      return key("Tavily", TAVILY_KEYS, "fix_tavily");
+    case "keys.accessCode":
+      return bad(
+        "The access code can't be sent as it is",
+        "A code is one run of keyboard characters with no spaces inside. Check it against the one you were given.",
+        [],
+        "access code can't be sent",
+      );
+    default:
+      return null;
   }
 }
 
