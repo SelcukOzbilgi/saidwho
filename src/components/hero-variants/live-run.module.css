@@ -1,0 +1,133 @@
+/* The run panel at /?hero=run (live-run.tsx). The panel carries the global
+   hero-trace class, so the strike, the marker and the written trace play from
+   globals.css, HeroReplay plays it all again by setting hero-rewind for a
+   moment, and reduced motion stops every animation in it. What is here plays
+   the steps: each row lights up at --start, its span fills for --dur, and
+   its numbers count up over the same time. Like the rest of the hero it plays
+   from the first paint, in CSS alone, and only where scripts run and motion
+   is welcome, so without JavaScript, or with reduced motion, the panel shows
+   the finished run as the server drew it. */
+
+/* The count drawn over a number while it plays. An integer property can be
+   animated, and a counter shows it. */
+@property --n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.count {
+  position: relative;
+  display: inline-block;
+}
+/* Set against the end of the value's box, so while a count is shorter than
+   the value the spare room sits before the digits, not between them and the
+   word after. */
+.count::after {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  visibility: hidden;
+}
+
+.span {
+  opacity: 0;
+  transform-origin: left;
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  /* Every step is there from the start, its name set back; as the run
+     reaches it the name inks in and what it did arrives. */
+  .panel:not(:global(.hero-rewind)) .name {
+    animation: name-on 200ms ease-out var(--start) both;
+  }
+  .panel:not(:global(.hero-rewind)) .said {
+    animation: said-in 260ms ease-out var(--start) both;
+  }
+  .panel:not(:global(.hero-rewind)) .span {
+    animation: span-fill calc(var(--dur) + 260ms) linear var(--start) both;
+  }
+
+  /* The saved value hides until its count is done, and the count shows over
+     it until then, from 0 before the step starts to the value as it ends. */
+  .panel:not(:global(.hero-rewind)) .value {
+    animation: hide calc(var(--start) + var(--dur)) linear;
+  }
+  .panel:not(:global(.hero-rewind)) .count::after {
+    content: counter(n);
+    counter-reset: n var(--n);
+    animation:
+      count var(--dur) cubic-bezier(0.22, 1, 0.36, 1) var(--start) both,
+      show calc(var(--start) + var(--dur)) linear;
+  }
+  .panel:not(:global(.hero-rewind)) .pad::after {
+    content: counter(n, decimal-leading-zero);
+  }
+
+  /* The verdict is pressed on like the case page's stamp: in from a touch
+     bigger and turned, dipping past its size on the way. */
+  .panel:not(:global(.hero-rewind)) .stamp {
+    display: inline-block;
+    animation:
+      stamp 360ms cubic-bezier(0.3, 1.35, 0.55, 1) calc(var(--at) + 120ms) both,
+      stamp-in 120ms ease-out calc(var(--at) + 120ms) both;
+  }
+}
+
+@keyframes name-on {
+  from {
+    color: var(--muted);
+    opacity: 0.55;
+  }
+}
+@keyframes said-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+/* Fills across the row while the step runs, then fades into the rule under it. */
+@keyframes span-fill {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  70% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+@keyframes hide {
+  from,
+  to {
+    color: transparent;
+  }
+}
+@keyframes show {
+  from,
+  to {
+    visibility: visible;
+  }
+}
+@keyframes count {
+  from {
+    --n: 0;
+  }
+  to {
+    --n: var(--to);
+  }
+}
+@keyframes stamp {
+  from {
+    transform: scale(1.4) rotate(-4deg);
+  }
+}
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+  }
+}
