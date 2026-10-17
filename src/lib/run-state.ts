@@ -117,7 +117,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
       return {
         ...state,
         quote: event.quote,
-        language: event.language,
+        language: event.language ?? null,
         popularAttribution: event.popularAttribution,
         attributionFrom: event.popularAttribution === null ? null : "visitor",
         log: log("Run", `Started. Sites that already wrote up answers are left out: ${event.excludeDomains.join(", ")}`),

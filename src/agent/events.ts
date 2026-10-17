@@ -57,7 +57,8 @@ export const runEventSchema = z.discriminatedUnion("type", [
     quote: z.string(),
     // null when the visitor left the name blank.
     popularAttribution: z.string().nullable(),
-    language: z.string(),
+    // null when the visitor wasn't sure of it. Runs saved before then always have one.
+    language: z.string().nullish(),
     excludeDomains: z.array(z.string()),
   }),
   z.strictObject({

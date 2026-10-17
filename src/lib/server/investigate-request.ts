@@ -20,6 +20,14 @@ const optionalName = z
   .nullish()
   .transform((value) => value || null);
 
+// The quote's language, as a code like "en" or "pt-BR". A visitor who isn't
+// sure leaves it out, and the planner works it out from the quote.
+const optionalLanguage = z
+  .string()
+  .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/)
+  .nullish()
+  .transform((value) => value ?? null);
+
 // A key is one printable token. Blank is allowed here so resolveRunKeys can
 // report an incomplete BYOK request; anything with spaces or control characters
 // inside cannot be a header value and is rejected.
@@ -42,10 +50,7 @@ const accessCode = z
 export const investigateRequestSchema = z.strictObject({
   quote: text(500),
   popularAttribution: optionalName,
-  language: z
-    .string()
-    .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/)
-    .default("en"),
+  language: optionalLanguage,
   keys: z.discriminatedUnion("mode", [
     z.strictObject({ mode: z.literal("byok"), nebiusApiKey: apiKey, tavilyApiKey: apiKey }),
     z.strictObject({ mode: z.literal("trial"), accessCode }),

@@ -16,9 +16,23 @@ const valid = {
 };
 
 describe("parseInvestigateRequest", () => {
-  it("accepts a valid body and defaults the language", async () => {
+  it("accepts a valid body, with no language when none is sent", async () => {
     const parsed = await parseInvestigateRequest(post(valid));
-    expect(parsed).toMatchObject({ ok: true, request: { language: "en", keys: { mode: "trial" } } });
+    expect(parsed).toMatchObject({ ok: true, request: { language: null, keys: { mode: "trial" } } });
+  });
+
+  it("takes a missing or null language as not given, and keeps a code that is sent", async () => {
+    for (const language of [null, undefined]) {
+      const parsed = await parseInvestigateRequest(post({ ...valid, language }));
+      expect(parsed).toMatchObject({ ok: true, request: { language: null } });
+    }
+    for (const language of ["tr", "pt-BR"]) {
+      const parsed = await parseInvestigateRequest(post({ ...valid, language }));
+      expect(parsed.ok && parsed.request.language).toBe(language);
+    }
+    // Blank is not a code; the form leaves the field out instead.
+    const blank = await parseInvestigateRequest(post({ ...valid, language: "" }));
+    expect(blank).toMatchObject({ ok: false, fields: ["language"] });
   });
 
   it("folds line breaks and control characters in pasted text into single spaces", async () => {

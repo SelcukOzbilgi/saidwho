@@ -7,7 +7,8 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 export type QuoteRequest = {
   quote: string;
   popularAttribution: string;
-  language: string;
+  // null when the visitor isn't sure; the planner works it out from the quote.
+  language: string | null;
   keys: { mode: "trial"; accessCode?: string } | { mode: "byok"; nebiusApiKey: string; tavilyApiKey: string };
 };
 
@@ -91,7 +92,9 @@ const SEGMENT =
   "relative z-10 flex cursor-pointer items-center justify-center rounded-sm px-3 py-2 text-center leading-snug text-muted transition-colors duration-200 hover:text-foreground has-checked:text-background has-disabled:cursor-not-allowed [&:has(:disabled):not(:has(:checked))]:text-muted/70 [&:has(:disabled):not(:has(:checked))]:hover:text-muted/70 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent-ink";
 
 
+// The first choice, and the one the form starts on, sends no language.
 const LANGUAGES = [
+  ["", "Not sure"],
   ["en", "English"],
   ["tr", "Turkish"],
   ["de", "German"],
@@ -133,7 +136,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
   const id = useId();
   const [quote, setQuote] = useState("");
   const [popularAttribution, setPopularAttribution] = useState("");
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState("");
   const [mode, setMode] = useState<"trial" | "byok">(initialMode(trialOpen, needsCode));
   const [nebiusApiKey, setNebiusApiKey] = useState("");
   const [tavilyApiKey, setTavilyApiKey] = useState("");
@@ -175,7 +178,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
     onStart({
       quote,
       popularAttribution,
-      language,
+      language: language || null,
       keys: mode === "trial" ? (needsCode ? { mode, accessCode } : { mode }) : { mode, nebiusApiKey, tavilyApiKey },
     });
   };
@@ -264,7 +267,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
           </div>
           <div>
             <label htmlFor={`${id}-lang`} className="mb-1.5 block text-sm font-medium">
-              Language of the quote
+              Language of the quote <span className="font-normal text-muted">(optional)</span>
             </label>
             <select
               id={`${id}-lang`}

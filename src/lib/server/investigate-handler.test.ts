@@ -135,7 +135,7 @@ describe("POST /api/investigate", () => {
 
     const events = frames(await res.text()).map((f) => runEventSchema.parse(f.data));
     expect(events.map((e) => e.type)).toEqual(["started", "searched", "done"]);
-    expect(calls[0].input).toMatchObject({ language: "en", excludeDomains: ["quoteinvestigator.com"] });
+    expect(calls[0].input).toMatchObject({ language: null, excludeDomains: ["quoteinvestigator.com"] });
   });
 
   it("never falls back to owner keys for a blank BYOK key, and creates no client", async () => {

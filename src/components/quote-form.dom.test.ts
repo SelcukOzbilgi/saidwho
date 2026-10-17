@@ -4,18 +4,18 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EXAMPLES, QuoteForm } from "./quote-form";
+import { EXAMPLES, QuoteForm, type QuoteRequest } from "./quote-form";
 
 // The form mounted in a page, so clicks and links go through React as they do
 // in a browser. The rest of the suite renders markup on the node environment.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-type Options = { trialOpen?: boolean; needsCode?: boolean; running?: boolean };
+type Options = { trialOpen?: boolean; needsCode?: boolean; running?: boolean; onStart?: (request: QuoteRequest) => void };
 
 let root: Root | null = null;
 let container: HTMLElement | null = null;
 
-async function mount({ trialOpen = false, needsCode = false, running = false }: Options = {}) {
+async function mount({ trialOpen = false, needsCode = false, running = false, onStart = () => {} }: Options = {}) {
   // Inside the "Run your own" section, as on the home page.
   const section = document.createElement("section");
   section.id = "run";
@@ -24,7 +24,7 @@ async function mount({ trialOpen = false, needsCode = false, running = false }: 
   document.body.append(section);
   root = createRoot(container);
   await act(async () => {
-    root!.render(createElement(QuoteForm, { trialOpen, needsCode, savesRuns: false, running, onStart: () => {}, onStop: () => {} }));
+    root!.render(createElement(QuoteForm, { trialOpen, needsCode, savesRuns: false, running, onStart, onStop: () => {} }));
   });
   return { section, form: container.querySelector("form")! };
 }
@@ -69,6 +69,29 @@ describe("QuoteForm in a page: example chips", () => {
     for (const example of EXAMPLES.filter((e) => !e.caseId)) {
       expect(fillChip(example.popularAttribution).disabled).toBe(true);
     }
+  });
+});
+
+describe("QuoteForm in a page: the language", () => {
+  // React reads a field's new value through the setter it watches, so this types the way a visitor does.
+  const type = (el: HTMLTextAreaElement, value: string) => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(el, value);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  it("starts on Not sure and then sends no language; a chip's language is sent as it is", async () => {
+    const sent: QuoteRequest[] = [];
+    const { form } = await mount({ trialOpen: true, onStart: (request) => sent.push(request) });
+    expect(languageField().value).toBe("");
+    expect(languageField().selectedOptions[0].textContent).toBe("Not sure");
+    await act(async () => type(quoteField(), "A quote I saw"));
+    await act(async () => form.requestSubmit());
+    expect(sent.at(-1)).toMatchObject({ quote: "A quote I saw", language: null });
+
+    const example = EXAMPLES.find((e) => !e.caseId)!;
+    await act(async () => fillChip(example.popularAttribution).click());
+    await act(async () => form.requestSubmit());
+    expect(sent.at(-1)).toMatchObject({ quote: example.quote, language: example.language });
   });
 });
 
