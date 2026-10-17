@@ -287,10 +287,7 @@ function RunBar({
       aria-label="This run"
       className="arrive sticky top-[calc(var(--site-header-height,3.5rem)+0.5rem)] z-20 flex items-center gap-3 rounded-sm border border-line bg-card px-4 py-3 shadow-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
     >
-      <span aria-hidden="true" className="relative grid size-2.5 shrink-0 place-items-center">
-        {running && <span className="run-ping absolute inset-0 rounded-full bg-accent" />}
-        <span className={cn("relative size-2.5 rounded-full transition-colors duration-300", dot)} />
-      </span>
+      <span aria-hidden="true" className={cn("size-2.5 shrink-0 rounded-full transition-colors duration-300", dot)} />
       <p className="min-w-0 text-sm" role="status">
         <span className="font-medium">{word}</span>
         <span className="text-muted"> · {paidBy === "trial" ? "on the free trial" : "on your own keys"}</span>

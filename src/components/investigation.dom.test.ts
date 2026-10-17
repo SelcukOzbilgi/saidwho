@@ -60,6 +60,7 @@ afterEach(async () => {
   root = null;
   document.body.replaceChildren();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("Investigation", () => {

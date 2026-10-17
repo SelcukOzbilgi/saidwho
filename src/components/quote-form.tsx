@@ -307,7 +307,7 @@ export function QuoteForm({ trialOpen, needsCode, savesRuns, running, onStart, o
               tag={trialOpen ? undefined : "Not offered on this site"}
             >
               {!trialOpen
-                ? "Trial runs are paid with the site's own keys, and they aren't switched on here. Use your own keys, or see a run already made."
+                ? "Trial runs are paid with the site's own keys, and they aren't switched on here. Use your own keys, or open a finished case."
                 : needsCode
                   ? "Paid with the site's keys, for hackathon judges and others given a code."
                   : "Paid with the site's keys, from a small daily budget. Nothing to set up."}
@@ -454,8 +454,8 @@ export function AccessCodeField({ id, value, onChange }: { id: string; value: st
     <div className="arrive mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
       <KeyInput id={id} label="Access code" value={value} onChange={onChange} maxLength={200} />
       <p className="text-xs text-muted sm:col-span-2 lg:col-span-1 xl:col-span-2">
-        Hackathon judges get the code in the testing instructions. No code? Use your own keys, or see a run already
-        made.
+        Hackathon judges get the code in the testing instructions. No code? Use your own keys, or open a finished
+        case.
       </p>
     </div>
   );
