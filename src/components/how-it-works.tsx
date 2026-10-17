@@ -1,6 +1,6 @@
 import { RotateCcw } from "lucide-react";
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 
 import { CASCADE, type Tier } from "../agent/models";
 import { LEADS_PER_ROUND, MAX_PAGES, MAX_QUERIES, TRACE_ROUNDS } from "../agent/orchestrator";
@@ -9,10 +9,11 @@ import type { CheckerRejections } from "../cases/checker-rejections";
 import { MODEL_NAME } from "../lib/model-name";
 import { plural } from "../lib/plural";
 import { Reveal } from "./reveal";
+import { RunMap, stepAnchor, ToolChip } from "./run-map";
 import { TierChip } from "./tier-chip";
-import { TraceLoop } from "./trace-loop";
 
-// The six steps of a run, for the home page. Which model each step uses comes
+// The six steps of a run, for the home page: a card that plays a run through
+// them, and next to it what each step does. Which model each step uses comes
 // from the cascade in models.ts, and the limits from the orchestrator, so this
 // can't drift from what a run does.
 
@@ -65,15 +66,6 @@ export const STEPS: readonly Step[] = [
   },
 ];
 
-// Looks like the smallest model's chip, so the tools sit quietly next to the models.
-function ToolChip({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-line px-1.5 py-px font-mono text-[10px] tracking-wide text-muted">
-      {children}
-    </span>
-  );
-}
-
 // The crossed-out card the counts link to, cut to a line or two, for the
 // Checker's step: what a thrown-out snippet looks like, from a real run.
 function crossedOutSnippet(example: CheckerRejections["example"]) {
@@ -86,12 +78,15 @@ function crossedOutSnippet(example: CheckerRejections["example"]) {
   // space late enough (a long URL, or a language written without spaces).
   const space = text.lastIndexOf(" ", 120);
   const cut = text.length <= 120 ? text : `${text.slice(0, space > 60 ? space : 120).replace(/[,;:.]$/, "")}…`;
-  return { text: cut, host: node.host, quote: found.run.quote };
+  // The map shows only the start of it, cut at a word.
+  const short = text.length <= 36 ? text : `${text.slice(0, Math.max(text.lastIndexOf(" ", 36), 20)).replace(/[,;:.]$/, "")}…`;
+  return { text: cut, short, host: node.host, quote: found.run.quote };
 }
 
 export function HowItWorks({ rejections, cases }: { rejections: CheckerRejections; cases: number }) {
   const { rejected, rescued, crossedOut, example } = rejections;
   const snippet = crossedOutSnippet(example);
+  const rounds = `up to ${plural(TRACE_ROUNDS, "round")}`;
 
   return (
     <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-6">
@@ -106,97 +101,83 @@ export function HowItWorks({ rejections, cases }: { rejections: CheckerRejection
         </p>
       </Reveal>
 
-      {/* One step under the other, joined in the order a run takes them, with the
-          Genealogist's loop back to the Readers drawn on the left. */}
-      <Reveal className="relative mt-8">
-        <TraceLoop from="Genealogist" to="Readers" rounds={TRACE_ROUNDS} />
-        <ol className="flex flex-col gap-3 pl-6 sm:pl-10">
-          {STEPS.map((step, i) => {
-            const checker = step.name === "Checker";
-            const look = { "--i": i } as CSSProperties;
-            return (
-              <li key={step.name} className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 sm:gap-x-5">
-                {/* The line down to the next step, drawn after this one comes in. */}
-                {i < STEPS.length - 1 && (
-                  <span
-                    aria-hidden="true"
-                    className="reveal-draw-y absolute top-12 -bottom-6 left-[calc(1.125rem-0.5px)] w-px bg-line"
-                    style={look}
-                  />
-                )}
-                <span
-                  aria-hidden="true"
-                  data-step-node={step.name}
-                  className={`reveal-pop relative mt-3 flex size-9 items-center justify-center rounded-full border bg-card font-mono text-xs tabular-nums ${checker ? "border-bad bg-bad/10 text-bad" : "border-line text-muted"}`}
-                  style={look}
+      {/* The card plays a run through the steps; on a wide screen it stays in view
+          while the list next to it says what each step does. The sticky card beside
+          a list is the layout of scrollxui's Features With Panel on 21st.dev. */}
+      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start lg:gap-16">
+        <div className="lg:sticky lg:top-[calc(var(--site-header-height,4.25rem)+1.5rem)]">
+          <RunMap steps={STEPS} rounds={TRACE_ROUNDS} roundsLabel={rounds} thrownOut={snippet?.short ?? null} />
+        </div>
+
+        <Reveal>
+          <ol className="flex flex-col">
+            {STEPS.map((step, i) => {
+              const checker = step.name === "Checker";
+              return (
+                <li
+                  key={step.name}
+                  id={stepAnchor(step.name)}
+                  className="reveal-up scroll-mt-6 border-t border-line py-7 first:border-t-0 first:pt-0 last:pb-0"
+                  style={{ "--i": i } as CSSProperties}
                 >
-                  {checker ? "✗" : i + 1}
-                </span>
-                <div
-                  className={`reveal-up rounded-sm border bg-card p-4 sm:p-5 ${checker ? "border-bad/40" : "border-line"}`}
-                  style={look}
-                >
-                  <div className="grid gap-x-8 gap-y-2 lg:grid-cols-[14rem_minmax(0,1fr)]">
-                    <div className="flex flex-col gap-2">
-                      <h3 className="font-medium">{step.name}</h3>
-                      <p className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
-                        {step.model && <TierChip tier={step.model.first} />}
-                        {step.model?.retry && (
-                          <>
-                            then <TierChip tier={step.model.retry} /> on a retry
-                          </>
-                        )}
-                        {step.tool && <ToolChip>{step.tool}</ToolChip>}
-                      </p>
-                      {step.name === "Genealogist" && (
-                        <p className="flex items-center gap-1.5 text-xs text-accent-ink">
-                          <RotateCcw aria-hidden="true" className="size-3.5 -scale-x-100" />
-                          Back to the Readers, up to {plural(TRACE_ROUNDS, "round")}
-                        </p>
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+                    <span className="font-mono text-xs text-muted tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                    <h3 className="font-serif text-2xl font-semibold">{step.name}</h3>
+                    <p className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+                      {step.model && <TierChip tier={step.model.first} />}
+                      {step.model?.retry && (
+                        <>
+                          then <TierChip tier={step.model.retry} /> on a retry
+                        </>
                       )}
-                    </div>
-                    <div>
-                      <p className="text-sm leading-relaxed text-foreground/85">{step.does}</p>
-                      {checker && rejected > 0 && (
-                        <p className="mt-3 border-t border-line pt-3 text-sm">
-                          In the {cases} saved cases it turned down {plural(rejected, "snippet")}.{" "}
-                          {rescued > 0 && `${rescued} passed when ${MODEL_NAME[CASCADE.reread.tier]} read the page again`}
-                          {rescued > 0 && crossedOut > 0 && ", and "}
-                          {crossedOut > 0 && `${crossedOut} ${crossedOut === 1 ? "stays" : "stay"} crossed out`}
-                          {example ? (
-                            <>
-                              ,{" "}
-                              <Link
-                                href={`/cases/${example.caseId}#node-${example.nodeId}`}
-                                className="underline decoration-bad underline-offset-4 hover:text-bad"
-                              >
-                                like this one
-                              </Link>
-                              .
-                            </>
-                          ) : (
-                            "."
-                          )}
-                        </p>
-                      )}
-                      {checker && snippet && (
-                        <figure className="mt-3 rounded-sm border border-dashed border-bad/40 bg-bad/5 px-3 py-2.5">
-                          <blockquote className="font-serif text-[15px] leading-snug text-foreground/70">
-                            <s className="decoration-bad decoration-[0.09em]">“{snippet.text}”</s>
-                          </blockquote>
-                          <figcaption className="mt-1.5 text-xs text-muted">
-                            Crossed out in the case for “{snippet.quote}”: a sentence a Reader copied from {snippet.host}.
-                          </figcaption>
-                        </figure>
-                      )}
-                    </div>
+                      {step.tool && <ToolChip>{step.tool}</ToolChip>}
+                    </p>
                   </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </Reveal>
+                  <p className="mt-3 max-w-2xl leading-relaxed text-foreground/85">{step.does}</p>
+                  {step.name === "Genealogist" && (
+                    <p className="mt-3 flex items-center gap-1.5 text-sm text-accent-ink">
+                      <RotateCcw aria-hidden="true" className="size-3.5 -scale-x-100" />
+                      Back to the Readers, {rounds}
+                    </p>
+                  )}
+                  {checker && rejected > 0 && (
+                    <p className="mt-4 max-w-2xl border-t border-line pt-4 text-sm">
+                      In the {cases} saved cases it turned down {plural(rejected, "snippet")}.{" "}
+                      {rescued > 0 && `${rescued} passed when ${MODEL_NAME[CASCADE.reread.tier]} read the page again`}
+                      {rescued > 0 && crossedOut > 0 && ", and "}
+                      {crossedOut > 0 && `${crossedOut} ${crossedOut === 1 ? "stays" : "stay"} crossed out`}
+                      {example ? (
+                        <>
+                          ,{" "}
+                          <Link
+                            href={`/cases/${example.caseId}#node-${example.nodeId}`}
+                            className="underline decoration-bad underline-offset-4 hover:text-bad"
+                          >
+                            like this one
+                          </Link>
+                          .
+                        </>
+                      ) : (
+                        "."
+                      )}
+                    </p>
+                  )}
+                  {checker && snippet && (
+                    <figure className="mt-3 max-w-2xl rounded-sm border border-dashed border-bad/40 bg-bad/5 px-3 py-2.5">
+                      <blockquote className="font-serif text-[15px] leading-snug text-foreground/70">
+                        <s className="decoration-bad decoration-[0.09em]">“{snippet.text}”</s>
+                      </blockquote>
+                      <figcaption className="mt-1.5 text-xs text-muted">
+                        Crossed out in the case for “{snippet.quote}”: a sentence a Reader copied from {snippet.host}.
+                      </figcaption>
+                    </figure>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </Reveal>
+      </div>
     </section>
   );
 }

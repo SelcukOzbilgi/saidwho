@@ -342,55 +342,13 @@ details[open] .menu-panel {
   }
 }
 
-/* How it works: the loop from the Genealogist back to the Readers draws in,
-   then a dot runs it once for each round a run may take. */
-.hiw-loop-path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-}
-[data-reveal="wait"] .hiw-loop-path {
-  stroke-dashoffset: 1;
-}
-[data-reveal="in"] .hiw-loop-path {
-  transition: stroke-dashoffset 700ms ease-out 900ms;
-}
-[data-reveal="wait"] .hiw-loop-head {
-  opacity: 0;
-}
-[data-reveal="in"] .hiw-loop-head {
-  transition: opacity 200ms ease-out 1500ms;
-}
-.hiw-loop-dot {
-  display: none;
-}
-[data-reveal="in"] .hiw-loop-dot {
-  display: block;
-  offset-rotate: 0deg;
-  animation: hiw-round 1.4s ease-in-out 1.7s both;
-  animation-iteration-count: var(--rounds, 1);
-}
-@keyframes hiw-round {
-  from {
-    offset-distance: 0%;
-    opacity: 1;
-  }
-  to {
-    offset-distance: 100%;
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hero-trace *,
-  .hero-trace *::after,
-  .hiw-loop-dot {
+  .hero-trace *::after {
     animation: none !important;
   }
   [data-reveal] * {
     transition: none !important;
-  }
-  .hiw-loop-dot {
-    display: none !important;
   }
 }
 
@@ -723,5 +681,217 @@ form[data-ready] .run-go {
 @media (prefers-reduced-motion: reduce) and (hover: hover) {
   .cg-link:hover :is(.cg-figures, .cg-trace) {
     transform: none;
+  }
+}
+
+/* Home: hero and how it works */
+
+/* The hero's year strip (hero-b.tsx): the line draws in, the marks land on it
+   in the order the run found them, then the oldest is ringed and named. The
+   same gate as the trace above, so without JavaScript, or with reduced motion,
+   it shows how it ends. */
+.hero-axis {
+  transform-origin: left;
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .hero-trace:not(.hero-rewind) .hero-axis {
+    animation: hero-axis 600ms ease-out both;
+    animation-delay: var(--at);
+  }
+  .hero-trace:not(.hero-rewind) .hero-mark {
+    animation: hero-mark 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--at);
+  }
+  .hero-trace:not(.hero-rewind) .hero-pick {
+    animation: hero-pick 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--at);
+  }
+}
+@keyframes hero-axis {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes hero-mark {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@keyframes hero-pick {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+/* How it works: the run map (run-map.tsx). PlayOnView sets data-run on it:
+   "wait" holds every step at its start, "play" runs them in order from the
+   times set on each row (--start, --done, --busy) and on the map (--loop-at,
+   --round, --rounds), and "done" is the finished run again. Without the
+   attribute it is a finished run too. */
+.hiw-busy,
+.hiw-again,
+.hiw-loop-dot {
+  opacity: 0;
+}
+.hiw-fill {
+  transform-origin: top;
+}
+/* While it plays, the ring shows the step the run is on, so the mark for the
+   step being read in the list (run-map-spy.tsx) waits until it is done. */
+:is([data-run="wait"], [data-run="play"]) a[aria-current="step"] {
+  background-color: transparent;
+  box-shadow: none;
+}
+.play-again {
+  display: none;
+}
+[data-run="wait"] :is(.hiw-done, .hiw-thrown, .hiw-rounds, .hiw-loop-head) {
+  opacity: 0;
+}
+[data-run="wait"] .hiw-name {
+  color: var(--muted);
+}
+[data-run="wait"] .hiw-fill {
+  transform: scaleY(0);
+}
+[data-run="wait"] .hiw-thrown .strike::after {
+  transform: scaleX(0);
+}
+[data-run="wait"] .hiw-loop-path {
+  stroke-dashoffset: 1;
+}
+.hiw-loop-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .play-again {
+    display: inline-flex;
+  }
+  [data-run="play"] .hiw-busy {
+    animation: hiw-busy var(--busy) ease-out var(--start) both;
+  }
+  [data-run="play"] .hiw-done {
+    animation: hiw-in 240ms ease-out var(--done) both;
+  }
+  [data-run="play"] .hiw-name {
+    animation: hiw-name 240ms ease-out var(--start) both;
+  }
+  [data-run="play"] .hiw-fill {
+    animation: hiw-fill 260ms ease-out var(--done) both;
+  }
+  /* The Checker's snippet comes out of its row, is struck through, and stays out. */
+  [data-run="play"] .hiw-thrown {
+    animation: hiw-out 320ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--start) + 200ms) both;
+  }
+  [data-run="play"] .hiw-thrown .strike::after {
+    animation: hero-strike 380ms ease-out calc(var(--start) + 600ms) both;
+  }
+  /* The loop draws in from the Genealogist, then a dot runs it once a round,
+     and each time it gets back the Readers and the Checker light up again. */
+  [data-run="play"] .hiw-loop-path {
+    animation: hiw-draw 450ms ease-out calc(var(--loop-at) - 450ms) both;
+  }
+  [data-run="play"] :is(.hiw-loop-head, .hiw-rounds) {
+    animation: hiw-in 200ms ease-out var(--loop-at) both;
+  }
+  [data-run="play"] .hiw-loop-dot {
+    offset-rotate: 0deg;
+    animation: hiw-round var(--round) ease-in-out var(--loop-at) var(--rounds) both;
+  }
+  [data-run="play"] .hiw-again {
+    animation: hiw-again var(--round) ease-out var(--loop-at) var(--rounds) both;
+  }
+  [data-run="play"] .hiw-again-late {
+    animation-name: hiw-again-late;
+  }
+}
+@keyframes hiw-busy {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  20%,
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@keyframes hiw-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hiw-name {
+  from {
+    color: var(--muted);
+  }
+}
+@keyframes hiw-fill {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes hiw-out {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes hiw-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+/* A round: the dot runs the loop, then rests on the Readers while they and
+   the Checker read and check what the Genealogist found. */
+@keyframes hiw-round {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  55% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  70%,
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+@keyframes hiw-again {
+  0%,
+  52% {
+    opacity: 0;
+  }
+  62% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hiw-again-late {
+  0%,
+  68% {
+    opacity: 0;
+  }
+  78% {
+    opacity: 1;
+  }
+  96%,
+  100% {
+    opacity: 0;
   }
 }
