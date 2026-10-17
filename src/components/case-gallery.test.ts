@@ -43,4 +43,15 @@ describe("CaseGallery", () => {
     const alone = renderToStaticMarkup(createElement(CaseGallery, { cases: [stray] }));
     expect(alone).not.toMatch(/Matches the known answer|Differs from the known answer|No verdict to compare/);
   });
+
+  it("ships the cards in place, so they read the same without JavaScript", () => {
+    expect(html).not.toMatch(/data-arrive=|opacity:\s*0/);
+  });
+
+  it("previews each run's earliest trace on its card, year first", () => {
+    expect(card(html, "be-the-change")).toContain("Earliest trace: 1974, Arleen Lorrance");
+    expect(card(html, "so-much-owed")).toContain("Earliest trace: 1940, Winston Churchill");
+    // The Judge gave no author or year for this one, so there is nothing to preview.
+    expect(card(html, "gel-ne-olursan-ol")).not.toContain("Earliest trace");
+  });
 });
