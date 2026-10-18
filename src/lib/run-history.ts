@@ -70,8 +70,17 @@ function write(runs: readonly PastRun[]) {
   window.dispatchEvent(new Event(CHANGED));
 }
 
+// Text past what an entry may hold is cut, so a long credit or trace shortens
+// the card rather than leaving the run off the list.
+const clip = (text: string | null, max: number) => (text && text.length > max ? `${text.slice(0, max - 1)}…` : text);
+
 export function rememberRun(run: PastRun) {
-  const parsed = pastRunSchema.safeParse(run);
+  const parsed = pastRunSchema.safeParse({
+    ...run,
+    quote: clip(run.quote, 500),
+    credit: clip(run.credit, 200),
+    trace: clip(run.trace, 300),
+  });
   if (parsed.success) write(withRun(parseHistory(read()), parsed.data));
 }
 

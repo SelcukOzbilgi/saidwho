@@ -71,6 +71,45 @@ afterEach(async () => {
 });
 
 describe("Investigation", () => {
+  it("still lists a stopped run whose page comes up after another run has started", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // A run that names its id first, as the server does when it saves runs, then stays open.
+    const withId = (signal: AbortSignal, quote: string, id: string | null) => {
+      const head = id ? `event: run\ndata: ${JSON.stringify({ id })}\n\n` : "";
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(`${head}data: ${JSON.stringify({ ...STARTED, quote })}\n\n`));
+          signal.addEventListener("abort", () => controller.error(new DOMException("Aborted", "AbortError")));
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+    };
+    let posts = 0;
+    vi.stubGlobal("fetch", (url: string, init: RequestInit = {}) => {
+      if (init.method === "HEAD") return Promise.resolve(new Response(null, { status: url === "/runs/stoppedRun1" ? 200 : 404 }));
+      posts += 1;
+      return Promise.resolve(posts === 1 ? withId(init.signal!, "First quote", "stoppedRun1") : withId(init.signal!, "Second quote", null));
+    });
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    try {
+      await mount();
+      await typeAndRun("First quote");
+      await act(async () => button("Stop")!.click());
+      await act(async () => vi.advanceTimersByTimeAsync(20));
+      await act(async () => button("Run another quote")!.click());
+      await typeAndRun("Second quote");
+      // The stopped run's page turns up on the first check, a few seconds on.
+      await act(async () => vi.advanceTimersByTimeAsync(3_100));
+      const kept = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]");
+      expect(kept).toEqual([expect.objectContaining({ id: "stoppedRun1", quote: "First quote" })]);
+      // The run on screen is the second one, so the first one's link isn't shown under it.
+      expect(container!.textContent).not.toContain("Saved. Anyone with this link");
+    } finally {
+      localStorage.clear();
+      vi.useRealTimers();
+    }
+  });
+
   it("puts a run the server saved on this browser's list of the visitor's runs, once", async () => {
     const DONE: RunEvent = { type: "done", nebiusUsd: 0.004, tavilyCredits: 5, unknownCostCalls: 0, seconds: 1 };
     const saved = 'event: saved\ndata: {"id":"savedRun_01"}\n\n';

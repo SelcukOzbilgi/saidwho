@@ -63,6 +63,15 @@ describe("run history", () => {
     expect(changed).toHaveBeenCalledTimes(3);
   });
 
+  it("cuts a credit or trace too long to keep, rather than leaving the run off", () => {
+    rememberRun(run(1, { credit: "C".repeat(250), trace: `1903, ${"T".repeat(320)}, via example.org` }));
+    const [kept] = historySnapshot();
+    expect(kept.id).toBe(run(1).id);
+    expect(kept.credit).toHaveLength(200);
+    expect(kept.trace).toHaveLength(300);
+    expect(kept.trace!.endsWith("…")).toBe(true);
+  });
+
   it("hands React the same list until the stored text changes", () => {
     rememberRun(run(1));
     const first = historySnapshot();
