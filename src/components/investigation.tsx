@@ -6,6 +6,7 @@ import { type CSSProperties, type ReactNode, useEffect, useReducer, useRef, useS
 
 import type { RunEvent } from "../agent/events";
 import { type PaidBy, type Problem, type ProblemAction, refusal, runProblem } from "../lib/run-problem";
+import { type PastRun, rememberRun } from "../lib/run-history";
 import { initialRunState, reduceRun, type RunState } from "../lib/run-state";
 import { readRunStream } from "../lib/run-stream";
 import { cn } from "../lib/utils";
@@ -13,6 +14,7 @@ import { CaseLinks, QuoteForm, type QuoteFormHandle, type QuoteRequest } from ".
 import type { TypicalRun } from "./run-preview";
 import { ProblemCard } from "./problem-card";
 import { RunView } from "./run-view";
+import { earliestTrace } from "./verdict-card";
 
 // Codes the page finds on its own, on top of the ones POST /api/investigate
 // returns; refusal() and runProblem() in lib/run-problem.ts say what each means.
@@ -23,8 +25,9 @@ type Status = "idle" | "running" | "finished" | "stopped" | "failed";
 // A stopped run is saved once the calls it had running finish, which can take
 // up to a minute and a half (NEBIUS_TIMEOUT_MS), and the save itself up to ten
 // seconds more. Its stream is closed by then, so the page checks every few
-// seconds, for two minutes, whether the run's page exists, and links to it once
-// it does.
+// seconds, for two minutes, whether the run's page exists. Once it does, the
+// run goes on the visitor's list, and the page links to it if the run is still
+// the one on screen.
 const SAVE_CHECKS = 40;
 const SAVE_CHECK_MS = 3_000;
 
@@ -41,6 +44,21 @@ type Action = { type: "reset" } | { type: "event"; event: RunEvent };
 
 const reducer = (state: RunState, action: Action): RunState =>
   action.type === "reset" ? initialRunState : reduceRun(state, action.event);
+
+// What the visitor's list of their runs keeps of a saved one (lib/run-history.ts).
+function pastRun(id: string, run: RunState): PastRun | null {
+  if (!run.quote) return null;
+  const found = run.verdict ? earliestTrace(run.verdict.output, run.nodes) : null;
+  return {
+    id,
+    quote: run.quote,
+    language: run.language,
+    credit: run.popularAttribution,
+    verdict: run.verdict?.output.verdict ?? null,
+    trace: found ? (found.via ? `${found.trace}, via ${found.via}` : found.trace) : null,
+    at: new Date().toISOString(),
+  };
+}
 
 // The order the page's parts come in as it opens (globals.css, Run page).
 const order = (i: number) => ({ "--i": i }) as CSSProperties;
@@ -118,10 +136,19 @@ export function Investigation({
     const live = () => controller.current === abort && !abort.signal.aborted;
     // The id the server will save this run under, when it saves runs.
     let runId: string | null = null;
+    // This run as it stands, kept beside the screen's copy, so it goes on the
+    // visitor's list once saved even if another run has taken the screen by then.
+    let own = initialRunState;
+    const saved = (id: string) => {
+      const entry = pastRun(id, own);
+      if (entry) rememberRun(entry);
+      if (controller.current === abort) setSavedId(id);
+    };
     const stopped = () => {
+      // Checked for while the page is open, even once another run has started.
+      if (runId) void waitForSave(runId, () => mounted.current, saved);
       if (controller.current !== abort) return;
       setStatus("stopped");
-      if (runId) void waitForSave(runId, () => mounted.current && controller.current === abort, setSavedId);
     };
     const fail = (code: string) => {
       setProblem(code);
@@ -164,11 +191,12 @@ export function Investigation({
           continue;
         }
         if (item.kind === "saved") {
-          setSavedId(item.id);
+          saved(item.id);
           continue;
         }
         heard = true;
         if (item.event.type === "done") done = true;
+        own = reduceRun(own, item.event);
         dispatch({ type: "event", event: item.event });
       }
       if (broke && live()) fail("run_failed");

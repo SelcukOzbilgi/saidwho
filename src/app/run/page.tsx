@@ -3,6 +3,7 @@ import { connection } from "next/server";
 
 import { CASES } from "../../cases/cases";
 import { Investigation } from "../../components/investigation";
+import { RunHistory } from "../../components/run-history";
 import { typicalRun } from "../../components/run-preview";
 import { SiteFooter } from "../../components/site-footer";
 import { env } from "../../lib/server/env";
@@ -49,6 +50,8 @@ export default async function RunPage() {
           intro={description}
         />
       </section>
+
+      <RunHistory />
 
       <SiteFooter />
     </main>
