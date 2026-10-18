@@ -16,7 +16,7 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ### Changed
 - The site header stays at the top while the page scrolls, as a see-through bar the page blurs and fades into, and links to a section on the home page stop below it. When large text makes the header take more than a quarter of the window, it scrolls away with the page (#59)
-- A new look across the site: Schibsted Grotesk and IBM Plex Mono replace Geist, every card and button shares one small corner radius, and the footer has the site's links. Nothing moves when the system asks for reduced motion (#60)
+- A new look across the site: Schibsted Grotesk and IBM Plex Mono replace Geist, and the footer has the site's links. Cards, fields and text buttons share one small corner radius, and icon buttons are round. Nothing moves when the system asks for reduced motion (#60)
 - The home page opens on the featured case: the quote set large, the name it's usually credited to struck out, and the earliest trace underlined by a marker drawn on at a pen's pace. How it works is a numbered map that marks the step in view, the eval scores count up as they come into view, and the case cards rise in as they are scrolled to (#60, #61)
 - The lineage on a case page is one vertical line of steps that draws in step by step (#60)
 - The quote's language can be left as "Not sure" (#60)
