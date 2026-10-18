@@ -15,6 +15,7 @@
     "investigate": "node --env-file=.env.local --conditions=react-server --import tsx scripts/investigate.ts",
     "eval": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/eval.ts",
     "rejudge": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/rejudge.ts",
+    "trial-code": "node --conditions=react-server --import tsx scripts/trial-code.ts",
     "prepare": "node scripts/enable-hooks.mjs"
   },
   "dependencies": {

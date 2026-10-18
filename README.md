@@ -174,6 +174,8 @@ The free trial option, which runs on the server's own keys, stays off unless all
 
 With `TRIAL_ACCESS_CODE` set, the form shows an access code field, and a link ending in `/run#code=<the code>` fills it in (an older `/#code=` link goes on to the run page too). The code is checked on the server and never sent to the browser, and the part of a link after `#` never reaches the server. Each try with a wrong or missing code uses up one of the visitor's hourly runs, so guessing is slow. That count is per address, though, so the code has to be unguessable on its own: at least 20 characters, and only letters, digits and `-`, `_`, `.` or `~`, so the link carries it unchanged. Make one with something like `openssl rand -base64 18 | tr '+/' '-_'`. If the attempt can't be counted, the code isn't checked and no trial run starts.
 
+Codes with a set number of runs, one for a single test run, say, or 50 for a group, work next to it once runs are saved to Supabase (below). Make one with `pnpm trial-code --runs 50 --label judges`. It writes the code to `~/.saidwho/codes/judges.txt`, which only you can read, and prints one `insert` line to run in the Supabase SQL Editor. That line holds the code's hash, never the code, and the table keeps only the hash. Each run started with the code takes one of its runs, and a run the budget turns down gives its run back. Once they're all taken, the code is refused and the page says it's used up. The code is checked like `TRIAL_ACCESS_CODE`, after the attempt is counted against the visitor's hourly runs, and it skips the daily trial count too. These codes work only while `TRIAL_ACCESS_CODE` is set, since that is what makes the trial ask for a code; to hand out only counted codes, set it to one you keep to yourself. `select label, used_runs, max_runs from public.trial_codes;` shows what each code has left, and deleting a code's row turns it off. If the database fails partway through counting, a code can lose a run that never started, since an unclear count is never given back; `update public.trial_codes set used_runs = used_runs - 1 where label = 'judges';` returns it.
+
 A run started from the page stops making new model calls once its estimated Nebius spend reaches $0.50 with your keys, or $0.10 on the trial.
 
 One visitor can start up to 10 runs an hour on any keys (`RUNS_PER_IP_PER_HOUR`), and up to 3 trial runs a UTC day (`TRIAL_RUNS_PER_IP_PER_DAY`). A visitor is counted by their IP address, as Vercel reports it. Anywhere else the address can't be trusted, since the visitor could send any value, so all visitors share one count. Only a keyed hash of the address is kept. In Supabase, ended counts are deleted a batch at a time as later runs are counted, starting an hour after their hour or day ends, so a hash can stay a while longer when the site is quiet. Run locally, all trial runs share one count, so raise `TRIAL_RUNS_PER_IP_PER_DAY` in `.env.local` for a demo with more than 3. Runs with the right access code don't count against `TRIAL_RUNS_PER_IP_PER_DAY`, since several people with the code may share one address. The hourly limit still applies to them, and the daily budget caps what they spend together.
@@ -226,11 +228,13 @@ src/eval/         the test sets' format, how a run is scored, the eval's argumen
                   filters scripts/rejudge.ts uses
 eval/             the test set of 20 quotes and the held-out set of 10, their scores, and
                   the script that runs the eval as a Nebius Serverless AI job
-supabase/         the tables for saved runs, the trial budget and per-visitor limits
+supabase/         the tables for saved runs, the trial budget, per-visitor limits and
+                  counted access codes
 scripts/          the command-line investigation, the eval and the smoke tests, plus
                   rejudge.ts, which judges saved runs again (see eval/README.md),
-                  saved-runs.ts, which rebuilds what a saved run's Judge saw, and the
-                  setup of the pre-commit secret scan
+                  saved-runs.ts, which rebuilds what a saved run's Judge saw,
+                  trial-code.ts, which makes access codes with a set number of runs,
+                  and the setup of the pre-commit secret scan
 docs/             the README's pictures; social-preview.jpg is the GitHub repository's
                   preview image
 ```

@@ -6,6 +6,7 @@ import { createNebiusClient } from "@/lib/server/providers/nebius";
 import { createTavilyClient } from "@/lib/server/providers/tavily";
 import { limiterFromEnv } from "@/lib/server/rate-limit";
 import { runStoreFromEnv } from "@/lib/server/run-store";
+import { trialCodesFromEnv } from "@/lib/server/trial-codes";
 
 // A run is usually under a minute; the handler ends it well before this (RUN_DEADLINE_MS).
 export const maxDuration = 300;
@@ -16,6 +17,7 @@ export const POST = createInvestigateHandler({
   env,
   ledger: ledgerFromEnv(env),
   limiter: limiterFromEnv(env),
+  trialCodes: trialCodesFromEnv(env),
   excludeDomains: ANSWER_SITES,
   createNebius: createNebiusClient,
   createTavily: createTavilyClient,

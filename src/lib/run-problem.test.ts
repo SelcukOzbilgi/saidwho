@@ -136,11 +136,23 @@ describe("runProblem", () => {
 
 describe("refusal", () => {
   it("gives every code the server sends a title and a way forward where there is one", () => {
-    for (const code of ["daily_budget_spent", "trial_limit_reached", "trial_disabled", "access_code_wrong", "limits_unavailable"]) {
+    for (const code of [
+      "daily_budget_spent",
+      "trial_limit_reached",
+      "trial_disabled",
+      "access_code_wrong",
+      "access_code_used_up",
+      "limits_unavailable",
+    ]) {
       const problem = refusal(code);
       expect(problem.title).not.toBe("Couldn't reach the server");
       expect(problem.actions.length).toBeGreaterThan(0);
     }
+  });
+
+  it("tells a used-up access code from a wrong one", () => {
+    expect(refusal("access_code_used_up").title).toBe("That access code is used up");
+    expect(refusal("access_code_wrong").title).toBe("That access code isn't right");
   });
 
   it("says how long to wait when the server said", () => {
