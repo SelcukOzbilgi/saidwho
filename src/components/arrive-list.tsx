@@ -14,31 +14,8 @@ export function ArriveList({ children, className }: { children: ReactNode; class
 
   useEffect(() => {
     const list = ref.current;
-    if (!list || typeof IntersectionObserver === "undefined") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const items = [...list.children].filter((el): el is HTMLElement => el instanceof HTMLElement);
-    const later = items.filter((el) => el.getBoundingClientRect().top >= window.innerHeight);
-    later.forEach((el) => (el.dataset.arrive = "wait"));
-    // A little inside the bottom edge, as Reveal does, so a card moves once it can be seen.
-    const seen = new IntersectionObserver(
-      (entries) => {
-        const now = entries.filter((e) => e.isIntersecting).map((e) => e.target as HTMLElement);
-        now.forEach((el, i) => {
-          el.style.setProperty("--wait", `${Math.min(i, 8) * 70}ms`);
-          el.dataset.arrive = "in";
-          seen.unobserve(el);
-        });
-      },
-      { rootMargin: "0px 0px -8% 0px" },
-    );
-    later.forEach((el) => seen.observe(el));
-    return () => {
-      seen.disconnect();
-      items.forEach((el) => {
-        delete el.dataset.arrive;
-        el.style.removeProperty("--wait");
-      });
-    };
+    if (!list) return;
+    return arriveOnView([...list.children].filter((el): el is HTMLElement => el instanceof HTMLElement));
   }, []);
 
   return (
@@ -46,4 +23,34 @@ export function ArriveList({ children, className }: { children: ReactNode; class
       {children}
     </ul>
   );
+}
+
+// What ArriveList does to its items, for a list that marks other elements: sets
+// back the ones still out of the window and brings each in as it gets there.
+// Returns the clean-up.
+export function arriveOnView(items: readonly HTMLElement[]): () => void {
+  if (typeof IntersectionObserver === "undefined") return () => {};
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return () => {};
+  const later = items.filter((el) => el.getBoundingClientRect().top >= window.innerHeight);
+  later.forEach((el) => (el.dataset.arrive = "wait"));
+  // A little inside the bottom edge, as Reveal does, so a card moves once it can be seen.
+  const seen = new IntersectionObserver(
+    (entries) => {
+      const now = entries.filter((e) => e.isIntersecting).map((e) => e.target as HTMLElement);
+      now.forEach((el, i) => {
+        el.style.setProperty("--wait", `${Math.min(i, 8) * 70}ms`);
+        el.dataset.arrive = "in";
+        seen.unobserve(el);
+      });
+    },
+    { rootMargin: "0px 0px -8% 0px" },
+  );
+  later.forEach((el) => seen.observe(el));
+  return () => {
+    seen.disconnect();
+    items.forEach((el) => {
+      delete el.dataset.arrive;
+      el.style.removeProperty("--wait");
+    });
+  };
 }

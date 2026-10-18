@@ -6,6 +6,7 @@ import { type CSSProperties, type ReactNode, useEffect, useReducer, useRef, useS
 
 import type { RunEvent } from "../agent/events";
 import { type PaidBy, type Problem, type ProblemAction, refusal, runProblem } from "../lib/run-problem";
+import { rememberRun } from "../lib/run-history";
 import { initialRunState, reduceRun, type RunState } from "../lib/run-state";
 import { readRunStream } from "../lib/run-stream";
 import { cn } from "../lib/utils";
@@ -13,6 +14,7 @@ import { CaseLinks, QuoteForm, type QuoteFormHandle, type QuoteRequest } from ".
 import type { TypicalRun } from "./run-preview";
 import { ProblemCard } from "./problem-card";
 import { RunView } from "./run-view";
+import { earliestTrace } from "./verdict-card";
 
 // Codes the page finds on its own, on top of the ones POST /api/investigate
 // returns; refusal() and runProblem() in lib/run-problem.ts say what each means.
@@ -91,6 +93,29 @@ export function Investigation({
   // What to do once the form opens again from a way forward under a run, in
   // place of putting the cursor in the quote.
   const onReopen = useRef<(() => void) | null>(null);
+
+  // Once the server has saved a run, it goes on this browser's list of the
+  // visitor's runs (RunHistory), from the run as it stands then. The run is
+  // read through a ref, so the entry is written once per saved id rather than
+  // again on every later change to the run.
+  const latestRun = useRef(run);
+  useEffect(() => {
+    latestRun.current = run;
+  });
+  useEffect(() => {
+    const { quote, language, popularAttribution, verdict, nodes } = latestRun.current;
+    if (!savedId || !quote) return;
+    const found = verdict ? earliestTrace(verdict.output, nodes) : null;
+    rememberRun({
+      id: savedId,
+      quote,
+      language,
+      credit: popularAttribution,
+      verdict: verdict?.output.verdict ?? null,
+      trace: found ? (found.via ? `${found.trace}, via ${found.via}` : found.trace) : null,
+      at: new Date().toISOString(),
+    });
+  }, [savedId]);
 
   // Leaving the page ends the run, which stops the spend on the server too.
   useEffect(() => {

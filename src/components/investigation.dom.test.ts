@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RunEvent } from "../agent/events";
+import { HISTORY_KEY } from "../lib/run-history";
 import { Investigation } from "./investigation";
 
 // The run page with a stand-in for POST /api/investigate, so a run can start,
@@ -70,6 +71,21 @@ afterEach(async () => {
 });
 
 describe("Investigation", () => {
+  it("puts a run the server saved on this browser's list of the visitor's runs, once", async () => {
+    const DONE: RunEvent = { type: "done", nebiusUsd: 0.004, tavilyCredits: 5, unknownCostCalls: 0, seconds: 1 };
+    const saved = 'event: saved\ndata: {"id":"savedRun_01"}\n\n';
+    vi.stubGlobal("fetch", () => {
+      const text = [STARTED, DONE].map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") + saved;
+      return Promise.resolve(new Response(text, { status: 200, headers: { "content-type": "text/event-stream" } }));
+    });
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    await mount();
+    await typeAndRun("Q");
+    const kept = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]");
+    expect(kept).toEqual([expect.objectContaining({ id: "savedRun_01", quote: "Q", verdict: null, credit: null })]);
+    localStorage.clear();
+  });
+
   it("puts the run in the form's place, and brings the form back with the quote after a stop", async () => {
     vi.stubGlobal("fetch", (_url: string, init: RequestInit) => Promise.resolve(openStream(init.signal!)));
     vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
