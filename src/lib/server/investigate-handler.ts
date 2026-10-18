@@ -184,11 +184,12 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     // to guess freely. A right code's count is the run's own hourly count.
     //
     // A code other than TRIAL_ACCESS_CODE may be a counted one (trial-codes.ts),
-    // with a run taken from it here. A used-up code is right but has no runs
-    // left, so it is refused and gives its hourly count back. When the count
-    // can't be made, no trial run starts, and the hourly count stays, as for a
-    // wrong code; a call that failed may still have taken the run, so that isn't
-    // given back either. A run refused after this gives its code's run back.
+    // with a run taken from it here. A used-up code is refused and keeps its
+    // hourly count, as a wrong code does, so sending it again and again is
+    // still held to the hourly limit. When the count can't be made, no trial run
+    // starts and the hourly count stays; a call that failed may still have taken
+    // the run, so that isn't given back either. A run refused after this gives
+    // its code's run back.
     if (keys.withCode) {
       let windowStart: number | null;
       try {
@@ -203,9 +204,9 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       }
       const sent = keyRequest.mode === "trial" ? (keyRequest.accessCode?.trim() ?? "") : "";
       if (!sent) return fail(403, "access_code_required");
-      let use: CodeUse | "shared" = "shared";
       if (!accessCodeMatches(sent, deps.env.TRIAL_ACCESS_CODE ?? "")) {
         if (!deps.trialCodes) return fail(403, "access_code_wrong");
+        let use: CodeUse;
         try {
           use = await deps.trialCodes.use(sent);
         } catch (err: unknown) {
@@ -213,10 +214,10 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
           return fail(503, "limits_unavailable");
         }
         if (use === "unknown") return fail(403, "access_code_wrong");
+        if (use === "used_up") return fail(403, "access_code_used_up");
+        codeTaken = sent;
       }
       taken.push({ limit: runsLimit, windowStart });
-      if (use === "used_up") return refuse(fail(403, "access_code_used_up"));
-      if (use === "ok") codeTaken = sent;
     }
     for (const limit of limits) {
       if (taken.some((t) => t.limit === limit)) continue;

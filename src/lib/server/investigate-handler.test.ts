@@ -891,7 +891,7 @@ describe("POST /api/investigate with a counted access code", () => {
     expect(unhits).toEqual([]);
   });
 
-  it("refuses a code once its runs are taken, and gives that attempt's hourly count back", async () => {
+  it("refuses a code once its runs are taken, and keeps that attempt's hourly count", async () => {
     const codes = fakeCodes({ [COUNTED]: 1 });
     const { limiter, hits, unhits } = spyLimiter();
     const ledger = createDailyLedger(1);
@@ -906,7 +906,7 @@ describe("POST /api/investigate with a counted access code", () => {
     expect(calls).toHaveLength(1);
     expect(reserve).toHaveBeenCalledTimes(1);
     expect(names(hits)).toEqual(["runs", "runs"]);
-    expect(unhits).toEqual([hits[1]]);
+    expect(unhits).toEqual([]);
     expect(codes.givenBack).toEqual([]);
   });
 
