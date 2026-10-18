@@ -76,6 +76,8 @@ export function refusal(code: string, retryAfter: number | null = null, fields: 
       return bad("The free trial needs an access code", "Add it in the field above, or use your own keys.", ["own_keys"]);
     case "access_code_wrong":
       return bad("That access code isn't right", "Check it for a missing character and try again, or use your own keys.", ["own_keys"]);
+    case "access_code_used_up":
+      return bad("That access code is used up", "It was good for a set number of runs, and they're all taken. Ask for a new one, or use your own keys.", ["own_keys"]);
     case "daily_budget_spent":
       return warn("Today's free trial budget is spent", "It refills at midnight UTC. Your own keys work any time.", ["own_keys", "cases"]);
     case "trial_limit_reached":

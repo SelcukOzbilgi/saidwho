@@ -20,6 +20,7 @@ import { type TavilyClient, TAVILY_TIMEOUT_MS } from "./providers/tavily";
 import { createMemoryLimiter, type Limit, type RateLimiter } from "./rate-limit";
 import { accessCodeMatches } from "./run-keys";
 import { RUN_STORE_TIMEOUT_MS, type RunStore } from "./run-store";
+import type { CodeUse, TrialCodes } from "./trial-codes";
 
 // The real comparison, watched, so a test can tell whether a code was compared at all.
 vi.mock("./run-keys", async (importOriginal) => {
@@ -844,5 +845,141 @@ describe("POST /api/investigate with an access code", () => {
     await res.text();
     expect(names(hits)).toEqual(["runs", "trial"]);
     expect(calls).toHaveLength(1);
+  });
+});
+
+// Counted codes, as trial-codes.ts keeps them in Supabase: each holds the runs it has left.
+function fakeCodes(left: Record<string, number>, fail = false) {
+  const runsLeft = new Map(Object.entries(left));
+  const used: string[] = [];
+  const givenBack: string[] = [];
+  const trialCodes: TrialCodes = {
+    async use(code): Promise<CodeUse> {
+      used.push(code);
+      if (fail) throw new Error("use_trial_code failed with 503");
+      const n = runsLeft.get(code);
+      if (n === undefined) return "unknown";
+      if (n === 0) return "used_up";
+      runsLeft.set(code, n - 1);
+      return "ok";
+    },
+    async giveBack(code) {
+      givenBack.push(code);
+      runsLeft.set(code, (runsLeft.get(code) ?? 0) + 1);
+    },
+  };
+  return { trialCodes, used, givenBack, runsLeft };
+}
+
+describe("POST /api/investigate with a counted access code", () => {
+  const SHARED = "judges-only-code-123";
+  const COUNTED = "counted-code-for-one-run";
+  const codeEnv = { ...ownerEnv, TRIAL_ACCESS_CODE: SHARED };
+  const withCode = (accessCode: string) => body({ mode: "trial", accessCode });
+
+  it("runs a trial for a counted code and takes one of its runs, counted by the hour only", async () => {
+    const codes = fakeCodes({ [COUNTED]: 2 });
+    const { limiter, hits, unhits } = spyLimiter();
+    const { handler, calls } = setup({ envVars: codeEnv, ledger: createDailyLedger(1), limiter, trialCodes: codes.trialCodes });
+    const res = await handler(post(withCode(` ${COUNTED} `)));
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(calls).toHaveLength(1);
+    expect(codes.used).toEqual([COUNTED]);
+    expect(codes.runsLeft.get(COUNTED)).toBe(1);
+    expect(names(hits)).toEqual(["runs"]);
+    expect(unhits).toEqual([]);
+  });
+
+  it("refuses a code once its runs are taken, and gives that attempt's hourly count back", async () => {
+    const codes = fakeCodes({ [COUNTED]: 1 });
+    const { limiter, hits, unhits } = spyLimiter();
+    const ledger = createDailyLedger(1);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { handler, calls } = setup({ envVars: codeEnv, ledger, limiter, trialCodes: codes.trialCodes });
+    const first = await handler(post(withCode(COUNTED)));
+    expect(first.status).toBe(200);
+    await first.text();
+    const second = await handler(post(withCode(COUNTED)));
+    expect(second.status).toBe(403);
+    expect(await second.json()).toEqual({ error: "access_code_used_up" });
+    expect(calls).toHaveLength(1);
+    expect(reserve).toHaveBeenCalledTimes(1);
+    expect(names(hits)).toEqual(["runs", "runs"]);
+    expect(unhits).toEqual([hits[1]]);
+    expect(codes.givenBack).toEqual([]);
+  });
+
+  it("gives the code's run back when the budget refuses the run", async () => {
+    const codes = fakeCodes({ [COUNTED]: 1 });
+    const { limiter, hits, unhits } = spyLimiter();
+    const res = await setup({ envVars: codeEnv, ledger: createDailyLedger(0), limiter, trialCodes: codes.trialCodes }).handler(
+      post(withCode(COUNTED)),
+    );
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "daily_budget_spent" });
+    expect(codes.givenBack).toEqual([COUNTED]);
+    expect(codes.runsLeft.get(COUNTED)).toBe(1);
+    expect(unhits).toEqual(hits);
+  });
+
+  it("refuses a code it doesn't know as wrong, and keeps its hourly count", async () => {
+    const codes = fakeCodes({ [COUNTED]: 1 });
+    const { limiter, hits, unhits } = spyLimiter();
+    const { handler, calls } = setup({ envVars: codeEnv, ledger: createDailyLedger(1), limiter, trialCodes: codes.trialCodes });
+    const res = await handler(post(withCode("not-a-code-anyone-has")));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "access_code_wrong" });
+    expect(names(hits)).toEqual(["runs"]);
+    expect(unhits).toEqual([]);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("starts no trial run when it can't count the code's run, and keeps the hourly count", async () => {
+    const codes = fakeCodes({ [COUNTED]: 1 }, true);
+    const { limiter, unhits } = spyLimiter();
+    const ledger = createDailyLedger(1);
+    const reserve = vi.spyOn(ledger, "reserve");
+    const { handler, calls, logError } = setup({ envVars: codeEnv, ledger, limiter, trialCodes: codes.trialCodes });
+    const res = await handler(post(withCode(COUNTED)));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "limits_unavailable" });
+    expect(unhits).toEqual([]);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+    expect(logError.mock.calls[0][0]).toContain("could not count an access code's run");
+    expect(logError.mock.calls[0][0]).not.toContain(COUNTED);
+  });
+
+  it("never counts the shared code, or an attempt the hourly limit refuses", async () => {
+    const codes = fakeCodes({ [COUNTED]: 1 });
+    const shared = await setup({ envVars: codeEnv, ledger: createDailyLedger(1), trialCodes: codes.trialCodes }).handler(
+      post(withCode(SHARED)),
+    );
+    expect(shared.status).toBe(200);
+    await shared.text();
+    const { limiter } = spyLimiter(async () => false);
+    const limited = await setup({ envVars: codeEnv, ledger: createDailyLedger(1), limiter, trialCodes: codes.trialCodes }).handler(
+      post(withCode(COUNTED)),
+    );
+    expect(limited.status).toBe(429);
+    expect(codes.used).toEqual([]);
+  });
+
+  it("takes counted codes only while the trial asks for a code", async () => {
+    const codes = fakeCodes({ [COUNTED]: 1 });
+    const res = await setup({ envVars: ownerEnv, ledger: createDailyLedger(1), trialCodes: codes.trialCodes }).handler(
+      post(withCode(COUNTED)),
+    );
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(codes.used).toEqual([]);
+  });
+
+  it("takes only the shared code when there is nowhere to count codes", async () => {
+    const { handler } = setup({ envVars: codeEnv, ledger: createDailyLedger(1), trialCodes: null });
+    const res = await handler(post(withCode(COUNTED)));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "access_code_wrong" });
   });
 });

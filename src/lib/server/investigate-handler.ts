@@ -14,6 +14,7 @@ import { accessCodeMatches, resolveRunKeys } from "./run-keys";
 import { newRunId, type RunStore } from "./run-store";
 import { redactSecrets } from "./safe-error";
 import { SSE_HEADERS, SSE_HEARTBEAT, SSE_RUN_FAILED, toRunIdChunk, toSavedChunk, toSseChunk } from "./sse";
+import type { CodeUse, TrialCodes } from "./trial-codes";
 
 // POST /api/investigate: checks the request, picks whose keys pay, and streams
 // the orchestrator's events back as server-sent events. When the run ends, it is
@@ -53,6 +54,9 @@ export type InvestigateDeps = {
   ledger: DailyLedger;
   // Counts runs per visitor.
   limiter: RateLimiter;
+  // Access codes with a set number of runs; null or left out when there is
+  // nowhere to count them, and then only TRIAL_ACCESS_CODE works.
+  trialCodes?: TrialCodes | null;
   // Sites left out of every live run, so the agent finds the trail itself.
   excludeDomains: readonly string[];
   createNebius: (options: NebiusClientOptions) => NebiusClient;
@@ -150,16 +154,25 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     // they were. This is best effort: when it fails the run is still refused, and
     // the count stays until its window ends.
     const taken: { limit: Limit; windowStart: number }[] = [];
+    // A counted access code whose run was taken, given back the same way.
+    let codeTaken: string | null = null;
     const refuse = async (response: Response): Promise<Response> => {
-      await Promise.all(
-        taken.map(async ({ limit, windowStart }) => {
-          try {
-            await deps.limiter.unhit(visitor, limit, windowStart);
-          } catch (err: unknown) {
-            logError(`investigate: could not give back the ${limit.name} count: ${describe(err, secrets)}`);
-          }
-        }),
-      );
+      const givenBack = taken.map(async ({ limit, windowStart }) => {
+        try {
+          await deps.limiter.unhit(visitor, limit, windowStart);
+        } catch (err: unknown) {
+          logError(`investigate: could not give back the ${limit.name} count: ${describe(err, secrets)}`);
+        }
+      });
+      const code = codeTaken;
+      if (code !== null && deps.trialCodes) {
+        givenBack.push(
+          deps.trialCodes.giveBack(code).catch((err: unknown) => {
+            logError(`investigate: could not give back an access code's run: ${describe(err, secrets)}`);
+          }),
+        );
+      }
+      await Promise.all(givenBack);
       return response;
     };
 
@@ -169,6 +182,13 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
     // reaches the daily trial limit or the budget. When the attempt can't be
     // counted, the code isn't compared at all, so a broken count can't be used
     // to guess freely. A right code's count is the run's own hourly count.
+    //
+    // A code other than TRIAL_ACCESS_CODE may be a counted one (trial-codes.ts),
+    // with a run taken from it here. A used-up code is right but has no runs
+    // left, so it is refused and gives its hourly count back. When the count
+    // can't be made, no trial run starts, and the hourly count stays, as for a
+    // wrong code; a call that failed may still have taken the run, so that isn't
+    // given back either. A run refused after this gives its code's run back.
     if (keys.withCode) {
       let windowStart: number | null;
       try {
@@ -183,8 +203,20 @@ export function createInvestigateHandler(deps: InvestigateDeps): (request: Reque
       }
       const sent = keyRequest.mode === "trial" ? (keyRequest.accessCode?.trim() ?? "") : "";
       if (!sent) return fail(403, "access_code_required");
-      if (!accessCodeMatches(sent, deps.env.TRIAL_ACCESS_CODE ?? "")) return fail(403, "access_code_wrong");
+      let use: CodeUse | "shared" = "shared";
+      if (!accessCodeMatches(sent, deps.env.TRIAL_ACCESS_CODE ?? "")) {
+        if (!deps.trialCodes) return fail(403, "access_code_wrong");
+        try {
+          use = await deps.trialCodes.use(sent);
+        } catch (err: unknown) {
+          logError(`investigate: could not count an access code's run: ${describe(err, secrets)}`);
+          return fail(503, "limits_unavailable");
+        }
+        if (use === "unknown") return fail(403, "access_code_wrong");
+      }
       taken.push({ limit: runsLimit, windowStart });
+      if (use === "used_up") return refuse(fail(403, "access_code_used_up"));
+      if (use === "ok") codeTaken = sent;
     }
     for (const limit of limits) {
       if (taken.some((t) => t.limit === limit)) continue;
