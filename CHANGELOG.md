@@ -4,11 +4,23 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-18
+
 ### Added
 - A logo: a magnifier over two quote marks stands in for the "o" in the site's name, and the browser tab and home screen icons show it (#58)
+- A light and dark theme switch. The page opens in the saved choice or the system's, with no flash of the other (#60)
+- Run your own has its own page at `/run`. It checks the Nebius and Tavily keys before a run, at most 40 checks an hour per visitor, says which field needs fixing, and shows what to do when a run fails. Old `/#code=` links lead there (#60)
+- Case replays have a play and pause button, a bar to drag and "Skip to the end" (#60)
+- Access codes with a set number of trial runs, next to the one shared `TRIAL_ACCESS_CODE`. The database keeps only each code's hash, a used-up code gets its own message, and `pnpm trial-code` makes a code (#62)
+- `/run` lists the runs started from this browser, newest first, each linking to its page. The list stays in the browser, holds up to 24 runs and can be cleared (#63)
 
 ### Changed
 - The site header stays at the top while the page scrolls, as a see-through bar the page blurs and fades into, and links to a section on the home page stop below it. When large text makes the header take more than a quarter of the window, it scrolls away with the page (#59)
+- A new look across the site: Schibsted Grotesk and IBM Plex Mono replace Geist, and the footer has the site's links. Cards, fields and text buttons share one small corner radius, and icon buttons are round. Nothing moves when the system asks for reduced motion (#60)
+- The home page opens on the featured case: the quote set large, the name it's usually credited to struck out, and the earliest trace underlined by a marker drawn on at a pen's pace. How it works is a numbered map that marks the step in view, the eval scores count up as they come into view, and the case cards rise in as they are scrolled to (#60, #61)
+- The lineage on a case page is one vertical line of steps that draws in step by step (#60)
+- The quote's language can be left as "Not sure" (#60)
+- GitHub Actions moved to newer versions of checkout, setup-node, pnpm/action-setup and gitleaks (#53, #54, #55, #56)
 
 ## [0.8.0] - 2026-10-16
 
@@ -120,7 +132,8 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 - The eval set of 20 quotes with known origins (#3)
 - `pnpm investigate <case-id>`, the first end-to-end investigation (#5)
 
-[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.5.0...v0.6.0
