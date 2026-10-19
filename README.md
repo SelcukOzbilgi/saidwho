@@ -161,7 +161,7 @@ pnpm dev
 
 ### Using it locally
 
-Open http://localhost:3000, paste a quote and the name it's usually credited to, and add your own keys. You can leave the name blank. The Planner then tries to name who it's usually credited to, and when it does, the run marks that name as the Planner's. Your keys are only needed for new runs; the example cases work without them.
+Open http://localhost:3000/run, paste a quote and the name it's usually credited to, and add your own keys. You can leave the name blank. The Planner then tries to name who it's usually credited to, and when it does, the run marks that name as the Planner's. Your keys are only needed for new runs; the example cases work without them.
 
 The free trial option, which runs on the server's own keys, stays off unless all of these are set in `.env.local`:
 
