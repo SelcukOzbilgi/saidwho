@@ -4,6 +4,15 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-24
+
+The version submitted to the Nebius x NVIDIA Global AI Hackathon.
+
+### Changed
+- README shows which Nemotron model runs each step and why, and where Token Factory sped up the work, instead of folding the models away, and says the project was built for the hackathon (#66)
+- FEEDBACK.md opens with a summary of what worked and what needs work in Token Factory, the Nemotron models, AI Cloud and Tavily (#66)
+- The local setup in README points at the run page (#65)
+
 ## [0.9.0] - 2026-10-18
 
 ### Added
@@ -132,7 +141,8 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 - The eval set of 20 quotes with known origins (#3)
 - `pnpm investigate <case-id>`, the first end-to-end investigation (#5)
 
-[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/SelcukOzbilgi/saidwho/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.9.0...v1.0.0
 [0.9.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/SelcukOzbilgi/saidwho/compare/v0.6.0...v0.7.0

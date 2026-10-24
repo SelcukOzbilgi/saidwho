@@ -11,7 +11,7 @@
 
 <p align="center"><a href="https://saidwho.online"><b>Try it at saidwho.online</b></a></p>
 
-## Why I'm building this
+## Why I built this
 
 Quotes travel. Every time one gets shared it can lose a word, pick up a new one, or end up with a more famous name attached. A few years later everyone "knows" who said it, and nobody can point to where.
 
@@ -70,21 +70,29 @@ Small, fast models do most of the reading. If a model call fails, it gets one mo
 
 Under the steps, the page shows what the run cost on Nebius and what the same calls would have cost at Nemotron 3 Ultra's prices. That second number takes the token counts each call reported and prices them at Ultra's rates. It isn't a separate run on Ultra, which would probably think longer and cost more.
 
-<details>
-<summary>Models and services</summary>
+### Nemotron on Nebius Token Factory
 
-| Job | Model or service |
-|-----|---------|
-| Planner | NVIDIA Nemotron 3 Ultra |
-| Readers | NVIDIA Nemotron 3.5 Lightning, and Nemotron 3 Super for a page read again |
-| Genealogist | NVIDIA Nemotron 3 Super, to pick which cited works to look for |
-| Judge | NVIDIA Nemotron 3 Super, and Nemotron 3 Ultra when a verdict fails a check |
-| Search and page text | Tavily |
-| Checker | Plain TypeScript |
+Every model call goes to [Nebius Token Factory](https://nebius.com/services/token-factory), and every one is an NVIDIA Nemotron model, each on the step it suits:
 
-The Nemotron models are served by [Nebius Token Factory](https://nebius.com/services/token-factory). The app is built with Next.js.
+| Step | Model | Why this one |
+|-----|---------|---------|
+| Planner | Nemotron 3 Ultra, thinking on | One call a run, and it decides what gets searched |
+| Readers | Nemotron 3.5 Lightning, thinking off | Up to 20 pages a run plus the library pages, five at a time, so it has to be cheap and fast |
+| A page read again | Nemotron 3 Super, thinking off | Only when a check on Lightning's reading fails |
+| Genealogist | Nemotron 3 Super, thinking off | A short pick from the works the pages cite |
+| Judge | Nemotron 3 Super, thinking on | Weighs only the pages the Checker confirmed |
+| A second verdict | Nemotron 3 Ultra | Only when the first fails a check, at most once a run |
+| Search and page text | Tavily | |
+| Checker | Plain TypeScript | |
 
-</details>
+Where Token Factory sped up the work:
+
+- **One API for every model size.** Token Factory speaks the OpenAI API, so the app uses the official `openai` Node SDK with only the base URL changed. Moving a step to another model means changing one model ID in [src/agent/models.ts](src/agent/models.ts), and the eval's "every step on Ultra" and "every step on Lightning" setups are the same code with a different list of models.
+- **Structured output and thinking worked from day one.** On October 6, all four Nemotron models I tried passed strict `json_schema` output, tool calling and the `enable_thinking` switch. So every step returns JSON checked against a schema, and thinking is on for planning and judging and off for reading.
+- **Fast enough to sit inside the loop.** Super with thinking on planned in 3 to 8 seconds and judged in 5 to 10 in the first runs, so a mid-size model can judge inside a run someone watches.
+- **Cheap enough to measure.** The first full eval, 20 quotes run three ways, cost about $1.04 in Nebius tokens, so a change could be tested on the whole test set, and saved runs can be judged again several times without searching again.
+
+The app is built with Next.js, and Supabase keeps the run log, the visitor limits and the trial's daily budget. What worked and what didn't with each tool is in [FEEDBACK.md](FEEDBACK.md). The eval can also run as a Nebius Serverless AI Job (see [eval/README.md](eval/README.md)), though that path hasn't been run end to end yet.
 
 ## How well it does
 
@@ -128,7 +136,7 @@ What the eval showed about Tavily and Token Factory themselves is in [FEEDBACK.m
 
 ## Status
 
-I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/). Submissions close on October 30, 2026.
+I built this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/), in the Best Apps and Agents track. Version 1.0.0 is the version I submitted.
 
 - [x] Project setup, with key handling and automatic checks on every change
 - [x] Tried out all four Nemotron models, and checked that Tavily can read old sources like archive.org and Wikisource
@@ -140,8 +148,9 @@ I'm building this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusgl
 - [x] Following the older sources a page names, to look for something earlier still
 - [x] An eval of the whole test set, run three ways, with [the results](eval/results.md)
 - [x] A held-out set of ten quotes that played no part in the fixes, with [its results](eval/holdout-results.md)
+- [x] A free trial with access codes and a daily budget, and a [run page](https://saidwho.online/run) for your own keys
 
-Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases), and [CHANGELOG.md](CHANGELOG.md) lists what each one changed. Notes on what worked and what didn't with the tools I'm using are in [FEEDBACK.md](FEEDBACK.md).
+Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases), and [CHANGELOG.md](CHANGELOG.md) lists what each one changed. Notes on what worked and what didn't with the tools I used are in [FEEDBACK.md](FEEDBACK.md).
 
 ## Using the public demo
 
