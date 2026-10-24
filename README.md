@@ -76,12 +76,12 @@ Every model call goes to [Nebius Token Factory](https://nebius.com/services/toke
 
 | Step | Model | Why this one |
 |-----|---------|---------|
-| Planner | Nemotron 3 Ultra, thinking on | One call a run, and it decides what gets searched |
+| Planner | Nemotron 3 Ultra, thinking on | Usually one call a run, and it decides what gets searched |
 | Readers | Nemotron 3.5 Lightning, thinking off | Up to 20 pages a run plus the library pages, five at a time, so it has to be cheap and fast |
 | A page read again | Nemotron 3 Super, thinking off | Only when a check on Lightning's reading fails |
 | Genealogist | Nemotron 3 Super, thinking off | A short pick from the works the pages cite |
 | Judge | Nemotron 3 Super, thinking on | Weighs only the pages the Checker confirmed |
-| A second verdict | Nemotron 3 Ultra | Only when the first fails a check, at most once a run |
+| A second verdict | Nemotron 3 Ultra | Only when the first fails a check. Ultra takes over at most once a run |
 | Search and page text | Tavily | |
 | Checker | Plain TypeScript | |
 
