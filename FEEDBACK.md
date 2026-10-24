@@ -3,6 +3,70 @@
 Notes on Nebius Token Factory and partner tools, written while building Said Who?.
 Each entry: date, what we tried, what happened, what would have helped.
 
+The summary below is the feedback I gave in the hackathon submission. The dated entries after it are where its numbers come from.
+
+## Summary
+
+### Nebius Token Factory
+
+**What I used it for.** Every model call in the app and the eval: about 18 calls a quote across Nemotron 3.5 Lightning, 3 Super and 3 Ultra, through the official `openai` Node SDK with the base URL set to Token Factory.
+
+**What worked well.**
+- The OpenAI-compatible API meant no new client. Moving a step to another model is one model ID, so the eval's single-model setups are the same code.
+- On day one, all four Nemotron models I tried passed strict `json_schema` output, tool calling and the `enable_thinking` switch, and answered short prompts in 0.2 to 1 second.
+- Super with thinking on planned in 3 to 8 seconds and judged in 5 to 10, much faster than the 29 seconds in the agent cost benchmark I had planned around.
+- Prices low enough to measure: the 60-run eval cost $1.04 in tokens. The token counts in each response let every run page show its cost.
+
+**What needs work.**
+- **Model IDs.** `models.list` returns `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`, `nvidia/Nemotron-3_5-Lightning`, `nvidia/nemotron-3-super-120b-a12b` and `nvidia/Nemotron-3-Ultra-550b-a55b`. The casing and prefix differ from model to model, and I got a 404 guessing the Nano ID. One naming scheme, or case-insensitive matching, would help.
+- **Thinking is on by default and can take the whole budget.** On Lightning with `max_tokens: 64`, the answer was empty because all 64 tokens went to reasoning. Super with thinking on once spent all 8,000 output tokens reasoning and returned no plan, and in the first eval Lightning's judge hit the limit in 13 of 35 calls and Ultra's in 3 of 22. A cap on reasoning tokens separate from the answer would help most. A line in the model cards ("reasoning is on by default; set `enable_thinking: false` for short structured output") would have saved a debugging round.
+- **Reasoning tokens aren't visible in `usage`.** `completion_tokens` includes them, which is right for billing, but I found that out by testing. A `reasoning_tokens` count would make the split visible.
+- **The reasoning field isn't in the OpenAI SDK's types,** so TypeScript code has to read it through a cast. A docs note naming the field would help.
+- **Repeatability.** With thinking on, two runs of the same quote shared only a few searches. If `seed` is supported for these models, saying so in the docs would help with testing.
+- **Slow periods.** On October 12, two Super planning calls timed out after 120 seconds in one afternoon, and a retry worked both times. A status signal for slow periods would help tell load from my own bugs.
+
+**Onboarding.** Zero to a first answer was one smoke-test script on the `openai` SDK with the base URL changed, and it ran all four models on day one. The two snags were the Nano model ID and the empty answer from thinking being on by default.
+
+**Would I build with it again?** Yes. One API for every model size, at prices that let me run a full eval for about a dollar, is what made it possible to test which model belongs on which step instead of guessing.
+
+### NVIDIA Nemotron models
+
+**What I used them for.** 3 Ultra plans each run and writes a second verdict when the first fails a check. 3.5 Lightning reads every page. 3 Super reads a page again when Lightning's reading fails, picks which cited works to look up, and judges. 3 Nano was used only in the smoke test.
+
+**What worked well.**
+- Lightning is a dependable structured reader: valid JSON on all 54 pages in the first end-to-end runs, and about four in five calls of an eval for under a fifth of the cost.
+- Super is the right size for judging: in the first eval its verdicts never used more than 3,329 of their 8,000 completion tokens.
+- Ultra planned with no broken plans in 34, where Super had 7.
+- The mix matched every step on Ultra for right verdicts at about a tenth of the cost.
+
+**What needs work.**
+- **Copying text exactly.** Lightning once "tidied" a copied sentence into the quote's famous wording. For extraction work, a reliable copy-exactly behavior matters more than fluency.
+- **Strict schema stops shape errors, not slips inside strings.** Super returned a plan with empty search lists, and one search item holding two searches joined by a comma. Lightning wrote node ids as `"[n8]"` instead of `"n8"`, wrote the string `"null"` where the field allows `null`, and put a range like `"n1–n7, n15"` where one id belongs. Super once ended a string with a curly quote and kept writing the next object inside it.
+- **Long thinking.** Ultra once ran out of room on a verdict even with thinking off (Edison's "Genius is one percent inspiration"), so that run had no verdict.
+
+**Onboarding.** The four models share one API and prompt format, so trying a step on each was quick. The thinking default was the one surprise.
+
+**Would I build with them again?** Yes. Having a small, a mid-size and a large model with the same interface let each step use the one it needs.
+
+### Nebius AI Cloud
+
+**What I used it for.** I wrote a runner to run the hour-long eval as a Serverless AI Job (`eval/job.sh`, steps in `eval/README.md`): the public Node.js image, the repo cloned at a chosen commit, keys from a Nebius secret through `--env-secret`, and results in an Object Storage bucket.
+
+**What worked, what needs work.** I haven't run it end to end, so I can't say how it behaves yet. The app itself only needs Token Factory, so nothing else runs on AI Cloud.
+
+### Nebius Builder Program credits
+
+The Toloka promo code from the builder program page showed as "not found" after login on October 6, and as a $50 balance by October 14. The Tendem code worked.
+
+### Tavily (search partner)
+
+- `include_raw_content` returns page text with each result, so one query gives up to five pages' text for one credit.
+- `include_domains` with `include_domains_mode: "restrict"` finds the cited work itself: for "Let them eat cake", it returned the Project Gutenberg and archive.org texts of Rousseau's Confessions.
+- Search operators like `site:` or `before:` return nothing, with no error or warning. A warning would save a debugging round.
+- A long exact phrase can come back empty even when the index has it: queries quoting the whole saying returned nothing 16% of the time, against 3% without quotes.
+- Some Turkish pages lose "â" in `raw_content` ("Mevlna" for Mevlânâ).
+- `/usage` lagged hours behind; the `usage.credits` in each search response is accurate.
+
 ## 2026-10-06: Day 1 smoke tests
 
 Setup: `openai` Node SDK 7.x with `baseURL=https://api.tokenfactory.nebius.com/v1/`. Script: `scripts/smoke/nebius.ts`.
