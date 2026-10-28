@@ -4,6 +4,9 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+- A link to the two-minute demo video in README and in the site footer (#67)
+
 ## [1.0.0] - 2026-10-24
 
 The version submitted to the Nebius x NVIDIA Global AI Hackathon.

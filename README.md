@@ -9,7 +9,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
 </p>
 
-<p align="center"><a href="https://saidwho.online"><b>Try it at saidwho.online</b></a></p>
+<p align="center"><a href="https://saidwho.online"><b>Try it at saidwho.online</b></a> · <a href="https://youtu.be/EpD1Z3okV88">Watch the two-minute demo</a></p>
 
 ## Why I built this
 
@@ -149,6 +149,7 @@ I built this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobala
 - [x] An eval of the whole test set, run three ways, with [the results](eval/results.md)
 - [x] A held-out set of ten quotes that played no part in the fixes, with [its results](eval/holdout-results.md)
 - [x] A free trial with access codes and a daily budget, and a [run page](https://saidwho.online/run) for your own keys
+- [x] A [two-minute demo video](https://youtu.be/EpD1Z3okV88)
 
 Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/releases), and [CHANGELOG.md](CHANGELOG.md) lists what each one changed. Notes on what worked and what didn't with the tools I used are in [FEEDBACK.md](FEEDBACK.md).
 

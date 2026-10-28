@@ -12,6 +12,7 @@ import { RUN_PAGE, SECTIONS } from "./sections";
 const PROJECT = [
   { href: REPO_URL, label: "Source on GitHub" },
   { href: `${REPO_URL}#readme`, label: "README" },
+  { href: "https://youtu.be/EpD1Z3okV88", label: "Demo video" },
   { href: `${REPO_URL}/blob/main/LICENSE`, label: "Apache-2.0 license" },
 ];
 
