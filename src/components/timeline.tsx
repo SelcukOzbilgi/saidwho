@@ -24,7 +24,17 @@ function columns(nodes: readonly EvidenceNode[]): { label: string; nodes: Eviden
 const SPAN: Record<number, string> = { 1: "", 2: "sm:col-span-2", 3: "sm:col-span-2 lg:col-span-3" };
 const CARDS: Record<number, string> = { 1: "", 2: "sm:grid-cols-2", 3: "sm:grid-cols-2 lg:grid-cols-3" };
 
-export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; marks: Marks }) {
+// language is the quote's: a source page's own language isn't recorded, and the excerpts are
+// the quote as the page words it, so the quote's is the closest value there is.
+export function Timeline({
+  nodes,
+  marks,
+  language,
+}: {
+  nodes: readonly EvidenceNode[];
+  marks: Marks;
+  language?: string | null;
+}) {
   if (nodes.length === 0) return null;
   const years = columns(nodes);
   return (
@@ -57,7 +67,7 @@ export function Timeline({ nodes, marks }: { nodes: readonly EvidenceNode[]; mar
                     {column.nodes.map((node) => (
                       <Enter as="li" layout key={node.id} className="min-w-0">
                         <div className="reveal-item h-full">
-                          <NodeCard node={node} marks={marks} />
+                          <NodeCard node={node} marks={marks} language={language} />
                         </div>
                       </Enter>
                     ))}
@@ -97,7 +107,7 @@ const CHECK = {
   not_found: { mark: "✗", words: "Not on the page", look: "text-bad" },
 } as const;
 
-function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
+function NodeCard({ node, marks, language }: { node: EvidenceNode; marks: Marks; language?: string | null }) {
   const crossed = node.check.status === "not_found";
   const check = node.check.reason === "not_the_saying" ? { ...CHECK.not_found, words: "On the page, but not the saying" } : CHECK[node.check.status];
   const earliest = marks.earliest === node.id;
@@ -133,7 +143,11 @@ function NodeCard({ node, marks }: { node: EvidenceNode; marks: Marks }) {
       </Arrivals>
 
       {node.reader.exact_snippet && (
-        <blockquote className={`font-serif text-[17px] leading-snug ${crossed ? "line-through decoration-bad decoration-2" : ""}`}>
+        <blockquote
+          lang={language ?? undefined}
+          dir="auto"
+          className={`font-serif text-[17px] leading-snug ${crossed ? "line-through decoration-bad decoration-2" : ""}`}
+        >
           “{unmark(unquote(node.reader.exact_snippet))}”
         </blockquote>
       )}
