@@ -1,17 +1,46 @@
 import type { Metadata, ResolvedMetadata } from "next";
 
+import type { JudgeOutput } from "../agent/schemas";
+import { knownMatch } from "../components/known-answer";
 import { HEADLINE } from "../components/verdict-card";
+import type { EvalCase } from "../eval/cases";
 import type { RunState } from "./run-state";
 
-// What a finished run found, in a share preview's words: the verdict card's
-// headline, except that a run with no early source says whom it couldn't tie the
-// quote to. null when the run reached no verdict.
-export function shareAnswer({ verdict, popularAttribution }: Pick<RunState, "verdict" | "popularAttribution">): string | null {
-  if (!verdict) return null;
-  if (verdict.output.verdict === "no_known_source" && popularAttribution) {
-    return `No early source ties it to ${popularAttribution}`;
+type SharedRun = Pick<RunState, "verdict" | "popularAttribution">;
+
+// A verdict in a share preview's words: the verdict card's headline, except that
+// no early source says whom it couldn't tie the quote to.
+const answerFor = (verdict: JudgeOutput["verdict"], name: string | null): string =>
+  verdict === "no_known_source" && name ? `No early source ties it to ${name}` : HEADLINE[verdict](name);
+
+// What a finished run found, in a share preview's words. null when the run
+// reached no verdict.
+export function shareAnswer({ verdict, popularAttribution }: SharedRun): string | null {
+  return verdict ? answerFor(verdict.output.verdict, popularAttribution) : null;
+}
+
+// The test set's answer, in the same words, for a bundled case whose recorded
+// run reached a different verdict, so a link preview doesn't pass the run's
+// verdict on as settled. null when there is no known answer, the verdicts agree,
+// or the run reached none.
+export function knownShareAnswer(run: SharedRun, known?: EvalCase): string | null {
+  if (!known || knownMatch(known, run.verdict?.output.verdict ?? null) !== "differs") return null;
+  return answerFor(known.verdict, known.popular_attribution);
+}
+
+// A case page's description, for search and link previews. A preview gives the
+// run's answer when there is one; not every run finds an origin. When the run's
+// verdict differs from the known answer, the known answer comes first.
+export function caseShareDescription(run: SharedRun, known?: EvalCase): string {
+  const answer = shareAnswer(run);
+  const knownAnswer = knownShareAnswer(run, known);
+  if (knownAnswer) {
+    return `The known answer: ${knownAnswer}. This recorded Said Who? run reached a different verdict: ${answer}. Replay it, with the pages it checked.`;
   }
-  return HEADLINE[verdict.output.verdict](popularAttribution);
+  if (answer) return `What one Said Who? run found: ${answer}. Replay it, with the pages it checked.`;
+  return run.popularAttribution
+    ? `A finished Said Who? run looking into where this quote, usually credited to ${run.popularAttribution}, came from, with every step.`
+    : "A finished Said Who? run looking into where this quote came from, with every step.";
 }
 
 export const quoteTitle = (quote: string): string => `“${quote}” · Said Who?`;
