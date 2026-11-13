@@ -37,6 +37,15 @@ describe("CaseGallery", () => {
     expect(card(html, "so-much-owed")).toContain("Matches the known answer");
   });
 
+  it("marks each card's quote with the run's language", () => {
+    for (const { caseId, run } of CASES) {
+      expect(card(html, caseId), caseId).toContain(`<span lang="${run.language}" dir="auto" class="line-clamp-3`);
+    }
+    expect(card(html, "en-hakiki-mursit")).toContain('lang="tr"');
+    expect(card(html, "gel-ne-olursan-ol")).toContain('lang="tr"');
+    expect(card(html, "so-much-owed")).toContain('lang="en"');
+  });
+
   it("leaves the chip off a case the test set doesn't have", () => {
     const [first] = CASES;
     const stray = { ...first, caseId: "not-in-the-test-set" };

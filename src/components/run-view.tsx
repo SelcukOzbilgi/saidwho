@@ -78,6 +78,7 @@ export function RunView({ run, running, quoteIsHeading = false, announce = false
       <Arrivals>{verdict?.lineage && <Lineage key="lineage" steps={verdict.lineage} nodes={run.nodes} />}</Arrivals>
       <Timeline
         nodes={run.nodes}
+        language={run.language}
         marks={{
           earliest: verdict?.earliest_node ?? null,
           // Judges sometimes fill this in for other verdicts too; it only means something here.

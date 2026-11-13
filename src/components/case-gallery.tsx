@@ -63,7 +63,9 @@ export function CaseGallery({ cases, title = "Finished cases" }: { cases: readon
                   >
                     {verdict ? verdictWords(verdict) : "No verdict"}
                   </span>
-                  <span className="line-clamp-3 font-serif text-lg leading-snug">“{run.quote}”</span>
+                  <span lang={run.language ?? undefined} dir="auto" className="line-clamp-3 font-serif text-lg leading-snug">
+                    “{run.quote}”
+                  </span>
                   <span className="text-sm text-muted">Credited to {run.popularAttribution ?? "no one in particular"}</span>
                   <span className="mt-auto flex flex-col items-start gap-2 pt-2">
                     {match && (
