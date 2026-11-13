@@ -7,7 +7,7 @@ import { CaseReplay } from "@/components/case-replay";
 import { KnownAnswer } from "@/components/known-answer";
 import { SiteFooter } from "@/components/site-footer";
 import { plural } from "@/lib/plural";
-import { quoteTitle, shareAnswer } from "@/lib/share";
+import { caseShareDescription, quoteTitle } from "@/lib/share";
 
 // Every case page is built ahead of time, so the test set is read at build time only.
 export const dynamicParams = false;
@@ -18,16 +18,10 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/cases/[id]">): Promise<Metadata> {
   const found = findCase((await params).id);
-  const { quote, popularAttribution } = found?.run ?? {};
+  const quote = found?.run.quote;
   if (!found || !quote) return {};
   const title = quoteTitle(quote);
-  // A share preview gives the run's answer when there is one; not every run finds an origin.
-  const answer = shareAnswer(found.run);
-  const description = answer
-    ? `What one Said Who? run found: ${answer}. Replay it, with the pages it checked.`
-    : popularAttribution
-      ? `A finished Said Who? run looking into where this quote, usually credited to ${popularAttribution}, came from, with every step.`
-      : "A finished Said Who? run looking into where this quote came from, with every step.";
+  const description = caseShareDescription(found.run, KNOWN.get(found.caseId));
   const url = `/cases/${found.caseId}`;
   return {
     title,

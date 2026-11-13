@@ -7,7 +7,7 @@ import { VERDICT_LOOK } from "./verdict-card";
 // The test set's verdict is about the popular credit, not the saying: a quote
 // with no known source for its famous name can still have an earliest trace, so
 // each label says whose credit it is about.
-const KNOWN_LABEL: Record<JudgeOutput["verdict"], (name: string) => string> = {
+export const KNOWN_LABEL: Record<JudgeOutput["verdict"], (name: string) => string> = {
   misattributed: (name) => `Misattributed to ${name}`,
   correct: (name) => `Correctly credited to ${name}`,
   contested: (name) => `Credit to ${name} is contested`,

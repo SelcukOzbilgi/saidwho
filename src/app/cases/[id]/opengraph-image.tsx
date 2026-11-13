@@ -1,4 +1,5 @@
 import { CASES, findCase } from "@/cases/cases";
+import { KNOWN } from "@/cases/known";
 import { SHARE_ALT, SHARE_SIZE, shareCard } from "@/components/share-card";
 
 // One share image per case, drawn at build time like the case pages.
@@ -14,5 +15,5 @@ export function generateStaticParams() {
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const found = findCase((await params).id);
   if (!found) return new Response("Not found", { status: 404 });
-  return shareCard(found);
+  return shareCard(found, KNOWN.get(found.caseId));
 }

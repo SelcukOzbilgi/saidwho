@@ -2,8 +2,9 @@ import { ImageResponse } from "next/og";
 
 import type { JudgeOutput } from "../agent/schemas";
 import type { ExampleCase } from "../cases/cases";
+import type { EvalCase } from "../eval/cases";
 import { verdictWords } from "../lib/run-state";
-import { shareAnswer } from "../lib/share";
+import { knownShareAnswer, shareAnswer } from "../lib/share";
 
 // The share image for a finished case, built once per case at build time and
 // laid out like its card in the gallery: verdict, quote, who it's credited to,
@@ -13,7 +14,7 @@ import { shareAnswer } from "../lib/share";
 export const SHARE_SIZE = { width: 1200, height: 630 };
 
 export const SHARE_ALT =
-  "A Said Who? case card: the quote, who it is usually credited to, and what one run found about where it came from.";
+  "A Said Who? case card: the quote, who it is usually credited to, and what is known about where it came from.";
 
 const PAPER = "#f6f4ef";
 const INK = "#1c1a16";
@@ -53,11 +54,15 @@ const [serif, serifSemibold, sans, sansMedium] = await Promise.all([
 // Shorter quotes set larger, so a short one still fills the card.
 const quoteSize = (quote: string): number => (quote.length <= 30 ? 80 : quote.length <= 50 ? 68 : quote.length <= 70 ? 60 : 52);
 
-export async function shareCard({ run }: ExampleCase): Promise<ImageResponse> {
+// When the run disagrees with the test set about the credit, the card leads
+// with the known answer and says the run reached a different verdict.
+export async function shareCard({ run }: ExampleCase, known?: EvalCase): Promise<ImageResponse> {
   // A recorded case always starts with its quote.
   const quote = run.quote ?? "";
-  const verdict = run.verdict?.output.verdict;
-  const answer = shareAnswer(run);
+  const runVerdict = run.verdict?.output.verdict;
+  const knownAnswer = knownShareAnswer(run, known);
+  const verdict = knownAnswer && known ? known.verdict : runVerdict;
+  const answer = knownAnswer ?? shareAnswer(run);
 
   return new ImageResponse(
     (
@@ -90,7 +95,7 @@ export async function shareCard({ run }: ExampleCase): Promise<ImageResponse> {
               color: verdict ? VERDICT_COLOR[verdict] : MUTED,
             }}
           >
-            {verdict ? verdictWords(verdict) : "No verdict"}
+            {verdict ? `${knownAnswer ? "Known answer: " : ""}${verdictWords(verdict)}` : "No verdict"}
           </div>
         </div>
 
@@ -101,10 +106,15 @@ export async function shareCard({ run }: ExampleCase): Promise<ImageResponse> {
           <div style={{ fontSize: 28, color: MUTED }}>{`Credited to ${run.popularAttribution ?? "no one in particular"}`}</div>
         </div>
 
-        <div style={{ display: "flex", borderTop: `2px solid ${LINE}`, paddingTop: 28 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: `2px solid ${LINE}`, paddingTop: 28 }}>
           <div style={{ fontFamily: "Newsreader", fontWeight: 600, fontSize: 44, lineHeight: 1.15 }}>
             {answer ?? "The run ended without a verdict"}
           </div>
+          {knownAnswer && runVerdict && (
+            <div style={{ fontSize: 24, color: MUTED }}>
+              {`This recorded run reached a different verdict: ${verdictWords(runVerdict)}`}
+            </div>
+          )}
         </div>
       </div>
     ),
