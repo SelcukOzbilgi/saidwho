@@ -146,7 +146,7 @@ I built this for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobala
 - [x] Ten finished example cases that can be played again
 - [x] A [public demo](https://saidwho.online)
 - [x] Following the older sources a page names, to look for something earlier still
-- [x] An eval of the whole test set, run three ways, with [the results](eval/results.md)
+- [x] An eval of the whole test set, run three ways, with [the results](eval/results-2026-10-12.md) and [a later run of the app's way](eval/results.md)
 - [x] A held-out set of ten quotes that played no part in the fixes, with [its results](eval/holdout-results.md)
 - [x] A free trial with access codes and a daily budget, and a [run page](https://saidwho.online/run) for your own keys
 - [x] A [two-minute demo video](https://youtu.be/EpD1Z3okV88)
@@ -155,7 +155,7 @@ Milestones are posted under [Releases](https://github.com/SelcukOzbilgi/saidwho/
 
 ## Using the public demo
 
-The demo is at [saidwho.online](https://saidwho.online). Anyone can browse the finished cases there for free and replay them step by step. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're never saved or written to logs. The run itself is saved: the quote, the snippets it found and its verdict. When it ends, the page shows a link to it that anyone can open. The run page also lists the runs you started from that browser, newest first, each with its link. That list is kept in the browser's own storage, not on the server, so it doesn't follow you to another device, and you can clear it. A run that ends before it plans or searches anything, as one with a rejected key does, isn't saved. The free trial, which runs on my keys, is only on when I switch it on, and then it can be limited to people with an access code. Hackathon judges get one in the testing instructions.
+The demo is at [saidwho.online](https://saidwho.online). Anyone can browse the finished cases there for free and replay them step by step. To run a new investigation, you paste in your own Nebius and Tavily keys. They go to the app's server, are used for that one run, and are passed on only to Nebius and Tavily. They're also sent to the server to check that they work, when you paste one, when you leave its field and before a run if it hasn't got an answer yet. They're never saved or written to logs. The run itself is saved: the quote, the snippets it found and its verdict. When it ends, the page shows a link to it that anyone can open. The run page also lists the runs you started from that browser, newest first, each with its link. That list is kept in the browser's own storage, not on the server, so it doesn't follow you to another device, and you can clear it. The page checks both keys first and won't start a run with a key that is refused. If a run goes ahead anyway because the check couldn't answer, it isn't saved when it ends before it plans or searches anything, as with a rejected Nebius key. With a rejected Tavily key the run still plans, so it is saved, and its searches fail. The free trial, which runs on my keys, is only on when I switch it on, and then it can be limited to people with an access code. Hackathon judges get one in the testing instructions.
 
 ## Running it locally
 
