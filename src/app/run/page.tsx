@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 import { connection } from "next/server";
 
 import { CASES } from "../../cases/cases";
@@ -16,13 +16,25 @@ const TYPICAL = typicalRun(CASES.map((c) => c.run));
 
 const description = "Paste any quote and watch the agents look for where it first appeared, step by step.";
 
-export const metadata: Metadata = {
-  title: "Run your own · Said Who?",
-  description,
-  alternates: { canonical: "/run" },
-  openGraph: { type: "website", siteName: "Said Who?", title: "Run your own · Said Who?", description, url: "/run" },
-  twitter: { card: "summary_large_image", title: "Run your own · Said Who?", description },
-};
+// openGraph and twitter replace the layout's blocks whole, so the share image comes
+// from the parent metadata to carry it over, as on the saved-run pages.
+export async function generateMetadata(_props: PageProps<"/run">, parent: ResolvingMetadata): Promise<Metadata> {
+  const { openGraph, twitter } = await parent;
+  return {
+    title: "Run your own · Said Who?",
+    description,
+    alternates: { canonical: "/run" },
+    openGraph: {
+      type: "website",
+      siteName: "Said Who?",
+      title: "Run your own · Said Who?",
+      description,
+      url: "/run",
+      images: openGraph?.images,
+    },
+    twitter: { card: "summary_large_image", title: "Run your own · Said Who?", description, images: twitter?.images },
+  };
+}
 
 export default async function RunPage() {
   // Read the switches per request, so turning trial runs off needs no rebuild.
