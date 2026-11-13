@@ -14,7 +14,7 @@ import { knownShareAnswer, shareAnswer } from "../lib/share";
 export const SHARE_SIZE = { width: 1200, height: 630 };
 
 export const SHARE_ALT =
-  "A Said Who? case card: the quote, who it is usually credited to, and what one run found about where it came from.";
+  "A Said Who? case card: the quote, who it is usually credited to, and what is known about where it came from.";
 
 const PAPER = "#f6f4ef";
 const INK = "#1c1a16";
@@ -54,8 +54,8 @@ const [serif, serifSemibold, sans, sansMedium] = await Promise.all([
 // Shorter quotes set larger, so a short one still fills the card.
 const quoteSize = (quote: string): number => (quote.length <= 30 ? 80 : quote.length <= 50 ? 68 : quote.length <= 70 ? 60 : 52);
 
-// When the run's verdict differs from the test set's, the card leads with the
-// known answer and says the run reached a different one.
+// When the run disagrees with the test set about the credit, the card leads
+// with the known answer and says the run reached a different verdict.
 export async function shareCard({ run }: ExampleCase, known?: EvalCase): Promise<ImageResponse> {
   // A recorded case always starts with its quote.
   const quote = run.quote ?? "";
