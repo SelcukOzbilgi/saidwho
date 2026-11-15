@@ -18,6 +18,8 @@ export const gitIn =
       stdio: ["ignore", "pipe", "pipe"],
       // A big uncommitted diff is still hashed, not cut off.
       maxBuffer: 256 * 1024 * 1024,
+      // isHarmless reads git's English error text, so git must not translate it.
+      env: { ...process.env, LC_ALL: "C", LANG: "C" },
     });
 
 // The two cases that only mean there is no commit to record: git isn't installed,

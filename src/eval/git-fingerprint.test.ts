@@ -112,4 +112,20 @@ describe("codeFingerprint on a real repo", () => {
   it("gives null in a folder that isn't a git checkout", () => {
     expect(codeFingerprint(gitIn(outside))).toBeNull();
   });
+
+  it("gives null outside a git checkout when the machine's language isn't English", () => {
+    const names = ["LC_ALL", "LANG", "LANGUAGE"] as const;
+    const before = names.map((name) => process.env[name]);
+    process.env.LC_ALL = "tr_TR.UTF-8";
+    process.env.LANG = "tr_TR.UTF-8";
+    process.env.LANGUAGE = "tr";
+    try {
+      expect(codeFingerprint(gitIn(outside))).toBeNull();
+    } finally {
+      names.forEach((name, i) => {
+        if (before[i] === undefined) delete process.env[name];
+        else process.env[name] = before[i];
+      });
+    }
+  });
 });
