@@ -14,7 +14,7 @@ import { knownShareAnswer, shareAnswer } from "../lib/share";
 export const SHARE_SIZE = { width: 1200, height: 630 };
 
 export const SHARE_ALT =
-  "A Said Who? case card: the quote, who it is usually credited to, and what is known about where it came from.";
+  "A Said Who? case card: the quote, who it is usually credited to, and what was found about where it came from.";
 
 const PAPER = "#f6f4ef";
 const INK = "#1c1a16";
@@ -106,7 +106,15 @@ export async function shareCard({ run }: ExampleCase, known?: EvalCase): Promise
           <div style={{ fontSize: 28, color: MUTED }}>{`Credited to ${run.popularAttribution ?? "no one in particular"}`}</div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: `2px solid ${LINE}`, paddingTop: 28 }}>
+        <div
+          style={{
+            display: "flex",
+            // Stacked only when the note under the answer is there.
+            ...(knownAnswer && runVerdict ? { flexDirection: "column", gap: 10 } : {}),
+            borderTop: `2px solid ${LINE}`,
+            paddingTop: 28,
+          }}
+        >
           <div style={{ fontFamily: "Newsreader", fontWeight: 600, fontSize: 44, lineHeight: 1.15 }}>
             {answer ?? "The run ended without a verdict"}
           </div>
