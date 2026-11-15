@@ -7,6 +7,15 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 ### Added
 - A link to the two-minute demo video in README and in the site footer (#67)
 
+### Changed
+- A case's link preview and share image lead with the known answer when the recorded run disagrees with it about who said the quote, which today is the Atatürk case, and say what the run found. The share image's alt text is true for every case, and cards without the known-answer note keep their earlier layout (#77, #80)
+- README and SECURITY.md say which file holds the three-way eval results, that a run with a rejected Nebius key isn't saved while one with a rejected Tavily key is, and that pasted keys are also sent to the server for a check (#79)
+
+### Fixed
+- A link to Run your own shows the site's share image when it is shared; it had none (#76)
+- Quotes on the home page's case cards and the excerpts on case and run pages are marked with the quote's language, so screen readers read Turkish text as Turkish (#78)
+- The code fingerprint behind `pnpm eval` and `pnpm investigate` no longer fails outside a git checkout when git's messages aren't in English (#82)
+
 ## [1.0.0] - 2026-10-24
 
 The version submitted to the Nebius x NVIDIA Global AI Hackathon.
