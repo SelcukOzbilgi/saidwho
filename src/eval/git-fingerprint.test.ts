@@ -3,9 +3,15 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { codeFingerprint, gitIn, type RunGit } from "./git-fingerprint";
+
+// Runs the real execFileSync, but lets a test see how it was called.
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  return { ...actual, execFileSync: vi.fn(actual.execFileSync) };
+});
 
 const failing =
   (error: object): RunGit =>
@@ -111,5 +117,28 @@ describe("codeFingerprint on a real repo", () => {
 
   it("gives null in a folder that isn't a git checkout", () => {
     expect(codeFingerprint(gitIn(outside))).toBeNull();
+  });
+
+  it("runs git in the C locale, whatever language the machine uses", () => {
+    vi.mocked(execFileSync).mockClear();
+    gitIn(outside)(["--version"]);
+    const options = vi.mocked(execFileSync).mock.calls[0][2] as { env?: NodeJS.ProcessEnv };
+    expect(options.env).toMatchObject({ LC_ALL: "C", LANG: "C" });
+  });
+
+  it("gives null outside a git checkout when the machine's language isn't English", () => {
+    const names = ["LC_ALL", "LANG", "LANGUAGE"] as const;
+    const before = names.map((name) => process.env[name]);
+    process.env.LC_ALL = "tr_TR.UTF-8";
+    process.env.LANG = "tr_TR.UTF-8";
+    process.env.LANGUAGE = "tr";
+    try {
+      expect(codeFingerprint(gitIn(outside))).toBeNull();
+    } finally {
+      names.forEach((name, i) => {
+        if (before[i] === undefined) delete process.env[name];
+        else process.env[name] = before[i];
+      });
+    }
   });
 });
