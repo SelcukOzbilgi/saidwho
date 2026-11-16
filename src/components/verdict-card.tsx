@@ -70,6 +70,8 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
   const { output, tier } = verdict;
   const confirmed = new Set(nodes.filter((n) => n.check.status !== "not_found").map((n) => n.id));
   const earliest = earliestTrace(output, nodes);
+  // The earliest year is a cited work's date the run didn't find the saying in.
+  const citedNotFound = verdict.citedNotFound?.node === output.earliest_node ? verdict.citedNotFound : undefined;
 
   return (
     <section aria-label="Verdict" className="rounded-sm border border-line bg-card p-5 shadow-sm">
@@ -95,6 +97,12 @@ export function VerdictCard({ verdict, noVerdict, stopped, popularAttribution, n
               {" "}
               <Cite id={output.earliest_node} confirmed={confirmed} />
             </>
+          )}
+          {citedNotFound && (
+            <span className="text-muted">
+              . That is the date of {citedNotFound.work}, which {citedNotFound.node} cites; this run didn&rsquo;t find the saying in the
+              copies of it that it read.
+            </span>
           )}
         </p>
       )}

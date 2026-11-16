@@ -45,7 +45,9 @@ export type RunState = {
   leads: { round: number; fromNode: string; work: string; query: string }[];
   // The verdict that stands: the last one whose ids all check out. A verdict
   // citing a page that wasn't confirmed is logged but never shown as the answer.
-  verdict: { tier: Tier; output: JudgeOutput } | null;
+  // citedNotFound is set when the earliest year is a cited work's date the run
+  // didn't find the saying in (see the verdict event).
+  verdict: { tier: Tier; output: JudgeOutput; citedNotFound?: { node: string; work: string } } | null;
   // Why no verdict came, when none did.
   noVerdict: string | null;
   stopped: "budget" | "aborted" | null;
@@ -306,7 +308,7 @@ export function reduceRun(state: RunState, event: RunEvent): RunState {
         ...state,
         ...spent(event),
         phase: "judging",
-        verdict: { tier: event.tier, output: event.verdict },
+        verdict: { tier: event.tier, output: event.verdict, ...(event.citedNotFound && { citedNotFound: event.citedNotFound }) },
         noVerdict: null,
         log: entries,
       };
