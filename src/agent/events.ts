@@ -167,6 +167,10 @@ export const runEventSchema = z.discriminatedUnion("type", [
     // asked about an earliest page worded unlike the saying, it rested on that
     // page as another origin again. The first verdict stays the answer. Says why.
     notTaken: z.string().optional(),
+    // Set when the earliest year is only the date of the work the earliest page
+    // cites, and the run looked that work up without finding the saying
+    // (checkVerdict). Runs saved before this check have no key.
+    citedNotFound: z.strictObject({ node: z.string(), work: z.string() }).optional(),
   }),
   z.strictObject({ type: z.literal("judge_failed"), ...spendSchema, reason: z.string() }),
   z.strictObject({ type: z.literal("budget_exceeded"), spentUsd: z.number(), maxUsd: z.number() }),

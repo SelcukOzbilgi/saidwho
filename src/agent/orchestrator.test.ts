@@ -424,9 +424,36 @@ describe("investigate", () => {
         works: [{ citedBy: "n1", work: LEAD.work, checked: `The pages this run read for ${LEAD.work} on archive.org don't have the saying; they may be another edition or only part of the work.` }],
       });
       expect(types(events).slice(-3)).toEqual(["cited_works", "verdict", "done"]);
+      // The verdict dates n1 by its own 1981, so the miss changes nothing about it.
+      const verdict = events.find((e) => e.type === "verdict");
+      expect(verdict).not.toHaveProperty("citedNotFound");
+      expect(verdict).not.toHaveProperty("fixes");
+      expect(verdict).toMatchObject({ verdict: VERDICT });
       expect(events.find((e) => e.type === "page_read" && e.url === BOOK)).toMatchObject({ outcome: "no_quote", lookingFor: LEAD.work });
       expect(events.find((e) => e.type === "page_read" && e.url === NEWS)).not.toHaveProperty("lookingFor");
       expect(JSON.stringify(events)).not.toContain(SECRET);
+    });
+
+    it("marks an earliest year that is only the date of a cited work the run didn't find it in", async () => {
+      // A page with no date of its own credits Einstein and names the 1983 novel.
+      const blog = `A blog post. ${SECRET} "${QUOTE}," said Einstein, a line from Rita Mae Brown's Sudden Death (1983). ${SECRET}`;
+      const { tavily } = tavilyFor((q) => (q === LEAD.query ? [BOOK] : [NEWS]), (url) => (url === BOOK ? BOOK_WITHOUT : blog));
+      const nebius = fakeNebius({
+        read: ({ user }) => (user.includes(BOOK) ? NO_QUOTE : { ...CITES_BOOK, page_date: null }),
+        trace: ({ user }) => (user.includes("- n1:") ? { leads: [LEAD] } : { leads: [] }),
+        verdict: () => ({ ...VERDICT, verdict: "no_known_source", earliest_author: "Albert Einstein", earliest_date: "1983" }),
+      });
+      const events = await run({ nebius, tavily });
+      const verdict = events.find((e) => e.type === "verdict");
+      expect(verdict).toMatchObject({
+        verdict: { earliest_node: "n1", earliest_date: "1983", earliest_author: null },
+        citedNotFound: { node: "n1", work: LEAD.work },
+        fixes: [
+          `kept 1983, the date of the work n1 cites, though this run didn't find the saying in ${LEAD.work}`,
+          "left out the earliest author Albert Einstein: the source n1 cites doesn't name them",
+        ],
+      });
+      for (const event of events) expect(runEventSchema.safeParse(event).success).toBe(true);
     });
 
     it("says nothing about a cited work whose search returned no text of it", async () => {

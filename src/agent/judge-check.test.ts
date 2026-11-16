@@ -58,7 +58,7 @@ describe("canonicalId", () => {
 
 describe("checkVerdict", () => {
   it("lets a clean verdict through unchanged", () => {
-    expect(checkVerdict(VERDICT, PAGES)).toEqual({ verdict: VERDICT, unknownIds: [], fixes: [], pageDateOverCited: null });
+    expect(checkVerdict(VERDICT, PAGES)).toEqual({ verdict: VERDICT, unknownIds: [], fixes: [], pageDateOverCited: null, citedNotFound: null });
   });
 
   it("tidies wrapped ids in the id fields and the lineage", () => {
@@ -297,5 +297,80 @@ describe("otherOrigin", () => {
     expect(otherOrigin({ ...misattributed, verdict: "correct" }, [bacon(null)], QUOTE, "Franklin D. Roosevelt")).toBeNull();
     const fdr = { ...bacon(null), reader: { ...bacon(null).reader, exact_snippet: "the only thing we have to fear is fear itself" } };
     expect(otherOrigin(misattributed, [fdr], QUOTE, "Franklin D. Roosevelt")).toBeNull();
+  });
+});
+
+// Run JlJzUe-sEA4: a 2024 blog page (its own date not kept) credits the saying to
+// Wilde and names Whitman's 1855 preface as its source; the run looked the
+// preface up and didn't find the saying, and the Judge gave "Oscar Wilde, 1855".
+describe("checkVerdict and a cited work the run didn't find the saying in", () => {
+  const blog = {
+    ...node("n8", { citedSourceDate: "1855" }),
+    reader: { ...node("n8").reader, page_date: "2024", cited_source: "Preface to Leaves of Grass, 1855", cited_source_date: "1855" },
+    attributedTo: "Oscar Wilde",
+  };
+  const pages = [node("n1"), blog];
+  const beYourself: JudgeOutput = {
+    rationale: "All pages credit Wilde [n1]. The earliest dated reference is n8, which cites an 1855 source.",
+    verdict: "no_known_source",
+    confidence: "medium",
+    earliest_node: "n8",
+    earliest_author: "Oscar Wilde",
+    earliest_date: "1855",
+    misattribution_node: null,
+    lineage: [],
+  };
+  const missed = [{ cited_by: "n8", work: "Leaves of Grass by Walt Whitman" }];
+
+  it("keeps the cited date, marks it, and leaves out a name the cited source doesn't give", () => {
+    const check = checkVerdict(beYourself, pages, true, missed);
+    expect(check.verdict).toEqual({ ...beYourself, earliest_author: null });
+    expect(check.citedNotFound).toEqual({ node: "n8", work: "Leaves of Grass by Walt Whitman" });
+    expect(check.fixes).toEqual([
+      "kept 1855, the date of the work n8 cites, though this run didn't find the saying in Leaves of Grass by Walt Whitman",
+      "left out the earliest author Oscar Wilde: the source n8 cites doesn't name them",
+    ]);
+    expect(check.unknownIds).toEqual([]);
+    expect(check.pageDateOverCited).toBeNull();
+  });
+
+  it("keeps a name the cited source gives", () => {
+    const whitman = { ...beYourself, earliest_author: "Walt Whitman" };
+    const named = { ...blog, reader: { ...blog.reader, cited_source: "Walt Whitman, Preface to Leaves of Grass, 1855" } };
+    const check = checkVerdict(whitman, [node("n1"), named], true, missed);
+    expect(check.verdict.earliest_author).toBe("Walt Whitman");
+    expect(check.citedNotFound).toEqual({ node: "n8", work: "Leaves of Grass by Walt Whitman" });
+    expect(check.fixes).toHaveLength(1);
+  });
+
+  it("changes nothing when the cited work was found, or never looked up", () => {
+    // A work found with the saying, or not looked for, is not in the list the Judge was told about.
+    expect(checkVerdict(beYourself, pages, true, [])).toEqual(checkVerdict(beYourself, pages));
+    const other = [{ cited_by: "n1", work: "Something else" }];
+    expect(checkVerdict(beYourself, pages, true, other)).toEqual(checkVerdict(beYourself, pages));
+    const plain = checkVerdict(beYourself, pages);
+    expect(plain.verdict.earliest_author).toBe("Oscar Wilde");
+    expect(plain.fixes).toEqual([]);
+    expect(plain.citedNotFound).toBeNull();
+  });
+
+  it("changes nothing when the page's own date is the same year", () => {
+    const sameYear = { ...blog, pageDate: "1855", date: "1855" };
+    const check = checkVerdict(beYourself, [node("n1"), sameYear], true, missed);
+    expect(check.verdict.earliest_author).toBe("Oscar Wilde");
+    expect(check.fixes).toEqual([]);
+    expect(check.citedNotFound).toBeNull();
+  });
+
+  it("changes nothing when the verdict dates the page by its own date", () => {
+    const dated = { ...blog, pageDate: "2024", date: "1855" };
+    const own = { ...beYourself, earliest_date: "2024" };
+    expect(checkVerdict(own, [node("n1"), dated], false, missed)).toEqual(checkVerdict(own, [node("n1"), dated], false));
+  });
+
+  it("leaves every other verdict exactly as before", () => {
+    for (const verdict of [VERDICT, { ...VERDICT, earliest_node: "n2", earliest_date: "1931", earliest_author: "Someone" }]) {
+      expect(checkVerdict(verdict, PAGES, true, [{ cited_by: "n3", work: "A book" }])).toEqual(checkVerdict(verdict, PAGES));
+    }
   });
 });
