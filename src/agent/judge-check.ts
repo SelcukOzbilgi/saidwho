@@ -8,6 +8,7 @@ import {
   MAX_NOTE_CHARS,
   MAX_RATIONALE_CHARS,
 } from "./schemas";
+import { namesWork } from "./library-pages";
 import { mentionsName, normalizeText } from "./verifier";
 
 // Plain-code checks on a verdict before it can stand. The model's ids are
@@ -166,15 +167,20 @@ export function checkVerdict(
   // a library page can be another edition or only part of the work, so a miss
   // doesn't disprove the citation. But the year is then the work's, not a
   // proven appearance of the saying, so a name goes with it only when the cited
-  // source itself names that person; the credit the page gives the saying is
-  // not the work's author.
+  // source names that person, as the page gives it or as the Genealogist listed
+  // the work (title and author, "Leaves of Grass by Walt Whitman"); the credit
+  // the page gives the saying is not the work's author.
+  // When the page led to more than one missed work, the one its cited source
+  // names is the one the year belongs to.
   let earliestAuthor = raw.earliest_author?.slice(0, MAX_JUDGE_FIELD_CHARS) ?? null;
   let citedNotFound: CitedNotFound | null = null;
-  const miss = earliest && missed.find((m) => m.cited_by === earliest.id);
+  const citedSource = earliest?.reader.cited_source ?? "";
+  const misses = earliest ? missed.filter((m) => m.cited_by === earliest.id) : [];
+  const miss = misses.find((m) => namesWork(citedSource, m.work)) ?? misses[0];
   if (miss && earliest && givenYear && citedYear === givenYear && yearOf(earliest.pageDate) !== givenYear) {
     citedNotFound = { node: earliest.id, work: miss.work };
     fixes.push(`kept ${earliestDate}, the date of the work ${earliest.id} cites, though this run didn't find the saying in ${miss.work}`);
-    if (earliestAuthor !== null && !mentionsName(earliestAuthor, earliest.reader.cited_source ?? "")) {
+    if (earliestAuthor !== null && !mentionsName(earliestAuthor, citedSource) && !mentionsName(earliestAuthor, miss.work)) {
       fixes.push(`left out the earliest author ${earliestAuthor}: the source ${earliest.id} cites doesn't name them`);
       earliestAuthor = null;
     }

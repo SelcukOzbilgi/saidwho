@@ -343,6 +343,33 @@ describe("checkVerdict and a cited work the run didn't find the saying in", () =
     expect(check.fixes).toHaveLength(1);
   });
 
+  it("keeps a name that only the work as it was looked up gives", () => {
+    // The page gives just the title; the Genealogist listed the work with its author.
+    const almanack = { ...blog, reader: { ...blog.reader, cited_source: "Poor Richard's Almanack, 1855" } };
+    const franklin = { ...beYourself, earliest_author: "Benjamin Franklin" };
+    const work = [{ cited_by: "n8", work: "Poor Richard's Almanack by Benjamin Franklin" }];
+    const check = checkVerdict(franklin, [node("n1"), almanack], true, work);
+    expect(check.verdict.earliest_author).toBe("Benjamin Franklin");
+    expect(check.citedNotFound).toEqual({ node: "n8", work: "Poor Richard's Almanack by Benjamin Franklin" });
+    expect(check.fixes).toHaveLength(1);
+  });
+
+  it("names the missed work the page cites when the page led to more than one", () => {
+    const two = [
+      { cited_by: "n8", work: "Song of Myself by Walt Whitman" },
+      { cited_by: "n8", work: "Leaves of Grass by Walt Whitman" },
+    ];
+    const check = checkVerdict(beYourself, pages, true, two);
+    expect(check.citedNotFound).toEqual({ node: "n8", work: "Leaves of Grass by Walt Whitman" });
+    expect(check.verdict.earliest_author).toBeNull();
+    // With none matching the cited source, the first miss for the page stands.
+    const neither = [
+      { cited_by: "n8", work: "Song of Myself by Walt Whitman" },
+      { cited_by: "n8", work: "Democratic Vistas by Walt Whitman" },
+    ];
+    expect(checkVerdict(beYourself, pages, true, neither).citedNotFound).toEqual({ node: "n8", work: "Song of Myself by Walt Whitman" });
+  });
+
   it("changes nothing when the cited work was found, or never looked up", () => {
     // A work found with the saying, or not looked for, is not in the list the Judge was told about.
     expect(checkVerdict(beYourself, pages, true, [])).toEqual(checkVerdict(beYourself, pages));
