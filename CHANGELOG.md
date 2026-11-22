@@ -15,6 +15,7 @@ All notable changes to Said Who? are listed here. The format follows [Keep a Cha
 - A link to Run your own shows the site's share image when it is shared; it had none (#76)
 - Quotes on the home page's case cards and the excerpts on case and run pages are marked with the quote's language, so screen readers read Turkish text as Turkish (#78)
 - The code fingerprint behind `pnpm eval` and `pnpm investigate` no longer fails outside a git checkout when git's messages aren't in English (#82)
+- When a run's earliest year is only the date of a work the earliest page cites, and the run looked that work up without finding the saying, the verdict says so next to the earliest trace and leaves out an earliest author the cited source doesn't name. Runs saved before this keep their old text (#86)
 
 ## [1.0.0] - 2026-10-24
 

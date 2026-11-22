@@ -108,6 +108,24 @@ describe("reduceRun", () => {
     expect(reduceRun(failed, { type: "verdict", ...spend, verdict: verdict("misattributed"), unknownIds: [] }).phase).toBe("judging");
   });
 
+  it("keeps the note that the earliest year is a cited work's the run didn't find it in, and nothing when there is none", () => {
+    const plain = run([{ type: "verdict", ...spend, tier: "super", verdict: verdict("no_known_source"), unknownIds: [] }]);
+    expect(plain.verdict).toEqual({ tier: "super", output: verdict("no_known_source") });
+    const marked = run([
+      {
+        type: "verdict",
+        ...spend,
+        tier: "super",
+        verdict: verdict("no_known_source"),
+        unknownIds: [],
+        fixes: ["kept 1981, the date of the work n1 cites, though this run didn't find the saying in A Book"],
+        citedNotFound: { node: "n1", work: "A Book" },
+      },
+    ]);
+    expect(marked.verdict).toEqual({ tier: "super", output: verdict("no_known_source"), citedNotFound: { node: "n1", work: "A Book" } });
+    expect(marked.log.at(-1)).toMatchObject({ agent: "Checker", text: "Kept 1981, the date of the work n1 cites, though this run didn't find the saying in A Book" });
+  });
+
   it("keeps the last verdict when a second judge ran", () => {
     const state = run([
       STARTED,

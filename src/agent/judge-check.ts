@@ -8,7 +8,8 @@ import {
   MAX_NOTE_CHARS,
   MAX_RATIONALE_CHARS,
 } from "./schemas";
-import { normalizeText } from "./verifier";
+import { namesWork } from "./library-pages";
+import { mentionsName, normalizeText } from "./verifier";
 
 // Plain-code checks on a verdict before it can stand. The model's ids are
 // tidied first, since a slip like "[n8]" or "null" says nothing about the
@@ -62,12 +63,27 @@ export type VerdictCheck = {
   // that page names an earlier source with a date: the cited date is when the
   // saying appeared, unless the Judge had a reason. The run asks again, once.
   pageDateOverCited: { node: string; given: string; cited: string } | null;
+  // Set when the earliest year is only the date of the work the earliest page
+  // cites, and this run looked that work up and didn't find the saying there.
+  citedNotFound: CitedNotFound | null;
 };
+
+export type CitedNotFound = { node: string; work: string };
+
+// A cited work this run looked up without finding the saying: the page that
+// cites it and the work as the Genealogist looked for it (judge.ts CitedWork).
+export type MissedCitation = { cited_by: string; work: string };
 
 // verified: the confirmed pages the Judge was shown, in page order. guards off
 // leaves out pageDateOverCited, so a replay (scripts/rejudge.ts) can compare
 // with the rules from before that recheck; every other check here still runs.
-export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[], guards = true): VerdictCheck {
+// missed: the cited works the Judge was told this run didn't find the saying in.
+export function checkVerdict(
+  raw: JudgeOutput,
+  verified: readonly EvidenceNode[],
+  guards = true,
+  missed: readonly MissedCitation[] = [],
+): VerdictCheck {
   const byId = new Map(verified.map((n) => [n.id, n]));
   const unknown = new Set<string>();
   const pointer = (value: string | null): string | null => {
@@ -146,19 +162,44 @@ export function checkVerdict(raw: JudgeOutput, verified: readonly EvidenceNode[]
     pageDateOverCited = { node: earliest.id, given: earliestDate, cited: earliest.citedSourceDate };
   }
 
+  // The earliest year is only the date of the work the earliest page cites, and
+  // this run looked that work up without finding the saying. The date is kept:
+  // a library page can be another edition or only part of the work, so a miss
+  // doesn't disprove the citation. But the year is then the work's, not a
+  // proven appearance of the saying, so a name goes with it only when the cited
+  // source names that person, as the page gives it or as the Genealogist listed
+  // the work (title and author, "Leaves of Grass by Walt Whitman"); the credit
+  // the page gives the saying is not the work's author.
+  // When the page led to more than one missed work, the one its cited source
+  // names is the one the year belongs to.
+  let earliestAuthor = raw.earliest_author?.slice(0, MAX_JUDGE_FIELD_CHARS) ?? null;
+  let citedNotFound: CitedNotFound | null = null;
+  const citedSource = earliest?.reader.cited_source ?? "";
+  const misses = earliest ? missed.filter((m) => m.cited_by === earliest.id) : [];
+  const miss = misses.find((m) => namesWork(citedSource, m.work)) ?? misses[0];
+  if (miss && earliest && givenYear && citedYear === givenYear && yearOf(earliest.pageDate) !== givenYear) {
+    citedNotFound = { node: earliest.id, work: miss.work };
+    fixes.push(`kept ${earliestDate}, the date of the work ${earliest.id} cites, though this run didn't find the saying in ${miss.work}`);
+    if (earliestAuthor !== null && !mentionsName(earliestAuthor, citedSource) && !mentionsName(earliestAuthor, miss.work)) {
+      fixes.push(`left out the earliest author ${earliestAuthor}: the source ${earliest.id} cites doesn't name them`);
+      earliestAuthor = null;
+    }
+  }
+
   return {
     verdict: {
       ...raw,
       earliest_node: earliestNode,
       misattribution_node: misattributionNode,
       earliest_date: earliestDate,
-      earliest_author: raw.earliest_author?.slice(0, MAX_JUDGE_FIELD_CHARS) ?? null,
+      earliest_author: earliestAuthor,
       rationale: capText(raw.rationale, MAX_RATIONALE_CHARS),
       lineage: kept,
     },
     unknownIds: [...unknown],
     fixes,
     pageDateOverCited,
+    citedNotFound,
   };
 }
 

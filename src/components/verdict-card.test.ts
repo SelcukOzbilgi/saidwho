@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { JudgeOutput } from "../agent/schemas";
-import { findCase } from "../cases/cases";
+import { CASES, findCase } from "../cases/cases";
 import { earliestTrace, Rationale, VerdictCard } from "./verdict-card";
 
 const render = (text: string, confirmed: string[] = ["n2"]) =>
@@ -92,6 +92,72 @@ describe("VerdictCard", () => {
     expect(html).toContain(">misattributed<");
     expect(html).not.toMatch(/opacity:\s*0[;"]/);
     expect(html).not.toContain("scale(");
+  });
+});
+
+describe("VerdictCard and a cited work the run didn't find the saying in", () => {
+  const n8 = {
+    id: "n8",
+    url: "https://example.org/n8",
+    host: "example.org",
+    title: "A blog post",
+    check: { status: "exact" as const, score: 1 },
+    reader: {
+      contains_quote: true,
+      exact_snippet: "Be yourself; everyone else is already taken.",
+      attributed_to: "Oscar Wilde",
+      page_date: "2024",
+      cited_source: "Preface to Leaves of Grass, 1855",
+      cited_source_date: "1855",
+    },
+    attributedTo: "Oscar Wilde",
+    pageDate: null,
+    citedSourceDate: "1855",
+    date: "1855",
+    foundVia: null,
+  };
+  const output: JudgeOutput = {
+    verdict: "no_known_source",
+    earliest_node: "n8",
+    earliest_author: null,
+    earliest_date: "1855",
+    misattribution_node: null,
+    confidence: "medium",
+    rationale: "The earliest dated reference is n8.",
+  };
+  const text = (citedNotFound?: { node: string; work: string }) =>
+    renderToStaticMarkup(
+      createElement(VerdictCard, {
+        verdict: { tier: "super", output, ...(citedNotFound && { citedNotFound }) },
+        noVerdict: null,
+        stopped: null,
+        popularAttribution: "Oscar Wilde",
+        nodes: [n8],
+      }),
+    )
+      .replace(/<[^>]+>/g, "")
+      .replaceAll("&#x27;", "'")
+      .replaceAll("&rsquo;", "’");
+
+  it("says the year is the cited work's and that the run didn't find the saying in it", () => {
+    expect(text({ node: "n8", work: "Leaves of Grass by Walt Whitman" })).toContain(
+      "Earliest trace: 1855, Preface to Leaves of Grass, 1855, via example.org n8. That is the date of Leaves of Grass by Walt Whitman, which n8 cites; this run didn’t find the saying in the copies of it that it read.",
+    );
+  });
+
+  it("says nothing more without the note, or when the note is about another page", () => {
+    for (const html of [text(), text({ node: "n3", work: "Another work" })]) {
+      expect(html).toContain("Earliest trace: 1855, Preface to Leaves of Grass, 1855, via example.org n8The earliest");
+      expect(html).not.toContain("copies of it");
+    }
+  });
+
+  it("renders every bundled case without the note", () => {
+    for (const { run } of CASES) {
+      expect(run.verdict).not.toHaveProperty("citedNotFound");
+      const html = renderToStaticMarkup(createElement(VerdictCard, { ...run }));
+      expect(html).not.toContain("copies of it");
+    }
   });
 });
 

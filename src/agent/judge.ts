@@ -157,7 +157,7 @@ export async function judge(step: JudgeStep): Promise<void> {
       onEvent({ type: "judge_failed", ...judgeSpend, reason });
       return { stands: false, cause: result.cause, reason, note };
     }
-    const { verdict, unknownIds, fixes, pageDateOverCited } = checkVerdict({ lineage: [], ...result.data }, verified, checks);
+    const { verdict, unknownIds, fixes, pageDateOverCited, citedNotFound } = checkVerdict({ lineage: [], ...result.data }, verified, checks, citedWorks);
     // The second judge was asked about the date, so its verdict is taken over the
     // first only when it moves the date earlier, to one the Checker found a page
     // for: the cited source's, or an older page's, even one that cites an older
@@ -181,7 +181,15 @@ export async function judge(step: JudgeStep): Promise<void> {
     }
     const asked = recheck ? [recheck.date, recheck.origin].filter((a) => a !== null).length : 0;
     const notTaken = asked > 0 && unanswered.length === asked ? unanswered.join(", and ") : undefined;
-    onEvent({ type: "verdict", ...judgeSpend, verdict, unknownIds, ...(fixes.length > 0 && { fixes }), ...(notTaken && { notTaken }) });
+    onEvent({
+      type: "verdict",
+      ...judgeSpend,
+      verdict,
+      unknownIds,
+      ...(fixes.length > 0 && { fixes }),
+      ...(notTaken && { notTaken }),
+      ...(citedNotFound && { citedNotFound }),
+    });
     // Either way the run has had its one second judge, so this ends the judging.
     if (notTaken) return { stands: false, cause: "unsupported", reason: `the second verdict ${notTaken}`, note: null };
     if (unknownIds.length > 0) {
